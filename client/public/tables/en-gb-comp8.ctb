@@ -1,5 +1,27 @@
 # liblouis: U.K. English 8 dot Computer braille table
 #
+# -----------
+#-index-name: English, U.K., computer
+#-display-name: English computer braille as used in the U.K.
+#
+#+language:en
+#+region:en-GB
+#+type:computer
+#+dots:8
+#+system:bauk
+# Marked as "direction:both" by Bue Vester-Andersen
+# as it is a computer Braille table.
+#+direction:both
+#
+# TODO: Please correct the metadata above. It is not meant to be
+# accurate nor complete. It hasn't been verified by the table
+# author yet. It is merely an attempt by the liblouis maintainers
+# to get some sensible initial values in place.
+#
+# This table implements the specifications for Braille Computer
+# Notation from the UK Association for Accessible Formats, see
+# https://www.ukaaf.org/wp-content/uploads/2020/03/Braille-Computer-Notation-PDF.pdf
+#
 #  Copyright (C) 2013 David Reynolds <dkreynolds@ntlworld.com>
 #
 #  This file is part of liblouis.
@@ -39,7 +61,7 @@ math < 236
 math = 2356
 math > 356
 sign % 46
-math + 236
+math + 235
 math ~ 14567
 sign ` 3457
 sign £ 467
@@ -59,4 +81,4 @@ math / 34
 sign * 35
 digit 0 123456
 include digits6DotsPlusDot6.uti
-noback sign \X25CF 35	# 9679 black circle
+noback sign \x25CF 35	# 9679 black circle

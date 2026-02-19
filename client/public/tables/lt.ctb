@@ -1,4 +1,3 @@
-#
 # Copyright (C) 2016 Rimas Kudelis <rq@akl.lt>
 #
 #  This file is part of liblouis.
@@ -33,19 +32,27 @@
 # This file is based on the standard, but does not exactly follow it. Some standard
 # definitions are commented out, some changed, and some extra ones are added.
 
+# lt-8dot.utb is the Lithuanian 8-dot table that we want to be actually used. For this
+# reason the metadata below is commented out, so that the table is not discoverable.
+
+# ----
+##-index-name: Lithuanian, 8-dot
+##-display-name: Lithuanian 8-dot braille
+#
+##+language: lt
+##+type: literary
+##+contraction: no
+##+dots: 8
+##+direction: both
+# ----
 
 ###
 ### WHITESPACE
 ###
 
-space         \x0009 0                      [CHARACTER TABULATION]
-space         \x000a 0                      [LINE FEED (LF)]
-space         \x000b 0                      [LINE TABULATION]
-space         \x000c 0                      [FORM FEED (FF)]
-space         \x000d 0                      [CARRIAGE RETURN (CR)]
-space         \x0020 0                      [SPACE]
 # No-break space is defined as 7 in the standard.
-space         \x00a0 0                      [NO-BREAK SPACE]
+space         \x00a0 7                      [NO-BREAK SPACE]
+include spaces.uti
 
 
 ###
@@ -62,15 +69,24 @@ include digits8Dots.uti
 include latinLetterDef8Dots.uti
 
 # Accented letters which are part of the Lithuanian alphabet.
-uplow         \x0104\x0105 167,16           Ąą LATIN CAPITAL LETTER A WITH OGONEK,LATIN SMALL LETTER A WITH OGONEK
-uplow         \x010c\x010d 1467,146         Čč LATIN CAPITAL LETTER C WITH CARON,LATIN SMALL LETTER C WITH CARON
-uplow         \x0118\x0119 1567,156         Ęę LATIN CAPITAL LETTER E WITH OGONEK,LATIN SMALL LETTER E WITH OGONEK
-uplow         \x0116\x0117 3457,345         Ėė LATIN CAPITAL LETTER E WITH DOT ABOVE,LATIN SMALL LETTER E WITH DOT ABOVE
-uplow         \x012e\x012f 2467,246         Įį LATIN CAPITAL LETTER I WITH OGONEK,LATIN SMALL LETTER E WITH OGONEK
-uplow         \x0160\x0161 23467,2346       Šš LATIN CAPITAL LETTER S WITH CARON,LATIN SMALL LETTER S WITH CARON
-uplow         \x0172\x0173 3467,346         Ųų LATIN CAPITAL LETTER U WITH OGONEK,LATIN SMALL LETTER U WITH OGONEK
-uplow         \x016a\x016b 12567,1256       Ūū LATIN CAPITAL LETTER U WITH MACRON,LATIN SMALL LETTER U WITH MACRON
-uplow         \x017d\x017e 1267,126         Žž LATIN CAPITAL LETTER Z WITH CARON,LATIN SMALL LETTER Z WITH CARON
+uppercase         \x0104 167         Ą LATIN CAPITAL LETTER A WITH OGONEK
+lowercase         \x0105 16          ą LATIN SMALL LETTER A WITH OGONEK
+uppercase         \x010c 1467        Č LATIN CAPITAL LETTER C WITH CARON
+lowercase         \x010d 146         č LATIN SMALL LETTER C WITH CARON
+uppercase         \x0116 3457        Ė LATIN CAPITAL LETTER E WITH DOT ABOVE
+lowercase         \x0117 345         ė LATIN SMALL LETTER E WITH DOT ABOVE
+uppercase         \x0118 1567        Ę LATIN CAPITAL LETTER E WITH OGONEK
+lowercase         \x0119 156         ę LATIN SMALL LETTER E WITH OGONEK
+uppercase         \x012e 2467        Į LATIN CAPITAL LETTER I WITH OGONEK
+lowercase         \x012f 246         į LATIN SMALL LETTER E WITH OGONEK
+uppercase         \x0160 23467       Š LATIN CAPITAL LETTER S WITH CARON
+lowercase         \x0161 2346        š LATIN SMALL LETTER S WITH CARON
+uppercase         \x0172 3467        Ų LATIN CAPITAL LETTER U WITH OGONEK
+lowercase         \x0173 346         ų LATIN SMALL LETTER U WITH OGONEK
+uppercase         \x016a 12567       Ū LATIN CAPITAL LETTER U WITH MACRON
+lowercase         \x016b 1256        ū LATIN SMALL LETTER U WITH MACRON
+uppercase         \x017d 1267        Ž LATIN CAPITAL LETTER Z WITH CARON
+lowercase         \x017e 126         ž LATIN SMALL LETTER Z WITH CARON
 
 
 ###
@@ -189,6 +205,9 @@ sign          \x00b9 178                    ¹ SUPERSCRIPT ONE
 hyphen        \x002d 36                     - HYPHEN-MINUS
 decpoint      \x002c 2                      , DECIMAL SEPARATOR
 
+sign          \xfffd 7                      � REPLACEMENT CHARACTER
+undefined            7                      Replacement dots for characters not defined in this table
+
 
 ###
 ### ATTIC (commented out definitions)
@@ -290,3 +309,5 @@ decpoint      \x002c 2                      , DECIMAL SEPARATOR
 # sign          \x009d 124567                 [OPERATING SYSTEM COMMAND]
 # sign          \x009e 235678                 [PRIVACY MESSAGE]
 # sign          \x009f 12345678               [APPLICATION PROGRAM COMMAND]
+
+include braille-patterns.cti

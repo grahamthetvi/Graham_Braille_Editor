@@ -27,6 +27,10 @@
 
 include es-chardefs.cti
 include braille-patterns.cti
-include es-translation.cti
+include litdigits6Dots.uti
+include digits6Dots.uti
 
-# ---------------------------------------------------------------------------------------
+numsign 3456
+capsletter 46
+begcapsword 46-46
+numericmodechars .,

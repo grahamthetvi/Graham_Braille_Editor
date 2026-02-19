@@ -1,4 +1,7 @@
-#+locale:ca
+#-index-name: Catalan
+#-display-name: Catalan braille
+
+#+language:ca
 #+type:literary
 #+grade:1
 

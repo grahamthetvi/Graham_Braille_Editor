@@ -1,7 +1,40 @@
-# liblouis: Norwegian contracted braille, level 3.
+# liblouis: Norwegian literary braille, 6-dot, contracted level 3
+#
+#-name: Norsk litterær punktskrift, 6-punkt, kortskrift nivå 3
+#-index-name: Norwegian, contracted, grade 3
+#-display-name: Norwegian grade 3 contracted braille
+#
+#+language:no
+#+language:nb
+#+language:nn
+#+type:literary
+#+direction:both
+#+dots:6
+#+grade:3
+#+contraction:full
 #
 #  Copyright (C) 2005 ViewPlus Technologies, Inc. www.viewplus.com
-#  Copyright (C) 2005, 2012 Lars Bjørndal <lars@lamasti.net>
+#  Copyright (C) 2005-2012 Lars Bjørndal <lars@lamasti.net>
+#
+#-copyright: 2005, ViewPlus Technologies, Inc. www.viewplus.com
+#-copyright: 2005-2012, Lars Bjørndal <lars@lamasti.net>
+#-license: LGPLv2.1
+#
+# Created June 9, 2005 by Leon Ungier <Leon.Ungier@ViewPlus.com> with
+# help and guidance from Lars Bjørndal <lars@lamasti.net>.
+# Modified Sep 30, 2005 by LU
+# Modified October 25, 2005
+# Last modified July 2012, by lars@lamasti.net
+#
+#-author: Leon Ungier <Leon.Ungier@ViewPlus.com>
+#-author: Lars Bjørndal <lars@lamasti.net>
+#
+# Official norwegian braille specifications are collected here:
+# http://liblouis.io/braille-specs/norwegian
+# This specific table is based on the document "Kortskrift i norsk punktskrift - KS04".
+#
+# Input is expected to be normalized to NFC (fully composed)
+#-unicode-form:nfc
 #
 #  This file is part of liblouis.
 #
@@ -19,14 +52,6 @@
 #  License along with liblouis. If not, see
 #  <http://www.gnu.org/licenses/>.
 #
-# Created June 9, 2005 by Leon Ungier <Leon.Ungier@ViewPlus.com> with
-# help and guidance from Lars Bjørndal <lars@lamasti.net>.
-# Modified Sep 30, 2005 by LU
-
-# Created June 9, 2005 by Leon Ungier <Leon.Ungier@ViewPlus.com> with
-# help and guidance from Lars Bjørndal <lars@lamasti.net>.
-# Modified October 25, 2005
-# Last modified July 2012, by lars@lamasti.net
 
 include no-no-g2.ctb
 

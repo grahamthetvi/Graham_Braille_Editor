@@ -1,4 +1,7 @@
-#+locale:kok
+#-index-name: Konkani
+#-display-name: Konkani braille
+
+#+language:kok
 #+type:literary
 
 # TODO: Please correct the metadata above. It is not meant to be
@@ -10,6 +13,5 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
-include spaces.ctb
 include kok.ctb
 include braille-patterns.cti

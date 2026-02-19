@@ -1,4 +1,7 @@
-#+locale:mwr
+#-index-name: Marwari
+#-display-name: Marwari braille
+
+#+language:mwr
 #+type:literary
 
 # TODO: Please correct the metadata above. It is not meant to be
@@ -10,6 +13,5 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
-include spaces.ctb
 include mwr.ctb
 include braille-patterns.cti

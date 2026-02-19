@@ -1,9 +1,28 @@
 # liblouis: Unified English Braille Code (Grade 2)
 #
+# -----------
+#-name: Unified English braille, grade 2
+#-index-name: English, unified, contracted
+#-display-name: Unified English contracted braille
+#
+#+language:en
+#+type:literary
+#+contraction:full
+#+grade:2
+#+system:ueb
+#
+# TODO: Please add a reference to official documentation about
+# the implemented braille code. Preferably submit the documents
+# to https://github.com/liblouis/braille-specs.
+# -----------
+#
 #  Copyright (C) 2004-2008 ViewPlus Technologies, Inc. www.viewplus.com
 #  Copyright (C) 2004-2006 JJB Software, Inc. www.jjb-software.com
 #  Copyright (C) 2016 American Printing House for the Blind, Inc. www.aph.org
 #  Copyright (C) 2016 Joseph Lee <joseph.lee22590@gmail.com>
+#  Copyright (C) 2019-2025 RNIB <www.rnib.org.uk>
+#  Copyright (C) 2022 Krzysztof Drewniak <krzysdrewniak@gmail.com>
+#  Copyright (C) 2023-2024 Anthony Tibbs
 #
 #  This file is part of liblouis.
 #
@@ -21,20 +40,23 @@
 #  License along with liblouis. If not, see
 #  <http://www.gnu.org/licenses/>.
 #
-#  Maintained by John J. Boyer john.boyer@jjb-software.com
-#                Mike Gray <mgray@aph.org>
-#  Modified by Mike Gray <mgray@aph.org>
-#              Joseph Lee <joseph.lee22590@gmail.com>
+#-maintainer: James Bowden <james.bowden@rnib.org.uk>
+#-author: John J. Boyer <john.boyer@jjb-software.com>
+#-author: Mike Gray <mgray@aph.org>
+#-author: Joseph Lee <joseph.lee22590@gmail.com>
+#-author: Krzysztof Drewniak <krzysdrewniak@gmail.com>
 
 include en-ueb-g1.ctb
 
-multind 56-6 letsign capsletter
+multind 56-6 nocontractsign capsletter
 
 seqdelimiter -—
 seqdelimiter ‐   \x2010
 seqdelimiter ‑   \x2011
 seqdelimiter –   \x2013
 seqdelimiter —   \x2014
+seqdelimiter ―   \x2015
+
 seqbeforechars ([{"“'‘
 seqafterchars  )]}"”'’.,;:.!?…
 seqafterpattern 'd
@@ -64,6 +86,14 @@ seqafterpattern ’S
 seqafterpattern ’T
 seqafterpattern ’VE
 seqafterexpression ’([DSTdst]|ll|[rv]e|LL|[RV]E)
+
+#   7  Punctuation
+#  - 7.1.3  could be read as contraction
+match %[^_]|%[^_~]%<*[([{] ; %[^_]|[)}\]]%>*%[^_~] 56-23
+#     or a word-initial groupsign
+match %[^_~]%<* . %a 56-256
+match %[^_~]%<* : %a 56-25
+match %[^_~]%<* ; %a 56-23
 
 #   10.1   Alphabetic Wordsigns
 #   - 10.1.1   standing alone
@@ -119,14 +149,58 @@ nofor word very  1236
 nofor word will  2456
 nofor word you  13456
 
-nofor word it's 1345-3-234
-nofor word it’s 1345-3-234
+nofor word but's 12-3-234
+nofor word but’s 12-3-234
+nofor word can's 14-3-234
+nofor word can’s 14-3-234
+nofor word can't 14-3-2345
+nofor word can’t 14-3-2345
+nofor word do's 145-3-234
+nofor word do’s 145-3-234
+nofor word go's 1245-3-234
+nofor word go’s 1245-3-234
+nofor word have's 125-3-234
+nofor word have’s 125-3-234
+nofor word it'd 1346-3-145
+nofor word it’d 1346-3-145
+nofor word it'll 1346-3-123-123
+nofor word it’ll 1346-3-123-123
+nofor word it's 1346-3-234
+nofor word it’s 1346-3-234
+nofor word knowledge's 13-3-234
+nofor word knowledge’s 13-3-234
+nofor word like's 123-3-234
+nofor word like’s 123-3-234
+nofor word more's 134-3-234
+nofor word more’s 134-3-234
 nofor word people's 1234-3-234
 nofor word people’s 1234-3-234
+nofor word so's 234-3-234
+nofor word so’s 234-3-234
+nofor word that'd 2345-3-145
+nofor word that’d 2345-3-145
+nofor word that'll 2345-3-123-123
+nofor word that’ll 2345-3-123-123
+nofor word that're 2345-3-1235-15
+nofor word that’re 2345-3-1235-15
 nofor word that's 2345-3-234
 nofor word that’s 2345-3-234
+nofor word that've 2345-3-1236-15
+nofor word that’ve 2345-3-1236-15
+nofor word will's 2456-3-234
+nofor word will’s 2456-3-234
+nofor word will've 2456-3-1236-15
+nofor word will’ve 2456-3-1236-15
+nofor word you'd 13456-3-145
+nofor word you’d 13456-3-145
 nofor word you'll 13456-3-123-123
 nofor word you’ll 13456-3-123-123
+nofor word you're 13456-3-1235-15
+nofor word you’re 13456-3-1235-15
+nofor word you's 13456-3-234
+nofor word you’s 13456-3-234
+nofor word you've 13456-3-1236-15
+nofor word you’ve 13456-3-1236-15
 
 contraction b
 contraction c
@@ -198,12 +272,33 @@ nofor word which  156
 
 nofor word child's 16-3-234
 nofor word child’s 16-3-234
-
+nofor word out's 1256-3-234
+nofor word out’s 1256-3-234
+nofor word shall've 146-3-1236-15
+nofor word shall’ve 146-3-1236-15
+nofor word still's 34-3-234
+nofor word still’s 34-3-234
+nofor word this'd 1456-3-145
+nofor word this’d 1456-3-145
+nofor word this'll 1456-3-123-123
+nofor word this’ll 1456-3-123-123
+nofor word this's 1456-3-234
+nofor word this’s 1456-3-234
+nofor word which'd 156-3-145
+nofor word which’d 156-3-145
+nofor word which'll 156-3-123-123
+nofor word which’ll 156-3-123-123
+nofor word which're 156-3-1235-15
+nofor word which’re 156-3-1235-15
+nofor word which's 156-3-234
+nofor word which’s 156-3-234
+nofor word which've 156-3-1236-15
+nofor word which’ve 156-3-1236-15
 
 #   10.3   Strong Contractions
 #   - 10.11.2
 
-# end
+# and
 always and 12346
 
 # for
@@ -211,74 +306,91 @@ always for 123456
 
 # of
 always of 12356
+always ofor 135-123456  in OFOR, the FOR sign takes  priority
 
-#match [Bb] io f =
-#match [Cc]h loro f =
-#match [Ii]n so f =
-#match [Pp] iano f =
-#match [Rr] ibo f =
-#match [Ss]t yro f =
-#match [Tt] wo f =
-#match [Mm] icro [fw] =   ow 10.4.2
-#match [Rr] etro f =
+match - aero [FWfw] 1-12456-135
+match - antero [FWfw] 1-1345-2345-12456-135
+match - auto [FWfw] =
+match - benzo [FWfw] 12-26-1356-135
+match - bio [FWfw] =
+match - chloro [FWfw] 16-123-135-1235-135
+match - deutero [FWfw] 145-15-136-2345-12456-135
+match - electro [FWfw] =
+match - fibro [FWfw] =
+match - fluoro [FWfw] =
+match - galvano [FWfw] =
+match - griseo [FWfw] =
+match - hetero [FWfw] 125-15-2345-12456-135
+match - homo [FWfw] =
+match - hydro [FWfw] =
+match - hypo [FWfw] =
+match - kilo [FWfw] =
+match - luteo [FWfw] =
+match - macro [FWfw] =
+match - micro [FWfw] =
+match - mono [FWfw] =
+match - myelo [FWfw] =
+match - myo [Ff] =
+match - nano [FWfw] = 
+match - nitro [FWfw] =
+match - octo [FWfw] =
+match - photo [FWfw] =
+match - pico [FWfw] =
+match - proto [FWfw] =
+match - pseudo [FWfw] =
+match - psycho [FWfw] 1234-234-13456-16-135
+match - retro [FWfw] =
+match - sulfo [FWfw] =
+match - sulpho [FWfw] =
+match - synchro [FWfw] 234-13456-1345-16-1235-135
+match - thermo [FWfw] 2346-1235-134-135
+match - thio [Ff][Uu][Rr] 1456-24-135
+match - ventro [FWfw] 1236-26-2345-1235-135
 
-sufword aeroflot 1-12456-135-124-123-135-2345
-sufword biofeedback 12-24-135-124-15-1246-12-1-14-13
-sufword chlorofluorocarbon 16-123-135-1235-135-124-123-136-135-1235-135-14-345-12-135-1345
-sufword chloroform 16-123-135-1235-135-123456-134
+sufword cofactor =
+sufword cofather 14-135-5-124
+sufword cofeatur 14-135-124-2-2345-136-1235
+sufword coferment 14-135-124-12456-56-2345
+sufword cofield =
+sufword cofight 14-135-124-24-126-2345
+sufword cofinal 14-135-124-35-1-123
+sufword cofinance 14-135-124-35-46-15
+sufword cofinancing 14-135-124-35-1-1345-14-346
+sufword cofound 14-135-124-46-145
+sufword cofunction 14-135-124-136-1345-14-56-1345
 sufword filofax 124-24-123-135-124-1-1346
-sufword hydrofoil 125-13456-145-1235-135-124-135-24-123
 sufword insofar 35-234-135-124-345
-sufword microfiche 134-24-14-1235-135-124-24-16-15
-sufword microfilm 134-24-14-1235-135-124-24-123-134
-sufword microwave 134-24-14-1235-135-2456-1-1236-15
-sufword microwaved 134-24-14-1235-135-2456-1-1236-1246
-sufword microwaving 134-24-14-1235-135-2456-1-1236-346
-sufword pianoforte 1234-24-1-1345-135-123456-2345-15
-sufword retrofit 1235-15-2345-1235-135-124-24-2345
+sufword portofino 1234-135-1235-2345-135-124-35-135
 sufword riboflavin 1235-24-12-135-124-123-1-1236-35
 sufword styrofoam 34-13456-1235-135-124-135-1-134
+sufword turbofan =
 sufword twofer 2345-2456-135-124-12456
 sufword twofold 2345-2456-135-124-135-123-145
 
 # the
 always the 2346
 
-sufword aesthete 1-15-234-2346-2345-15
-sufword aesthetic 1-15-234-2346-2345-24-14
-sufword anaesthesia 1-1345-1-15-234-2346-234-24-1
-sufword anaesthetic 1-1345-1-15-234-2346-2345-24-14
-sufword anaesthetist 1-1345-1-15-234-2346-2345-24-34
-sufword anaesthetize 1-1345-1-15-234-2346-2345-24-1356-15
-sufword anaesthetized 1-1345-1-15-234-2346-2345-24-1356-1246
-sufword anaesthetizing 1-1345-1-15-234-2346-2345-24-1356-346
-sufword anesthesia 1-1345-15-234-2346-234-24-1
-sufword anesthesiologist 1-1345-15-234-2346-234-24-135-123-135-1245-24-34
-sufword anesthesiology 1-1345-15-234-2346-234-24-135-123-135-1245-13456
-sufword anesthetic 1-1345-15-234-2346-2345-24-14
-sufword anesthetist 1-1345-15-234-2346-2345-24-34
-sufword anesthetize 1-1345-15-234-2346-2345-24-1356-15
-sufword anesthetized 1-1345-15-234-2346-2345-24-1356-1246
-sufword anesthetizing 1-1345-15-234-2346-2345-24-1356-346
+match %a thead - 2345-125-2-145
+match %a thear [Tt] 2345-125-15-345
+match %a theim - =
+
+match - esthe [STst][EIei] 15-234-2346
+
 sufword calisthenic 14-1-123-24-234-2346-1345-24-14
 sufword demosthenes 145-15-134-135-234-2346-1345-15-234
 sufword eratosthenes 12456-1-2345-135-234-2346-1345-15-234
 sufword esther 15-234-2346-1235
-sufword esthete 15-234-2346-2345-15
-sufword esthetic 15-234-2346-2345-24-14
-sufword fainthearted 124-1-35-2345-125-15-345-2345-1246
-sufword fathead 124-1-2345-125-2-145
-sufword hothead 125-135-2345-125-2-145
-sufword lightheaded 123-24-126-2345-125-2-145-1246
-sufword lighthearted 123-24-126-2345-125-15-345-2345-1246
+sufword hesther 125-15-234-2346-1235
 sufword motheaten 134-135-1456-2-2345-26
 sufword northeast 1345-135-1235-1456-2-34
+sufword northesk 1345-135-1235-1456-15-234-13
 sufword prostheses 1234-1235-135-234-2346-234-15-234
 sufword prosthesis 1234-1235-135-234-2346-234-24-234
 sufword prosthetic 1234-1235-135-234-2346-2345-24-14
-sufword softhearted 234-12356-2345-125-15-345-2345-1246
 sufword southeast 234-1256-1456-2-34
-sufword sweetheart 234-2456-15-15-2345-125-15-345-2345
+sufword southend 234-1256-1456-26-145
+sufword southesk 234-1256-1456-15-234-13
+sufword strathearn 34-1235-1-1456-15-345-1345
 sufword thence 1456-56-15
 
 # with
@@ -296,41 +408,60 @@ always ar 345
 match (%[^_~]%<*) ar (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
 sufword aright 1-5-1235
+sufword indiarubber 35-145-24-1-1235-136-23-12456
 sufword infrared 35-124-1235-1-1235-1246
-sufword tearoom 2345-2-1235-135-135-134
 
 # ch   10.4.2   10.11.2
 always ch 16
 match (%[^_~]%<*) ch (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
-sufword overreact 135-1236-12456-1235-15-1-14-2345
-sufword overreaction 135-1236-12456-1235-15-1-14-56-1345
-sufword react 1235-15-1-14-2345
-sufword reaction 1235-15-1-14-56-1345
+sufword gchq =
+sufword publicheart 1234-136-12-123-24-14-125-15-345-2345
 
 # ed
 always ed 1246
 
-sufword airedale 1-24-1235-15-145-1-123-15
-sufword comedown 14-135-134-15-145-246-1345
+match %a edale ([Ss]|(['’][Ss]))?%>*%[^_~] =
+match %a edown - 15-145-246-1345
+
+match - apple [Dd][Oo][Rr][Ee] =
+sufword basedow 12-1-234-15-145-246
+match - battle [Dd][Oo][Rr][Ee] =
+sufword cliveden 14-123-24-1236-15-145-26
 sufword daredevil 145-345-15-145-15-1236-24-123
-sufword dumbledore 145-136-134-12-123-15-145-135-1235-15
-sufword hoedown 125-135-15-145-246-1345
+match - dumble [Dd][Oo][Rr][Ee] =
+sufword doubleday 145-1256-12-123-15-5-145
+sufword eyedrop =
+sufword firedog =
+sufword firedrak =
+sufword firedrill =
+match - grave [Dd][Ii][Gg] =
+match - guide [Dd][Oo][Gg] =
+sufword gwynedd =
+sufword housedress 125-1256-234-15-145-1235-15-234-234
+sufword ingledew 35-1245-123-15-145-15-2456
 sufword kettledrum 13-15-2345-2345-123-15-145-1235-136-134
-sufword nosedive 1345-135-234-15-145-24-1236-15
-sufword nosedived 1345-135-234-15-145-24-1236-1246
-sufword nosediving 1345-135-234-15-145-24-1236-346
-sufword shakedown 146-1-13-15-145-246-1345
-sufword thistledown 1456-24-34-123-15-145-246-1345
-sufword tumbledown 2345-136-134-12-123-15-145-246-1345
+sufword knuckleduster 13-1345-136-14-13-123-15-145-136-34-12456
+match - langue [Dd][Oo][Cc] =
+match - nose [Dd][IOio][Vv][EIei] =
+sufword piedish 1234-24-15-145-24-146
+sufword pinedrop 1234-35-15-145-1235-135-1234
+sufword priedieu =
+sufword rosedrop =
+sufword shoreditch 146-135-1235-15-145-24-2345-16
+sufword threedimension 1456-1235-15-15-145-24-134-26-46-1345
+sufword tonedeaf 2345-5-135-145-2-124
 sufword turtledove 2345-136-1235-2345-123-15-145-135-1236-15
 sufword tweedledee 2345-2456-15-1246-123-15-145-15-15
 sufword tweedledum 2345-2456-15-1246-123-15-145-136-134
-sufword viced 1236-24-14-15-145
+begword viced 1236-24-14-15-145
+always vinedress 1236-35-15-145-1235-15-234-234
 
 # er
 always er 12456
 
+sufword fireroom =
+sufword forerunner 123456-15-1235-136-1345-1345-12456
 sufword hedgerow 125-1246-1245-15-1235-246
 sufword homeroom 125-135-134-15-1235-135-135-134
 sufword horseradish 125-135-1235-234-15-1235-1-145-24-146
@@ -347,18 +478,24 @@ sufword castlereagh 14-1-34-123-15-1235-2-126
 always gh 126
 match (%[^_~]%<*) gh ('([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
-sufword bighearted 12-24-1245-125-15-345-2345-1246
-sufword bighorn 12-24-1245-125-135-1235-1345
-sufword bunghole 12-136-1345-1245-125-135-123-15
-sufword doghouse 145-135-1245-125-1256-234-15
-sufword foghorn 124-135-1245-125-135-1235-1345
-sufword pigheaded 1234-24-1245-125-2-145-1246
+match %a ghead - 1245-125-2-145
+match %a gheap - 1245-125-2-1234
+match %a ghear [Tt] 1245-125-15-345
+match %a ghill - =
+match %a ghol [DETZdetz] =
+match %a ghorn - =
+match %a ghound - 1245-125-46-145
+match %a ghous [EIei] 1245-125-1256-234
+match %a ghur [Ss][Tt] =
+
+sufword cunnyngham 14-136-1345-1345-13456-1345-1245-125-1-134
+sufword froghop =
+sufword hwangho =
+sufword langhair =
 sufword shanghai 146-1-1345-1245-125-1-24
-sufword yoghourt 13456-135-1245-125-1256-1235-2345
 
 #TODO:  check pronunciation
 sufword senghor 234-26-1245-125-135-1235
-sufword songhai 234-135-1345-126-1-24
 
 # ing
 match !%[^_~] ing - 346
@@ -367,21 +504,29 @@ match !%[^_~] ing - 346
 nofor midendword ing 346
 nofor always ing 35-1245
 
+match %a ingaar [DTdt] 35-1245-1-345    Maingaard
+match %a ingar [Tt] 35-1245-345    Weingartner
+match %a ingold - 35-1245-135-123-145     Rheingold
+
 sufword disingenuous 256-35-1245-26-136-1256-234
+match - kingus [Ss] 13-35-1245-136-234    Kingussie
 sufword leningrad 123-26-35-1245-1235-1-145
+sufword seinglind 234-15-35-1245-123-35-145
 sufword stalingrad 34-1-123-35-1245-1235-1-145
 sufword vainglorious 1236-1-35-1245-123-135-1235-24-1256-234
 sufword vainglory 1236-1-35-1245-123-135-1235-13456
 
 # ou
 always ou 1256
-#match (%[^_~]%<*) ou (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
+match (%[^_~]%<*) ou (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
+match  (%[^_~]%<*) proun [Ii] =   prounion etc
 
 # ow
 always ow 246
+always owork 135-5-2456  in OWORK, the WORK sign takes  priority
 
-sufword autoworker 1-136-2345-135-5-2456-12456
-sufword coworker 14-135-5-2456-12456
+sufword cowinner 14-135-2456-35-1345-12456
+match - cowr [IOio][Tt] =   cowrite etc
 sufword kilowatt 13-24-123-135-2456-1-2345-2345
 sufword locoweed 123-135-14-135-2456-15-1246
 sufword monowheel 134-135-1345-135-156-15-15-123
@@ -393,92 +538,126 @@ sufword nowise 1345-135-2456-24-234-15
 always sh 146
 match (%[^_~]%<*) sh (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
-sufword asshole 1-234-234-125-135-123-15
+match %a shead - 234-125-2-145
+match %a sheim - =
+match %a shole ([Ss]|(['’][Ss]))?%>*%[^_~] =
+match %a shood - =
+match %a shound - 234-125-46-145
+match %a shous [EIei] 234-125-1256-234
+
+sufword betshanger 12-15-2345-234-125-1-1345-1245-12456
+sufword bosham =
+sufword chisholm 16-24-234-125-135-123-134
+match - cross [Hh] = crosshair, crosshatch, etc
+sufword dachshund 145-1-16-234-125-136-1345-145
+sufword deshabille 145-15-234-125-1-12-24-123-123-15
+sufword frederikshavn 124-1235-1246-12456-24-13-234-125-1-1236-1345
+sufword gemshorn =
+sufword goshawk =
 sufword grasshopper 1245-1235-1-234-234-125-135-1234-1234-12456
-sufword hogshead 125-135-1245-234-125-2-145
+sufword grimsholm =
+sufword hartshorn 125-345-2345-234-125-135-1235-1345
+sufword keeshond =
+sufword malesherb 134-1-123-15-234-125-12456-12
+sufword mansholt =
 sufword mishandle 134-24-234-125-12346-123-15
 sufword mishandled 134-24-234-125-12346-123-1246
 sufword mishandling 134-24-234-125-12346-123-346
 sufword mishap 134-24-234-125-1-1234
-
-#TODO:  check pronunciation
-sufword chisholm 16-24-234-125-135-123-134
-sufword dachshund 145-1-16-234-125-136-1345-145
-sufword florsheim 124-123-135-1235-234-125-15-24-134
+sufword mishear 134-24-234-125-15-345
+sufword mishit =
+sufword newshawk =
+sufword newshen 1345-15-2456-234-125-26
+sufword ramshorn =
+sufword rosmersholm 1235-135-234-134-12456-234-125-135-123-134
+sufword townshend 2345-246-1345-234-125-26-145
+match - transhum [Aa][Nn] =
+sufword undishearten 136-1345-145-24-234-125-15-345-2345-26
+sufword weisshorn =
+sufword wilhelmshaven 2456-24-123-125-15-123-134-234-125-1-1236-26
 
 # st
 always st 34
 match (%[^_~]%<*) st (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
+match %a stion - 234-56-1345
+match %a stown - 234-2345-246-1345
+
 sufword asthma 1-234-1456-134-1
-sufword bastion 12-1-234-56-1345
-sufword combustion 14-135-134-12-136-234-56-1345
-sufword congestion 25-1245-15-234-56-1345
-sufword cooperstown 14-135-135-1234-12456-234-2345-246-1345
-sufword crosstown 14-1235-135-234-234-2345-246-1345
-sufword digestion 145-24-1245-15-234-56-1345
-sufword exhaustion 15-1346-125-1-136-234-56-1345
+sufword bundestag 12-136-1345-145-15-234-2345-1-1245
+match - cross [Tt] = crosstie crosstrees etc
+sufword destouche 145-15-234-2345-1256-16-15
+sufword gastight 1245-1-234-2345-24-126-2345
+sufword gordonstoun 1245-135-1235-145-135-1345-234-2345-1256-1345
 sufword guesstimate 1245-136-15-234-234-2345-24-134-1-2345-15
 sufword guesstimated 1245-136-15-234-234-2345-24-134-1-2345-1246
 sufword guesstimating 1245-136-15-234-234-2345-24-134-1-2345-346
-sufword indigestion 35-145-24-1245-15-234-56-1345
-sufword ingestion 35-1245-15-234-56-1345
+sufword hephaestion 125-15-1234-125-1-15-34-24-135-1345
 sufword isthmi 24-234-1456-134-24
 sufword isthmus 24-234-1456-134-136-234
-sufword jamestown 245-1-134-15-234-2345-246-1345
-sufword kingstown 13-346-234-2345-246-1345
+sufword kreistag =
+sufword liebestod =
 sufword mistime 134-24-234-5-2345
 sufword painstaking 1234-1-35-234-2345-1-13-346
 sufword pastime 1234-1-234-5-2345
 sufword reichstag 1235-15-24-16-234-2345-1-1245
-sufword suggestion 234-136-2356-15-234-56-1345
-sufword youngstown 5-13456-234-2345-246-1345
-
-#TODO:  check pronunciation
-sufword bundestag 12-136-1345-145-15-234-2345-1-1245
 
 # th
 always th 1456
 match (%[^_~]%<*) th (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
-sufword adulthood 1-145-136-123-2345-125-135-135-145
-sufword anthill 1-1345-2345-125-24-123-123
-sufword bartholdi 12-345-2345-125-135-123-145-24
-sufword beethoven 12-15-15-2345-125-135-1236-26
-sufword courthouse 14-1256-1235-2345-125-1256-234-15
-sufword foothill 124-135-135-2345-125-24-123-123
-sufword foothold 124-135-135-2345-125-135-123-145
+match %a thand - 2345-125-12346
+match %a thill - =
+match %a thold - =
+match %a thoo [DKdk] =
+match %a thors [Ee] =
+match %a thound - 2345-125-46-145
+match %a thous [EIei] 2345-125-1256-234
+
+sufword bolthole =
+match - coat [Hh][Aa][Nn][Gg] =
+match - coat [Hh][Oo][Ll][Ee] =
+sufword crosthwait 14-1235-135-234-1456-2456-1-24-2345
+sufword esthwait 15-234-1456-2456-1-24-2345
+sufword flatholm =
 sufword goatherd 1245-135-1-2345-125-12456-145
-sufword hothouse 125-135-2345-125-1256-234-15
-sufword knighthood 13-1345-24-126-2345-125-135-135-145
+sufword gotthard 1245-135-2345-2345-125-345-145
 sufword knothole 13-1345-135-2345-125-135-123-15
-sufword lighthouse 123-24-126-2345-125-1256-234-15
+sufword lufthansa 123-136-124-2345-125-1-1345-234-1
 sufword nighthawk 1345-24-126-2345-125-1-2456-13
 sufword nuthatch 1345-136-2345-125-1-2345-16
-sufword outhouse 1256-2345-125-1256-234-15
-sufword parenthood 1234-345-26-2345-125-135-135-145
-sufword penthouse 1234-26-2345-125-1256-234-15
-sufword pilothouse 1234-24-123-135-2345-125-1256-234-15
 sufword porthole 1234-135-1235-2345-125-135-123-15
-sufword potholder 1234-135-2345-125-135-123-145-12456
-sufword pothole 1234-135-2345-125-135-123-15
-sufword pothook 1234-135-2345-125-135-135-13
+sufword pothat =
+sufword potherb 1234-135-2345-125-12456-12
+match - pothol [Ee] =
+sufword pothunt =
+sufword rathole =
 sufword richthofen 1235-24-16-2345-125-12356-26
-sufword sainthood 234-1-35-2345-125-135-135-145
-sufword shorthand 146-135-1235-2345-125-12346
 sufword shorthorn 146-135-1235-2345-125-135-1235-1345
+match - sight [Hh][Oo][Ll][Ee] 234-24-126-2345
+match - vent [Hh][Oo][Ll][Ee] 1236-26-2345
 sufword warthog 2456-345-2345-125-135-1245
-
-#TODO:  check pronunciation
-sufword lufthansa 123-136-124-2345-125-1-1345-234-1
 
 # wh
 always wh 156
-#match (%[^_~]%<*) wh (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
+match (%[^_~]%<*) wh (['’]([DSTdst]|ll|[rv]e|LL|[RV]E))?(%>*%[^_~]) =
 
-sufword rawhide 1235-1-2456-125-24-145-15
-sufword sawhorse 234-1-2456-125-135-1235-234-15
+match [AEae] whall - =
+match %a whead - 2456-125-2-145
+match [AEae] whol [Ee] = jawhole screwhole
+match %a whood - =
+match %a whors [Ee] =
+match %a whound - 2456-125-46-145
+match %a whous [EIei] 2456-125-1256-234
 
+sufword clawhammer 14-123-1-2456-125-1-134-134-12456
+sufword dewhurst 145-15-2456-125-136-1235-34
+sufword newham =
+match - newhar [Tt] 1345-15-2456-125-345
+sufword newhaven 1345-15-2456-125-1-1236-26
+sufword pewholder 1234-15-2456-125-135-123-145-12456
+match - rawhid [EIei] =
+sufword strawhat 34-1235-1-2456-125-1-2345
 
 #   10.5   Lower Wordsigns
 #   - 10.5.1   be were his was
@@ -486,33 +665,36 @@ sufword sawhorse 234-1-2456-125-135-1235-234-15
 #   - 10.5.3   in
 #   - 10.5.4   enough in
 
-attribute 1 +=*,.?!"'“”‘’  punctuation with only lower dots (except hyphens)
-#class lowerdotspunc +=*,.?!"'“”‘’
+attribute 1 +=*,.;:?!"'“”‘’  punctuation with only lower dots (except hyphens)
+#attribute lowerdotspunc +=*,.?!"'“”‘’
 
 # be
-match %[^_]|%[^_~]%<*[([{] be %[^_]|[;:)}\\]]%>*%[^_~] 23
+match %[^_]|%[^_~]%<*[([{] be %[^_]|[)}\]]%>*%[^_~] 23
 
 # enough
 word enough's 26-3-234
 word enough’s 26-3-234
-match %[^_~]([\\([{]*|[\\([{]+%<*) enough (%>*[\\)\\]};:]+|[\\)\\]};:]*)%[^_~] 26
+match %[^_~]([\([{]*|[\([{]+%<*) enough (%>*[\)\]}]+|[\)\]}]*)%[^_~] 26
+word -enough 36-26-1256-126     needed for a test file
+word enough- 26-1256-126-36     needed for a test file
+nofor lowword enough 26
 always enough 26-1256-126
 
 # his
-match %[^_]|%[^_~]%<*[([{] his %[^_]|[;:)}\\]]%>*%[^_~] 236
-nofor always his 236
+match %[^_]|%[^_~]%<*[([{] his %[^_]|[)}\]]%>*%[^_~] 236
+nofor lowword his 236
 
 # in
 match %[^_]!%[_1]* in !%[_1]*%[^_] 35
 nofor always in 35
 
 # was
-match %[^_]|%[^_~]%<*[([{] was %[^_]|[;:)}\\]]%>*%[^_~] 356
-nofor always was 356
+match %[^_]|%[^_~]%<*[([{] was %[^_]|[)}\]]%>*%[^_~] 356
+nofor lowword was 356
 
 # were
-match %[^_]|%[^_~]%<*[([{] were %[^_]|[;:)}\\]]%>*%[^_~] 2356
-nofor always were 2356
+match %[^_]|%[^_~]%<*[([{] were %[^_]|[)}\]]%>*%[^_~] 2356
+nofor lowword were 2356
 
 
 #   10.6   Lower Groupsigns
@@ -535,57 +717,156 @@ sufword subbasement 234-136-12-12-1-234-15-56-2345
 sufword subbing 234-136-12-12-346
 
 # be   10.6.1   10.6.2   10.6.3   10.6.4
+empmatchafter match %[^_~]%<* be [Aa][Pp][Rr][Oo][Nn] 23
+word beata 23-1-2345-1
+word beatae 23-1-2345-1-15
+word beati 23-1-2345-24
 empmatchafter match %[^_~]%<* be [Aa][Tt][Ii]![Nn] 23               beati*
 empmatchafter match %[^_~]%<* be [Aa][Tt][Rr] 23                    bea*
-empmatchafter match %[^_~]%<* be [Cc]![HKQhkq] 23                   bec*
+word beatus 23-1-2345-136-234
+word beche 12-15-16-15
+word beches 12-15-16-15-234
+empmatchafter match %[^_~]%<* bech [DTdt] 12-15-16
+empmatchafter match %[^_~]%<* beclome [Tt][Hh] =    beclomethasone
+empmatchafter match %[^_~]%<* beconas [AEIOUYaeiouy] =
+empmatchafter match %[^_~]%<* be [Cc]([HLRhlr])?[AEIOUYaeiouy] 23                   bec*
+word bede 12-1246-15
+word beden 12-1246-26
+word bedes 12-1246-15-234
+empmatchafter match %[^_~]%<* be [Dd][AIOUaiou] 23                        bed*
+empmatchafter match %[^_~]%<* bede [Gg]([Uu]?)[Aa][Rr] 12-1246-15
+empmatchafter match %[^_~]%<* bede [Hh][Oo][Uu][Ss] 12-1246-15
+empmatchafter match %[^_~]%<* bede ([Ss]?)(([Ww][Oo])?)[Mm]([Aa]|[Ee])[Nn] 12-1246-15
+empmatchafter match %[^_~]%<* be [Dd][Ee] 23            bede*
+empmatchafter match %[^_~]%<* bediver [Ee] 12-1246-24-1236-12456
+empmatchafter match %[^_~]%<* bedou [Ii][Nn] 12-1246-1256
+empmatchafter match %[^_~]%<* bed ([Ee]?)[Rr][AEae]([Ii]?)[Ll] 12-1246
 empmatchafter match %[^_~]%<* be [Dd][Rr][Aa] 23                    bedr*
-empmatchafter match %[^_~]%<* be [Dd][Ee]!(%>*%[_~^]) 23            bede*
-empmatchafter match %[^_~]%<* be [Dd][Aa] 23                        bed*
+empmatchafter match %[^_~]%<* be [Dd][Rr][Ee][Nn][Cc][Hh] 23
+empmatchafter match %[^_~]%<* be [Dd][Rr][Ee][Ss][Ss] 23
+empmatchafter match %[^_~]%<* bed [Rr][Ii][Dd] 12-1246
+empmatchafter match %[^_~]%<* be [Dd][Rr][Ii] 23
+empmatchafter match %[^_~]%<* be [Dd][Rr][Oo][Pp] 23
+empmatchafter match %[^_~]%<* be [Dd][Rr][Oo][Ww] 23
+empmatchafter match %[^_~]%<* be [Dd][Rr][Uu] 23
+empmatchafter match %[^_~]%<* bedu [Ii][Nn] 12-1246-136
+empmatchafter match %[^_~]%<* be [Dd][Ww][Aa][Rr][Ff] 23
+empmatchafter match %[^_~]%<* be [Dd][Ww][Ee][Ll][LTlt] 23
 empmatchafter match %[^_~]%<* be [Ee][Ll][Zz] 23                    bee*
-empmatchafter match %[^_~]%<* be [Gg]![GSgs] 23                     beg*
+empmatchafter match %[^_~]%<* be [Ff]([LRlr])?[AEIOUYaeiouy] 23                   bef*
+sufword beghard 12-15-1245-125-345-145  H is sometimes aspirate
+match %[^_~]%<* begler [Bb][Ee][GYgy] 12-15-1245-123-12456
+empmatchafter match %[^_~]%<* be [Gg]![BDFGMPQSTVbdfgmpqstv] 23                     beg*
+empmatchafter match %[^_~]%<* beh [BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz] =
+empmatchafter match %[^_~]%<* be [HYhy][AEIOUYaeiouy] 23                   beh* or bey*
+empmatchafter match %[^_~]%<* bein ['’] 23-24-1345
+word bein 12-15-35
+word beins 12-15-35-234
 empmatchafter match %[^_~]%<* be [Ii][Nn] 23                        bei*
+sufword bekesy =
+empmatchafter match %[^_~]%<* bek [HKRThkrt][AIai] =
+sufword belafon =      -te
+sufword belamour 12-15-123-1-134-1256-1235
+empmatchafter match %[^_~]%<* belemn ([AEIOUYaeiouy]*)[DTdt] =      e.g. -nid, -nite, -noid
+empmatchafter match %[^_~]%<* belom [Aa][Nn][Cc] =
+empmatchafter match %[^_~]%<* belomy [Ss] =
+empmatchafter match %[^_~]%<* belone ([Ss]|['’][Ss])?%>*%[_~^] =
+empmatchafter match %[^_~]%<* belon [EOeo][Pp][Hh][Oo] =
+empmatchafter match %[^_~]%<* belon ([AEIOUYaeiouy]*)[DTdt] =      e.g. -nid, -nite, -noid
 empmatchafter match %[^_~]%<* be [Ll][AEIOUWYaeiouwy] 23            bel*
+sufword benadryl 12-26-1-145-1235-13456-123
+word benammi 12-26-1-134-134-24     Normally written hyphenated
+word benefic 23-1345-15-124-24-14   Different from below
 empmatchafter match %[^_~]%<* be [Nn][Ee][Ff][Ii][Cc][Ee][Nn] 23    beneficen*
 empmatchafter match %[^_~]%<* be [Nn][Ee][Tt](['’]s)?%>*%[_~^] 23   benet
-empmatchafter match %[^_~]%<* be [Nn][Ee]![DFTdft] 23               bene*
-empmatchafter match %[^_~]%<* be [Nn][AIUaiu] 23                    ben*
-empmatchafter match %[^_~]%<* be [Rr][Aa] 23                        bere*
-empmatchafter match %[^_~]%<* be [Rr][Ee]![Nn] 23                   ber*
-empmatchafter match %[^_~]%<* be [Ss][Tt][Ii][Rr] 23                besti*
-empmatchafter match %[^_~]%<* be [Ss][Tt][ORor] 23                  best*
-empmatchafter match %[^_~]%<* be [Ss]![STst] 23                     bes*
-empmatchafter match %[^_~]%<* be [Tt]![CHSTchst'’] 23               bet*
-empmatchafter match %[^_~]%<* be [BFHJMOPQWXZbfhjmopqwxz] 23
+empmatchafter match %[^_~]%<* beneven [Tt] 12-26-15-1236-26
+empmatchafter match %[^_~]%<* be [Nn][Ee]![DFLTdflt] 23               bene*
+empmatchafter match %[^_~]%<* ben [Ii][AENOSUaenosu] 12-26
+sufword benomyl 12-26-135-134-13456-123
+empmatchafter match %[^_~]%<* be [Nn][AIOUaiou] 23                    ben*
+sufword beresford 12-12456-15-234-123456-145
+empmatchafter match %[^_~]%<* beresit [Ee] 12-12456-15-234-24-2345
+sufword berewick 12-12456-15-2456-24-14-13
+empmatchafter match %[^_~]%<* be [Rr][Hh][Yy][Mm] 23
+empmatchafter match %[^_~]%<* beribb [Oo][Nn] 23-1235-24-23
+empmatchafter match %[^_~]%<* berim [AEIOUYaeiouy] 23-1235-24-134
+empmatchafter match %[^_~]%<* bering [Ee][Dd] 23-1235-346
+empmatchafter match %[^_~]%<* bering [Ll][Ee][Tt] 23-1235-346
+empmatchafter match %[^_~]%<* be [Rr][AOUaou] 23                        bere*
+empmatchafter match %[^_~]%<* be [Rr][Ee]![NTZntz] 23                   ber*
+word best 12-15-34
+word bested 12-15-34-1246
+word bester 12-15-34-12456
+word bestest 12-15-34-15-34
+empmatchafter match %[^_~]%<* best [Ii][AEae] 12-15-34
+empmatchafter match %[^_~]%<* best [Ii][Cc][Uu] 12-15-34
+word besting 12-15-34-346
+word bestness 12-15-34-56-234
+empmatchafter match %[^_~]%<* best [Ss] 12-15-34   bests and bestsell*
+word besty 12-15-34-13456
+#empmatchafter match %[^_~]%<* be [Ss]![Ss] 23                     bes*
+empmatchafter match %[^_~]%<* be [Ss]([CHKLMNPQTWchklmnpqtw])?([Rr])?[AEIOUYaeiouy] 23                     bes*
+empmatchafter match %[^_~]%<* betafi [Tt][AEIOUaeiou] =
+word bete =
+word betes =
+sufword bethabar 23-1456-1-12-345
+sufword bethank 23-1456-1-1345-13
+sufword bethesda 23-2346-234-145-1
+sufword bethroot 12-15-1456-1235-135-135-2345
+sufword bethuel 12-15-1456-136-15-123
+sufword bethune 12-15-1456-136-1345-15
+empmatchafter match %[^_~]%<* bethylid [Aa][Ee] 23-1456-13456-123-24-145
+empmatchafter match %[^_~]%<* be [Tt][Hh][IORUWioruw]%a 23
+word betonies =
+word betony =
+match - betula [Cc] =
+match - betul [Ii][Nn] =
+#empmatchafter match %[^_~]%<* be [Tt]![CHJKSTZchjkstz'’] 23               bet*
+empmatchafter match %[^_~]%<* be [Tt]([RWrw])?[AEIOUYaeiouy] 23                   bet*
+empmatchafter match %[^_~]%<* beun [Ii] 23-136-1345 
+empmatchafter match %[^_~]%<* be [Vv][Uu][Ee] 23
+sufword bewick =
+word bewit =
+word bewits =
+empmatchafter match %[^_~]%<* bew [BCDFGJKLMNPQSTVWXZbcdfgjklmnpqstvwxz] =
+empmatchafter match %[^_~]%<* bex [BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz] =
+empmatchafter match %[^_~]%<* bey [AOao][Nn]([Ss]?)[Tt] 23-13456
+sufword beyer 12-15-13456-12456
+
+empmatchafter match %[^_~]%<* be [BCEFGHIJKLMPQSTUVWXYZbcefghijklmpqstuvwxyz]([Ss]|['’][Ss])?%>*%[_~^] =   3 letter words
+empmatchafter match %[^_~]%<* be [BFJKMPQVWXZbfjkmpqvwxz][BFJKMPQVWXZbfjkmpqvwxz] =   "be" is not the first syllable
+empmatchafter match %[^_~]%<* be [BJKMOPQWXZbjkmopqwxz] 23
 
 nofor sufword be 23
 
 #   be[cfhlnsty] are handled in 10.9.5
 word beg =
 
+sufword   bein'   23-24-1345-3
+always    betws   12-15-2345-2456-234
+
 #   easier if after "be" cause both are dots 23
 # bb   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a bb %a 23
 
-nofor always bb 23
+nofor midword bb 23
 
 # cc   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a cc %a 25
+always cch 14-16  CH always takes priority
+match - cchildren ![AEIOUYaeiouy] 14-16-1345   edge case for test word
+match - cchn ![AEIOUYaeiouy] 14-14-125-1345   edge case for test word
 
-nofor always cc 25
+nofor midword cc 25
 
 sufword arccosine 345-14-14-135-234-35-15
-sufword bacchanal 12-1-14-16-1-1345-1-123
-sufword bacchus 12-1-14-16-136-234
-sufword gracchus 1245-1235-1-14-16-136-234
-sufword pinocchio 1234-35-135-14-16-24-135
-sufword saccharin 234-1-14-16-345-35
-sufword zucchini 1356-136-14-16-35-24
 
 # con   10.6.1   10.6.2   10.6.3   10.6.4
-empmatchafter match %[^_~]%<* con [Cc]![Hh] 25
+empmatchafter match %[^_~]%<* con [Cc]![HVhv] 25
 empmatchafter match %[^_~]%<* con [Ee][Ss][Tt] 25
-empmatchafter match %[^_~]%<* con s%a 25  [Cc][Oo][Nn][Ss]  "mod cons" 10.6.4
+empmatchafter match %[^_~]%<* con [Ss]%a 25  [Cc][Oo][Nn][Ss]  "mod cons" 10.6.4
 empmatchafter match %[^_~]%<* con [ABDFGHIJLMNOPQRTUVWXYZabdfghijlmnopqrtuvwxyz] 25
+
 sufword conakry 14-135-1345-1-13-1235-13456
 sufword conan  14-135-1345-1-1345
 sufword conned 14-135-1345-1345-1246
@@ -593,14 +874,27 @@ sufword conned 14-135-1345-1345-1246
 nofor begword con 25
 
 # dis   10.6.1   10.6.2   10.6.3   10.6.4
-word diss 145-24-234-234
-empmatchafter match %[^_~]%<* dis [Cc]![Ss'’] 256
+
+word dish 145-24-146
+word disher 145-24-146-12456
+word dishers 145-24-146-12456-234
+match ^|!%a dishi ([Ee]([Rr]|([Ss][Tt]))) 145-24-146-24
+word dishon 145-24-146-135-1345
+word dishy 145-24-146-13456
+empmatchafter match ^|!%a diss ^|!%a =    word diss
+empmatchafter match %[^_~]%<* dis [Cc]([HLRhlr]?)[AEIOUYaeiouy] 256
 empmatchafter match %[^_~]%<* dis [Hh][Ee]![DSVdsv] 256
-empmatchafter match %[^_~]%<* dis [Hh]![CEIPRTWceiprtw'’] 256
+empmatchafter match %[^_~]%<* dis [Hh]![BCDEFGHIKLMNPRTWbcdefghiklmnprtw'’] 256
+
+empmatchafter match !%[^_~a] dis [Hh][Ee]![DSVdsv] =  # this is for other punctuation
+empmatchafter match !%[^_~a] dis [Hh]![BCDEFGHIKLMNPRTWbcdefghiklmnprtw'’] =   # this is for other punctuation
+
 empmatchafter match %[^_~]%<* dis [Pp]![Ii] 256
 empmatchafter match %[^_~]%<* dis [ABDEFGIJLMNOQRSTUVWXYZabdefgijlmnoqrstuvwxyz] 256
 
 nofor begword dis 256
+
+word disulphide 145-24-234-136-123-1234-125-24-145-15
 
 # ea   10.6.5   10.6.6   10.6.7
 empmatchbefore empmatchafter match %a ea %a 2
@@ -609,31 +903,101 @@ empmatchbefore empmatchafter match %a ea %a 2
 nofor always , 2
 nofor midword ea 2
 
-always ear 15-345
-midendword eand 15-12346 meander
-begword givea = giveaway
-word limeade =
-word orangeade =
-always pineapple 1234-35-15-1-1234-1234-123-15
-begword readj = readjust
-begword readm = readmit
-begword reaff 1235-15-1-235
-sufword reagent 1235-15-1-1245-26-2345
-begword realig = realign
-begword rean = reanalyze, reanimate
-begword reapp = reappear
-begword reass 1235-15-1-234-234
-begword reaw = reawaken
-always wiseacr =
+sufword areaway 345-2-2456-1-13456
+always battleax =
+match  %[^_~]%<* de [Aa][Cc][CKQTckqt] = 
+match  %[^_~]%<* deacetyl [AEIOUaeiou] =
+match  %[^_~]%<* de [Aa][Cc][Ii][Dd] = deacidify
+match  %[^_~]%<* de [Aa][Ee][Rr][Aa] = reaerate
+match  %[^_~]%<* de [Aa][Ff][Ff] = deafforest
+sufword deair =
+match %[^_~]%<* deal [Aa][Tt][EIei] =
+match %[^_~]%<* dealb [Aa][Tt][EIei] =
+sufword dealbumin 145-15-1-123-12-136-134-35
+sufword dealcohol =
+match %[^_~]%<* dealk [AYay][Ll] =
+begword deall = deallocate
+match %[^_~]%<* deambul [Aa][Tt][AEIOUaeiou] =
+match %[^_~]%<* deam [Ii][DNdn][AIai][STZstz][AEIaei] = deamidase, deaminization
+match %[^_~]%<* deanathemati [SZsz][AEIaei] 145-15-1-1345-1-2346-134-1-2345-24
+match %[^_~]%<* deanimal [Ii][SZsz][AEIaei] =
+sufword deanthropo 145-15-1-1345-1456-1235-135-1234-135
+begword deapp = deappetise
+sufword deash 145-15-1-146 deash
+begword deasp = deaspirate
+begword deass = deassign
+match  %[^_~]%<* deau [Rr] = deauriculate
+match  %[^_~]%<* deau [Tt][Hh] = deauthorise
 midendword eance 15-46-15 vengeance
-sufword takeaway =
-begword deact =   deactivate
-begword deallo = deallocate
-begword reallo = deallocate - really
+midendword eand 15-12346 meander
+always ear 15-345
+midendword eaway 15-1-2456-1-13456
+sufword flearidden 124-123-2-1235-24-145-145-26
 sufword geanticline 1245-15-1-1345-2345-24-14-123-35-15
-sufword pream =   preamble
-sufword hideaway 125-24-145-15-1-2456-1-13456
-sufword shakespearean 146-1-13-15-234-1234-15-345-15-1-1345
+match - house [Aa][Gg][Ee][Nn][CTct] 125-1256-234-15
+sufword learig 123-2-1235-24-1245
+sufword limeade =
+sufword orangeade =
+always pineapple 1234-35-15-1-1234-1234-123-15
+always poleax =
+sufword preachiev 1234-1235-15-1-16-24-15-1236
+sufword preach 1234-1235-2-16
+sufword preakness 1234-1235-2-13-56-234
+match  %[^_~]%<* pre [Aa] = default case for prea- words
+match  %[^_~]%<* re [Aa][Bb] = reabsorb
+match  %[^_~]%<* re [Aa][Cc][CKQckq] = reaccustom, reacknowledge
+match  %[^_~]%<* reacetyl [AEIOUaeiou] =
+sufword reachiev 1235-15-1-16-24-15-1236
+match  %[^_~]%<* re [Aa][Cc][Ii][Dd] = reacidify
+match  -  re [Aa][Cc][Tt] = react and all derivatives
+begword readap = readapt
+sufword readd = readd readdress
+match  %[^_~]%<* read [Hh][Ee][RSrs] = readhere and derivatives
+begword readj = readjust
+word readme 1235-2-145-134-15
+word readmes 1235-2-145-134-15-234
+begword readm = readmit
+sufword readonly 1235-2-145-135-1345-123-13456
+sufword readout 1235-2-145-1256-2345
+match  %[^_~]%<* re [Aa][Dd][Oo] = readopt readorn
+begword readv = readvance readvise
+match  %[^_~]%<* re [Aa][Ee][Rr][Aa] = reaerate
+match  %[^_~]%<* re [Aa][Ff][Ff] = reaffirm reafforest
+sufword reagan 1235-2-1245-1-1345
+match  %[^_~]%<* reag [Ee][Nn][CTct] = reagency reagent
+match  %[^_~]%<* re [Aa][Gg][Gg] = reaggregate
+sufword reagit = reagitate
+sufword reagr = reagree
+match  %[^_~]%<* re [Aa][Ll][Aa][Rr][Mm] = realarm
+match %[^_~]%<* re [Aa][Ll][Ee][Rr][Tt] = realert
+match  %[^_~]%<* re [Aa][Ll][Ii][Ee][Nn] = realienate
+begword realig = realign
+match %[^_~]%<* reall [AEIOUaeiou] = reallege reallocate but not really
+sufword realter 1235-15-1-123-2345-12456
+begword reamalg = reamalgamate
+sufword reamass = reamassment
+match %[^_~]%<* ream [BPbp] = reambitious reamputate
+sufword reamend 1235-15-1-134-26-145
+match %[^_~]%<* reamu [Ss]%a = reamuse
+begword rean = reanalyze, reanimate
+begword reapolog = reapologize
+begword reapp = reappear
+match %[^_~]%<* re [Aa][Ss][CKPSTckpst] =  reascend reask reaspire reassure reastonish
+sufword reasty 1235-2-34-13456
+begword reatt = reattach reattain
+match  %[^_~]%<* reau [Dd] = reaudition
+match ^|!%a reau [Tt][Hh] = reauthorise
+word reave 1235-2-1236-15
+word reaved 1235-2-1236-1246
+word reaves 1235-2-1236-15-234
+word reaving 1235-2-1236-346
+begword reav = reavail reaver reavoid 
+begword reaw = reawaken
+sufword seaway 234-2-2456-1-13456
+sufword tearoom 2345-2-1235-135-135-134
+begword unreass = unreassuring
+always wideawak =
+always wiseacr =
 
 #TODO:  check pronunciation
 sufword gilead 1245-24-123-15-1-145
@@ -653,29 +1017,25 @@ match - en %1*!%[_1] 26
 
 nofor always en 26
 
-midendword eness 15-56-234 closeness
+match %a eness - 15-56-234b closeness
 sufword bluenose 12-123-136-15-1345-135-234-15
 sufword bottleneck 12-135-2345-2345-123-15-1345-15-14-13
 sufword forenoon 123456-15-1345-135-135-1345
-sufword forerunner 123456-15-1235-136-1345-1345-12456
 sufword toenail 2345-135-15-1345-1-24-123
 sufword turtleneck 2345-136-1235-2345-123-15-1345-15-14-13
 
 # ff   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a ff %a 235
+always ffor 124-123456 FOR always has priority
 
-nofor always ff 235
+nofor midword ff 235
 
-sufword afford 1-124-123456-145
-sufword afforest 1-124-123456-15-34
-sufword clifford 14-123-24-124-123456-145
-sufword effort 15-124-123456-2345
-sufword stafford 34-1-124-123456-145
+sufword chifforobe 16-24-235-135-1235-135-12-15
 
 # gg   10.6.5   10.6.6
 empmatchbefore empmatchafter match %a gg %a 2356
 
-nofor always gg 2356
+nofor midword gg 2356
 
 # in   10.6.8
 match !%[_1]%1* in - 35
@@ -695,70 +1055,97 @@ always character 5-16
 # day
 always day 5-145
 
+sufword   dayan   145-1-13456-1-1345
+sufword   whaddaya   156-1-145-145-1-13456-1
+
 # ever   10.7.4
 always ever 5-15
 
-sufword achiever 1-16-24-15-1236-12456
-sufword believer 23-123-24-15-1236-12456
-sufword cheever 16-15-15-1236-12456
-sufword eversion 15-1236-12456-46-1345
+always eever 15-15-1236-12456
+always iever 24-15-1236-12456
+
+match - antever [STst] 1-1345-2345-15-1236-12456
+sufword bellevernon 12-15-123-123-15-1236-12456-1345-135-1345  old spelling of "Belle Vernon"
+match - boulevers [EIei] 	12-1256-123-15-1236-12456-234
+match - deverb [Aa][LTlt] 145-15-1236-12456-12
+sufword echeveria 15-16-15-1236-12456-24-1
+sufword evernia 15-1236-12456-1345-24-1
+match %[^_~]%<* evers [EIei] 15-1236-12456-234
+always eversion 15-1236-12456-46-1345
 sufword evert 15-1236-12456-2345
+sufword everton 5-15-2345-135-1345
+always evertebra 15-1236-12456-2345-15-12-1235-1
+always evertib 15-1236-12456-2345-24-12
+sufword grevera 1245-1235-15-1236-12456-1
+sufword guenevere 1245-136-26-15-1236-12456-15 variant spelling
 sufword guinevere 1245-136-35-15-1236-12456-15
 sufword monteverdi 134-135-1345-2345-15-1236-12456-145-24
-sufword nonbeliever 1345-135-1345-12-15-123-24-15-1236-12456
-sufword overachiever 135-1236-12456-1-16-24-15-1236-12456
-sufword retriever 1235-15-2345-1235-24-15-1236-12456
-sufword reversion 1235-15-1236-12456-46-1345
-sufword revert 1235-15-1236-12456-2345
-sufword thievery 1456-24-15-1236-12456-13456
-sufword unbeliever 136-1345-12-15-123-24-15-1236-12456
-sufword underachiever 5-136-1-16-24-15-1236-12456
+word nevers 1345-15-1236-12456-234 place name
+sufword preverb 1234-1235-15-1236-12456-12
+sufword preverna 1234-1235-15-1236-12456-1345-1
+match - primever [IOio] 1234-1235-24-134-15-1236-12456
+sufword quinqueverb 12345-136-35-12345-136-15-1236-12456-12
+sufword semievergreen 234-15-134-24-5-15-1245-1235-15-26
+match %[^_~]%<* unevers [EIei] 136-1345-15-1236-12456-234
+sufword unevert 136-1345-15-1236-12456-2345
+sufword viceversa 1236-24-14-15-1236-12456-234-1 normally two words
 
 #   reverend,revery <> reverse,revert,reverb,irreversible
 
-sufword irreversibl 24-1235-1235-15-1236-12456-234-24-12-123
+always reverb        1235-15-1236-12456-12
+match - reverd [Ii] 1235-15-1236-12456-145
+match - reverdur [Ee] 1235-15-1236-12456-145-136-1235
+always reversab 1235-15-1236-12456-234-1-12 bad spelling but ...
+always reversib 1235-15-1236-12456-234-24-12
+always reversif 1235-15-1236-12456-234-24-124
 
-sufword reverbera        1235-15-1236-12456-12-12456-1
-#sufword reverberate     1235-15-1236-12456-12-12456-1-2345-15
-#sufword reverberated    1235-15-1236-12456-12-12456-1-2345-1246
-#sufword reverberating   1235-15-1236-12456-12-12456-1-2345-346
-#sufword reverberation   1235-15-1236-12456-12-12456-1-56-1345
+match ([Nn][Oo][Nn])|([Uu][Nn]) reversal - 1235-15-1236-12456-234-1-123
+match ([Nn][Oo][Nn])|([Uu][Nn]) revers [Ee] 1235-15-1236-12456-234
+match ([Nn][Oo][Nn])|([Uu][Nn]) reversing - 1235-15-1236-12456-234-346
+match ([Nn][Oo][Nn])|([Uu][Nn]) revert - 1235-15-1236-12456-2345
 
-sufword revere 1235-15-1236-12456-15
-sufword revered 1235-15-1236-12456-1246
-sufword reverify 1235-15-1236-12456-24-124-13456
+sufword prereversal 1234-1235-12456-15-1236-12456-234-1-123
+sufword prereverse 1234-1235-12456-15-1236-12456-234-15
+sufword prereversed 1234-1235-12456-15-1236-12456-234-1246
+sufword prereversing 1234-1235-12456-15-1236-12456-234-346
+
+match %[^_~]%<* revers [IOio](^|!%a) 1235-15-1236-12456-234
+match %[^_~]%<* rever [Ee] 1235-15-1236-12456
+match - reverif [IYiy] 1235-15-1236-12456-24-124
 sufword revering 1235-15-1236-12456-346
+
 sufword reversal 1235-15-1236-12456-234-1-123
-sufword reverse 1235-15-1236-12456-234-15
-sufword reversed 1235-15-1236-12456-234-1246
-sufword reversible 1235-15-1236-12456-234-24-12-123-15
+match %[^_~]%<* revers [Ee] 1235-15-1236-12456-234
 sufword reversing 1235-15-1236-12456-234-346
+sufword reversive 1235-15-1236-12456-234-24-1236-15
 
 sufword reverence 1235-5-15-56-15
 sufword reverencing 1235-5-15-26-14-346
 sufword reverend 1235-5-15-26-145
 sufword reverent 1235-5-15-26-2345
 
+sufword revertend 1235-5-15-2345-26-145  revertendi
+sufword revert 1235-15-1236-12456-2345
+sufword unrevered 136-1345-1235-15-1236-12456-1246
+
 #   sever <> severe
 
-sufword persever        1234-12456-234-15-1236-12456
-#sufword perseverance   1234-12456-234-15-1236-12456-46-15
-#sufword persevere      1234-12456-234-15-1236-12456-15
-#sufword persevered     1234-12456-234-15-1236-12456-1246
-#sufword persevering    1234-12456-234-15-1236-12456-346
+match - persevera [Tt][EIei] 1234-12456-234-5-15-1
+match - persever [AEIaei]       1234-12456-234-15-1236-12456
 
-sufword severe 234-15-1236-12456-15
-sufword severer 234-15-1236-12456-12456
-sufword severity 234-15-1236-12456-56-13456
+match - sever [Ee](^|![Dd]) 234-15-1236-12456
+sufword severish 234-15-1236-12456-24-146
+match - sever [Ii][Tt][IYiy] 234-15-1236-12456
 sufword severus 234-15-1236-12456-136-234
 
-sufword  severed  234-5-15-1246
+always severed  234-5-15-1246
 
 # father
 always father 5-124
 
 # had   10.7.3
 always had 456-125
+always phad 1234-125-1-145
 
 #TODO:  check word jehad =
 #TODO:  check word jihad =
@@ -768,28 +1155,32 @@ sufword menhaden 134-26-125-1-145-26
 
 # here   10.7.5
 always here 5-125
+always hered 125-12456-1246 preference to single cell signs
+match - here [Ee][Nn] 125-12456-15
+always herence 125-12456-56-15
+always herencies 125-12456-26-14-24-15-234
+always herency 125-12456-26-14-13456
+always herend 125-12456-26-145
+always herent 125-12456-26-2345
+always herer 125-12456-12456
+match - heresc [Ee][Nn][CTct] 125-12456-15-234-14
+match - here [Ss][Ee][Ss] 125-12456-15
+match - here [Ss][IiYy] 125-12456-15
+match - here [Tt][Ii][Cc] 125-12456-15
 
-sufword adhered 1-145-125-12456-1246
-sufword adherence 1-145-125-12456-56-15
-sufword adherent 1-145-125-12456-26-2345
-sufword ciphered 14-24-1234-125-12456-1246
-sufword cohered 14-135-125-12456-1246
-sufword coherence 14-135-125-12456-56-15
-sufword coherent 14-135-125-12456-26-2345
-sufword deciphered 145-15-14-24-1234-125-12456-1246
-sufword hereditary 125-12456-1246-24-2345-345-13456
-sufword heredity 125-12456-1246-56-13456
+sufword heredofamil 125-12456-1246-135-124-1-134-24-123
 sufword hereford 125-12456-15-123456-145
-sufword herero 125-12456-12456-135
-sufword heresies 125-12456-15-234-24-15-234
-sufword heresy 125-12456-15-234-13456
-sufword heretic 125-12456-15-2345-24-14
-sufword heretofore 5-125-2345-135-123456-15
-sufword hereupon 5-125-45-136
-sufword incoherence 35-14-135-125-12456-56-15
-sufword incoherent 35-14-135-125-12456-26-2345
-sufword inhered 35-125-12456-1246
-sufword inherent 35-125-12456-26-2345
+sufword hereld 125-12456-15-123-145
+sufword herenach 125-12456-26-1-16
+match - hereto [CGcg][AHah] 125-12456-15-2345-135
+match - heretri [CXcx] 125-12456-15-2345-1235-24
+sufword hereward 125-12456-15-2456-345-145
+sufword herez 125-12456-15-1356
+match - phereclu [Ss] 1234-125-12456-15-14-123-136
+match - pherecra [Tt][EIei] 1234-125-12456-15-14-1235-1
+match - pheremi [Aa] 1234-125-12456-15-134-24
+word pheres 1234-125-12456-15-234
+match - phere [Ss][Ss] 1234-125-12456-15
 
 # know
 always know 5-13
@@ -799,7 +1190,10 @@ sufword lucknow 123-136-14-13-1345-246
 # lord
 always lord 5-123
 
-word chlordane 16-123-135-1235-145-1-1345-15
+sufword bachelordom 12-1-16-15-123-135-1235-145-135-134
+sufword chlordan 16-123-135-1235-145-1-1345
+sufword chlordiazep 16-123-135-1235-145-24-1-1356-15-1234
+sufword tailordom =
 
 # many
 always many 456-134
@@ -807,101 +1201,209 @@ always many 456-134
 # mother
 always mother 5-134
 
-sufword chemotherapy 16-15-134-135-2346-1235-1-1234-13456
+match %a motherap [EIYeiy] 134-135-2346-1235-1-1234
+match %a mothere ^|!%a 134-135-2346-1235-15
+match %a motherium - 134-135-2346-1235-24-136-134
+match %a motherm - 134-135-2346-1235-134
 
 # name   10.7.5
 always name 5-1345
+always nament 1345-1-56-2345  in nament, MENT has priority
 
-sufword filename 124-24-123-15-5-1345
-sufword forename 123456-15-5-1345
-sufword ornament 135-1235-1345-1-56-2345
-sufword rename 1235-15-5-1345
-sufword tournament 2345-1256-1235-1345-1-56-2345
-sufword unamended 136-1345-1-134-26-145-1246
-sufword vietnamese 1236-24-15-2345-1345-1-134-15-234-15
+match - ename ([DSds]|(['’][Ss]))?%>*%[^_~] 15-5-1345 filename tradename
+endword namese =
+endword namesian =
+match - name [Ee] =
+match - name [Tt][Ee][Rr] 1345-1-134-15
+match - name [Tt][Rr][AEIOUYaeiouy] 1345-1-134-15
+
+sufword anamelech 1-1345-1-134-15-123-15-16
+sufword anamelek =
+match - anamesit [AEIOUaeiou] =
+sufword anametadrom =
+match - cinnam [Ee]%a 14-35-1345-1-134
+sufword coname 14-135-5-1345
+match - coronam [Ee][Nn] =
+match ^|!%a nonam [Ee]%a 1345-135-1345-1-134 nonamenable nonamendable
+match ^|!%a unam [Ee]%a 136-1345-1-134 unameliorated unamendable unamerce
 
 # one   10.7.6
 always one 5-135
 
-midendword oned 135-1345-1246
-midendword onent 135-1345-26-2345
-midendword oner 135-1345-12456
-midendword onest 135-1345-15-34
+match %a onea ^|!%a =
+match %a onea [ELNSUelnsu](^|!%a) 135-1345-2
+match %a onea [DTdt][AEIOUaeiou] 135-1345-2
+match - onec [KTkt] =
+match - onecro [STst][EIei] =
+match %a oned - 135-1345-1246
+match %a one [Ee] 135-1345-15
+match - onega ^|!%a =
+match - onega [LNTlnt] =
+match %a onei ^|!%a =
+match %a one [Ii][Ss][MTmt] =
+match %a one [Ii][Tt][IYiy] =
+match %a onel [AIOUaiou]?[Ss]?(^|!%a) =
+match %a onell ^|!%a =
+match - onell [AEIOUYaeiouy] 135-1345-15-123-123
+match %a onema [ESes]?(^|!%a) =
+match %a onemal ^|!%a =
+match %a onemat [AIOUaioU] =
+match %a oneme [Ss]?(^|!%a) =
+match %a onemer [Tt][EIei] 135-1345-15-134-12456
+match %a onemi [ACac] =
+match %a onen [Ss]?(^|!%a) 135-1345-26
+match %a onence - 135-1345-56-15
+match %a onen [CDTcdt] 135-1345-26
+match %a onene [Ss]?(^|!%a) 135-1345-26-15
+match %a one [Oo] =
+match %a oneph - 135-1345-15-1234-125
+match %a oner - 135-1345-12456
+match %a onese - 135-1345-15-234-15
+match %a onesia - 135-1345-15-234-24-1
+match %a onesis ^|!%a =
+match %a onesqu [Ee] =
+match %a oness - 135-56-234
+match %a onest - 135-1345-15-34
+match %a onet ^|!%a =
+match %a oneta ^|!%a =
+match %a oneti [ACSZacsz] =
+match %a onet [STZstz] =
+match %a oneu [MRSTmrst] 135-1345-15-136
+match %a one [FVXZfvxz][Ss]?(^|!%a) =
+match %a onex [Ii] =
+
+match - oon [Ee] =
 
 sufword abalone 1-12-1-123-135-1345-15
 sufword alcyone 1-123-14-13456-135-1345-15
 sufword anemone 1-1345-15-134-135-1345-15
 sufword antigone 1-1345-2345-24-1245-135-1345-15
-sufword austronesian 1-136-34-1235-135-1345-15-234-24-1-1345
-sufword baroness 12-345-135-56-234
+sufword antonescu =
+sufword argemone 345-1245-15-134-135-1345-15
 sufword baronet 12-345-135-1345-15-2345
 sufword bayonet 12-1-13456-135-1345-15-2345
-sufword boone 12-135-135-1345-15
-sufword cantonese 14-1-1345-2345-135-1345-15-234-15
-sufword citronella 14-24-2345-1235-135-1345-15-123-123-1
+sufword bonedog 12-5-135-145-135-1245
+sufword bonedry 12-5-135-145-1235-13456
+sufword bonesteel 12-5-135-34-15-15-123
+sufword canzone =
+sufword cassone =
+sufword castiglione 14-1-34-24-1245-123-24-135-1345-15
+sufword chitarrone 16-24-2345-345-1235-135-1345-15
+sufword cicerone 14-24-14-12456-135-1345-15
+sufword cleone =
+sufword clione =
 sufword colonel 14-135-123-135-1345-15-123
-sufword coronet 14-135-1235-135-1345-15-2345
-sufword deaconess 145-2-14-135-56-234
-sufword dishonest 256-125-5-135-34
-sufword donegal 145-135-1345-15-1245-1-123
-sufword doonesbury 145-135-135-1345-15-234-12-136-1235-13456
-sufword erroneous 12456-1235-135-1345-15-1256-234
+sufword comedones 14-135-134-1246-135-1345-15-234
+sufword coneigh 14-135-1345-15-24-126  -bor/bour
+sufword conversazione 25-1236-12456-234-1-1356-24-135-1345-15
+always coronet =
+sufword daimon = plural is -es pron. -eez
+sufword deone =
+sufword dione =
+sufword doblon = plural is -es pron. -eez
+sufword donelson =
+match - donev [AEae][Nn] =
+word epulones =
+word erigone 12456-24-1245-135-1345-15
+word falcones =
+word gaberones 1245-1-12-12456-135-1345-15-234
+sufword gaborone =
+word gekkones =
 sufword giorgione 1245-24-135-1235-1245-24-135-1345-15
+sufword halcyone =
 sufword hermione 125-12456-134-24-135-1345-15
-sufword honecker 125-135-1345-15-14-13-12456
-sufword honest 125-5-135-34
-sufword indonesia 35-145-135-1345-15-234-24-1
+sufword honegger 125-135-1345-15-2356-12456
+always honest 125-5-135-34
 sufword ionesco 24-135-1345-15-234-14-135
+sufword jasione =
+sufword joneses 245-5-135-234-15-234
+sufword jonesian 245-5-135-234-24-1-1345
+sufword jonestown 245-5-135-234-2345-246-1345
+match ^|!%a kanon [Ee] =
 sufword krone 13-1235-135-1345-15
-sufword leonel 123-15-135-1345-15-123
-sufword lionel 123-24-135-1345-15-123
-sufword lioness 123-24-135-56-234
-sufword looney 123-135-135-1345-15-13456
-sufword luncheonette 123-136-1345-16-15-135-1345-15-2345-2345-15
-sufword marchioness 134-345-16-24-135-56-234
-sufword marionette 134-345-24-135-1345-15-2345-2345-15
-sufword micronesia 134-24-14-1235-135-1345-15-234-24-1
-sufword minestrone 134-35-15-34-1235-135-1345-15
-sufword monet 134-135-1345-15-2345
-sufword mooney 134-135-135-1345-15-13456
-sufword nonempty 1345-135-1345-15-134-1234-2345-13456
-sufword nonessential 1345-135-1345-15-234-234-26-2345-24-1-123
-sufword nonevent 1345-135-1345-15-1236-26-2345
-sufword nonexempt 1345-135-1345-15-1346-15-134-1234-2345
-sufword nonexistence 1345-135-1345-15-1346-24-34-56-15
-sufword nonexistent 1345-135-1345-15-1346-24-34-26-2345
-sufword oneal 135-1345-2-123
-sufword onega 135-1345-15-1245-1
-sufword onegin 135-1345-15-1245-35
-sufword oneida 135-1345-15-24-145-1
-sufword onerous 135-1345-12456-1256-234
-sufword peritonea 1234-12456-24-2345-135-1345-15-1
-sufword peritoneum 1234-12456-24-2345-135-1345-15-136-134
-sufword persephone 1234-12456-234-15-1234-125-135-1345-15
-sufword phoneme 1234-125-135-1345-15-134-15
-sufword phonemic 1234-125-135-1345-15-134-24-14
-sufword phonetic 1234-125-135-1345-15-2345-24-14
-sufword pioneer 1234-24-135-1345-15-12456
-sufword rooney 1235-135-135-1345-15-13456
-sufword salmonella 234-1-123-134-135-1345-15-123-123-1
-sufword shoshone 146-135-146-135-1345-15
-sufword spumone 234-1234-136-134-135-1345-15
-sufword veronese 1236-12456-135-1345-15-234-15
-
+sufword kronen 13-1235-135-1345-26
 sufword kroner 13-1235-135-1345-12456
-sufword monetarily 134-5-135-2345-345-24-123-13456
-sufword monetarism 134-5-135-2345-345-24-234-134
-sufword monetary 134-5-135-2345-345-13456
+sufword laestrygones 123-1-15-34-1235-13456-1245-135-1345-15-234
+sufword lazzarone 123-1-1356-1356-345-135-1345-15
+sufword lugones =
+sufword madrone =
+sufword mantellone =
+sufword mbabone =
+sufword merioneth 134-12456-24-135-1345-15-1456
+sufword minestrone 134-35-15-34-1235-135-1345-15
+sufword moliones =
+match - moneci [AOao] =
+sufword monegasqu =
+sufword monembry =
+sufword monepi =
+sufword monet 134-135-1345-15-2345
+word moneth 134-135-1345-15-1456
+match - monetari [LSls] 134-5-135-2345-345-24 -ily -ism -ist
+always monetary 134-5-135-2345-345-13456
+match - moneti [SZsz][AEIaei] 134-5-135-2345-24 monetization
+sufword montefiascone =
+sufword morone =
+sufword myrmidones =
+word none 1345-5-135
+word nones 1345-5-135-234
+#word nonesuch ## handled under shortforms app. 1
+sufword nonesuches 1345-5-135-234-136-16-15-234
+sufword nonetheless 1345-5-135-2346-46-234
+match %[^_~]%<* non [Ee]%a 1345-135-1345
+sufword oenone 135-26-135-1345-15
+sufword oneal 135-1345-2-123
+sufword oneco =
+match ^|!%a oneg [AEIOUaeiou] = Onega Onegin Onegite Onego
+sufword oneida 135-1345-15-24-145-1
+sufword oneil =
+match ^|!%a oneir [IOio] =
+sufword onekam =
+sufword oneont =
+match ^|!%a oner [AEIOUYaeiouy] 135-1345-12456
+sufword onesimus =
+sufword onesiphorus =
+sufword opilione =
+sufword padrone =
+sufword panettone =
+sufword papiliones =
+word pensione 1234-26-234-24-135-1345-15
+word pensiones 1234-26-234-24-135-1345-15-234
+word peones =
+sufword persephone 1234-12456-234-15-1234-125-135-1345-15
+match - phones [Tt][Hh][Ee][Mm] =
+sufword pronegotia = pronegotiation
+sufword sawboneses 234-1-2456-12-5-135-234-15-234
+sufword schiavone 234-16-24-1-1236-135-1345-15
+word scorpiones =
+match ^|!%a shoshon [EIei] 146-135-146-135-1345
+sufword sirione =
+sufword soffione 234-12356-124-24-135-1345-15
+sufword spumone 234-1234-136-134-135-1345-15
+match - stonegat [Ee] 34-5-135-1245-1-2345
+sufword stonestreet 34-5-135-34-1235-15-15-2345
+word struthiones 34-1235-136-1456-24-135-1345-15-234
+word sturiones 34-136-1235-24-135-1345-15-234
+word suiones =
+match - sulfon [Ee][Tt][Hh][AEIOUYaeiouy] =
+match - sulphon [Ee][Tt][Hh][AEIOUYaeiouy] =
+word sycones =
+sufword tarsonemid 2345-345-234-135-1345-15-134-24-145
+sufword tonelada =
+sufword torrone =
+sufword zabaglione =
+match - zonesthe [STst] 1356-135-1345-15-234-2346
 
 # ought
 always ought 5-1256
 
+match %a ought [Aa][Ii][Ll] 1256-126-2345 ploughtail
+
 # part
 always part 5-1234
 
-sufword parthenogenesis 1234-345-2346-1345-135-1245-26-15-234-24-234
-sufword parthenon 1234-345-2346-1345-135-1345
-sufword parthia 1234-345-1456-24-1
+always parthe 1234-345-2346
+always parth 1234-345-1456
+always apartheid 1-5-1234-125-15-24-145
 
 # question
 always question 5-12345
@@ -912,13 +1414,16 @@ always right 5-1235
 # some   10.7.7
 always some 5-234
 
+match - somer %a 234-135-134-12456
+match - some [Tt][Ee][Rr] 234-135-134-15
+match - some [Tt][Rr][AaEeIiOoUuYy] 234-135-134-15
+always somever 234-135-134-5-15
+
+sufword besomer 23-234-135-134-12456
 sufword blossomed 12-123-135-234-234-135-134-1246
-sufword gasometer 1245-1-234-135-134-15-2345-12456
-sufword isometric 24-234-135-134-15-2345-1235-24-14
-sufword ransomed 1235-1-1345-234-135-134-1246
-sufword somersault 234-135-134-12456-234-1-136-123-2345
-sufword somerset 234-135-134-12456-234-15-2345
-sufword unbosomed 136-1345-12-135-234-135-134-1246
+match - isom [Ee][DRdr] =
+match - osom [Ee][DRdr] =
+match - ransom [Ee][DNRdnr] =
 
 # spirit
 always spirit 456-234
@@ -927,16 +1432,13 @@ always spirit 456-234
 always their 456-2346
 
 # there   10.7.2
-word there 5-2346
-word thereby 5-2346-12-13456
-word therefore 5-2346-123456-15
-word therefrom 5-2346-124-1235-135-134
-word therein 5-2346-35
-word thereof 5-2346-12356
-word thereon 5-2346-135-1345
-word thereto 5-2346-2345-135
-word thereupon 5-2346-45-136
-word therewith 5-2346-23456
+match ^|!%a therea [BFGbfg]([Ss]|['’][Ss])?%>*%[_~^] 2346-1235-2  not thereabout, -after etc
+match ^|!%a there [Mm] 2346-1235-15 theremin
+match ^|!%a there [Ss][AEIOSUYaeiosuy] 2346-1235-15  Theresa, Therese etc
+match ^|!%a therevi [Dd] 2346-1235-15-1236-24  Therevidae
+match ^|!%a there [Zz][Ii][Nn] 2346-1235-15   Therezina etc
+match ^|!%a there - 5-2346    a little more general than sufword
+nofor always there 5-2346
 
 # these   10.7.2
 always these 45-2346
@@ -949,38 +1451,35 @@ sufword theses 2346-234-15-234
 sufword theseus 2346-234-15-136-234
 
 # those   10.7.2
-always those 45-1456
-
-sufword spathose 234-1234-1-1456-135-234-15
-sufword thoseby 1456-135-234-15-12-13456
+nofor always those 45-1456
+match ^|!%a those ^|!%a 45-1456  In practice, only the word "those" uses the sign
 
 # through
 always through 5-1456
 
 # time   10.7.8
 always time 5-2345
+always timent 2345-24-56-2345  in timent, MENT has priority
+always timeter 2345-24-134-15-2345-12456
+always timetric =
+always timetry =
 
-sufword altimeter 1-123-2345-24-134-15-2345-12456
+match ^|!%a anti [Mm][Ee] =    antimechanical antimerger
 sufword centime 14-26-2345-24-134-15
+sufword latimer 123-1-2345-24-134-12456
+sufword lattimer 123-1-2345-2345-24-134-12456
 sufword mortimer 134-135-1235-2345-24-134-12456
-sufword multimedia 134-136-123-2345-24-134-1246-24-1
-sufword presentiment 1234-1235-15-234-26-2345-24-56-2345
-sufword sentiment 234-26-2345-24-56-2345
-sufword unsentimental 136-1345-234-26-2345-24-56-2345-1-123
-
+match ^|!%a multi [Mm][Ee] =    multimedia multimember
+sufword optime =
+ 
 # under   10.7.9
-match %[^_~]%<*|![ao] under - 5-136
+match - aund [Ee][Rr] 1-136-1345-145
+# no need to catch ounder, because of OUND rule 
 
-sufword underived 136-1345-145-12456-24-1236-1246
+match - underi [DVdv][AEIaei] 136-1345-145-12456-24 underivative -derided- derived
 sufword underogatory 136-1345-145-12456-135-1245-1-2345-135-1235-13456
 
-nofor sufword asunder 1-234-5-136
-nofor sufword blunder 12-123-5-136
-nofor sufword misunder 134-24-234-5-136
-nofor sufword plunder 1234-123-5-136
-nofor sufword sunder 234-5-136
-nofor sufword thunder 1456-5-136
-nofor sufword under 5-136
+always under 5-136
 
 # upon   10.7.2
 always upon 45-136
@@ -991,6 +1490,7 @@ sufword dupont 145-136-1234-135-1345-2345
 always where 5-156
 
 sufword where'er 156-12456-15-3-12456
+sufword where’er 156-12456-15-3-12456
 sufword whereupon 5-156-45-136
 sufword wherever 156-12456-5-15
 
@@ -1005,6 +1505,8 @@ always word 45-2456
 # work
 always work 5-2456
 
+sufword   dworkin   145-2456-135-1235-13-35
+
 # world
 always world 456-2456
 
@@ -1014,82 +1516,160 @@ always young 5-13456
 
 #   10.8   Final-Letter Groupsigns
 
-# ance
-midendword ance 46-15
+# ance (1-1345-14-15 -> 46-15)
+nofor midendword ance 46-15
+
+match %a ance - 46-15b
+
+noback pass2 [@6-46-15b]    @6-1-1345-14-15
+noback pass2 [@6-3-46-15b]  @6-3-1-1345-14-15
+noback pass2 [@46-15b]      @46-15
 
 sufword fiance 124-24-1-1345-14-15   should be fiancé
 
-# ence
-midendword ence 56-15
+# ence (15-1345-14-15 -> 56-15)
+nofor midendword ence 56-15
+
+match %a ence - 56-15b
+
+noback pass2 [@6-56-15b]    @6-26-14-15       # (en)ce
+noback pass2 [@6-3-56-15b]  @6-3-26-14-15     # (en)ce
+noback pass2 [@56-15b]      @56-15
 
 #midendword oence 135-26-14-15 electroencephalogram
-sufword electroencephalogram 15-123-15-14-2345-1235-135-26-14-15-1234-125-1-123-135-1245-1235-1-134
-sufword electroencephalograph 15-123-15-14-2345-1235-135-26-14-15-1234-125-1-123-135-1245-1235-1-1234-125
+always encephal 26-14-15-1234-125-1-123
 
-# ful
-midendword ful 56-123
+# ful (124-136-123 -> 56-123)
+nofor midendword ful 56-123
+
+match %a ful - 56-123b
+
+noback pass2 [@6-56-123b]    @6-124-136-123
+noback pass2 [@6-3-56-123b]  @6-3-124-136-123
+noback pass2 [@56-123b]      @56-123
 
 sufword overfull 135-1236-12456-124-136-123-123 #TODO:  check
 
-# ity   10.8.3
-midendword ity 56-13456
+# ity (24-2345-13456 -> 56-13456)  10.8.3
+nofor midendword ity 56-13456
+
+match %a ity - 56-13456b
+
+noback pass2 [@6-56-13456b]    @6-24-2345-13456
+noback pass2 [@6-3-56-13456b]  @6-3-24-2345-13456
+noback pass2 [@56-13456b]      @56-13456
 
 word biscuity 12-24-234-14-136-24-2345-13456
 word dacoity 145-1-14-135-24-2345-13456
 word fruity 124-1235-136-24-2345-13456
-word hoity-toity 124-135-24-2345-13456-36-2345-135-24-2345-13456
+word hoity-toity 125-135-24-2345-13456-36-2345-135-24-2345-13456
 word rabbity 1235-1-23-24-2345-13456
 word pityard 1234-24-2345-13456-345-145
 
-# less
-midendword less 46-234
+sufword antitype 1-1345-2345-24-2345-13456-1234-15
+sufword captainess 14-1-1234-2345-1-24-35-15-234-234
 
-# ment
-midendword ment 56-2345
+# less (123-15-234-234 -> 46-234)
+nofor midendword less 46-234
 
-sufword aforementioned 1-123456-15-134-26-56-1345-1246
-sufword unmentionable 136-1345-134-26-56-1345-1-12-123-15
+match %a less - 46-234b
 
-# ness   10.8.4
-midendword ness 56-234
+noback pass2 [@6-46-234b]    @6-123-15-234-234
+noback pass2 [@6-3-46-234b]  @6-3-123-15-234-234
+noback pass2 [@46-234b]      @46-234
+
+# ment (134-15-1345-2345 -> 56-2345)
+nofor midendword ment 56-2345
+
+match %a ment - 56-2345b
+
+noback pass2 [@6-56-2345b]    @6-134-26-2345         # m(en)t
+noback pass2 [@6-3-56-2345b]  @6-3-134-26-2345          # m(en)t
+noback pass2 [@56-2345b]      @56-2345
+
+match - menth [AIOUYaiouy] 134-26-1456
+match - menthe - 134-26-2346
+
+# ness (1345-15-234-234 -> 56-234)  10.8.4
+nofor midendword ness 56-234
+
+match %a ness - 56-234b
+
+noback pass2 [@6-56-234b]   @6-1345-15-234-234
+noback pass2 [@6-3-56-234b] @6-3-1345-15-234-234
+noback pass2 [@56-234b]     @56-234
 
 sufword chieftainess 16-24-15-124-2345-1-35-15-234-234
 sufword citizeness 14-24-2345-24-1356-26-15-234-234
 sufword heatheness 125-2-2346-1345-15-234-234
 
-# ong
-midendword ong 56-1245
+# ong (135-1345-1245 -> 56-1245)
+nofor midendword ong 56-1245
 
-sufword moongod 134-135-135-1345-1245-135-145
-#begword nong = nongraphical
-sufword nongaseous 1345-135-1345-1245-1-234-15-1256-234
-sufword nongovernmental 1345-135-1345-1245-135-1236-12456-1345-56-2345-1-123
+match %a ong - 56-1245b
 
-# ound
-midendword ound 46-145
+noback pass2 [@6-56-1245b]   @6-135-1345-1245
+noback pass2 [@6-3-56-1245b] @6-3-135-1345-1245
+noback pass2 [@56-1245b]     @56-1245
 
-# ount
-midendword ount 46-2345
+match - cannon [Gg][Aa][Tt][Ee] =
+match - lemon [Gg][Rr][Aa][Ss][Ss] =
+match - longhi ^|!%a 123-135-1345-126-24
+match - melon [Gg][Rr][Oo][Ww] =
+match - moon [Gg]%a = moonglow moongod 
+begword nong = nongraphical nongaseous nongovernmental
+match - schon [Gg][Aa][Uu][Ee][Rr] 234-16-135-1345
+sufword songhai 234-135-1345-126-1-24
 
-# sion
-midendword sion 46-1345
+# ound (135-136-1345-145 -> 46-145)
+nofor midendword ound 46-145
 
-# tion
-midendword tion 56-1345
+match %a ound - 46-145b
+
+noback pass2 [@6-46-145b]   @6-1256-1345-145        # (ou)nd
+noback pass2 [@6-3-46-145b] @6-3-1256-1345-145      # (ou)nd
+noback pass2 [@46-145b]     @46-145
+
+# ount (135-136-1345-2345 -> 46-2345)
+nofor midendword ount 46-2345
+
+match %a ount - 46-2345b
+
+noback pass2 [@6-46-2345b]   @6-1256-1345-2345      # (ou)nt
+noback pass2 [@6-3-46-2345b] @6-3-1256-1345-2345    # (ou)nt
+noback pass2 [@46-2345b]     @46-2345
+
+# sion (234-24-135-1345 -> 46-1345)
+nofor midendword sion 46-1345
+
+match %a sion - 46-1345b
+
+noback pass2 [@6-46-1345b]   @6-234-24-135-1345
+noback pass2 [@6-3-46-1345b] @6-3-234-24-135-1345
+noback pass2 [@46-1345b]     @46-1345
+
+# tion (2345-24-135-1345 -> 56-1345)
+nofor midendword tion 56-1345
+
+match %a tion - 56-1345b
+
+noback pass2 [@6-56-1345b]   @6-2345-24-135-1345
+noback pass2 [@6-3-56-1345b] @6-3-2345-24-135-1345
+noback pass2 [@56-1345b]     @56-1345
 
 sufword cation 14-1-2345-24-135-1345
-
+always mention 134-26-56-1345 TION has priority
 
 #   10.9   Shortforms   not including 10.9.3
 #TODO:  2.6.4
 
-attribute 2 BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz'’  no vowels (except w) and 2.6.4
+attribute 2 BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz  no vowels (except w) and 2.6.4
 
 match %[_~^]%<* about ([Ss]|['’][Ss])?%>*%[_~^] 1-12
 match %[_~^]%<* above ([Ss]|['’][Ss])?%>*%[_~^] 1-12-1236
 match %[_~^]%<* according ([Ss]|['’][Ss])?%>*%[_~^] 1-14
 match %[_~^]%<* across ([Ss]|['’][Ss])?%>*%[_~^] 1-14-1235
-match %[_~^]%<*%a* after (%2%a*)?%>*%[_~^] 1-124   appendix 1.4
+match %[_~^]%<* after ([Ss]|['’][Ss])?%>*%[_~^] 1-124
 match %[_~^]%<* afternoon ([Ss]|['’][Ss])?%>*%[_~^] 1-124-1345
 match %[_~^]%<* afterward ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2456
 match %[_~^]%<* again ([Ss]|['’][Ss])?%>*%[_~^] 1-1245
@@ -1108,7 +1688,7 @@ match %[_~^]%<* beneath ([Ss]|['’][Ss])?%>*%[_~^] 23-1345
 match %[_~^]%<* beside ([Ss]|['’][Ss])?%>*%[_~^] 23-234
 match %[_~^]%<* between ([Ss]|['’][Ss])?%>*%[_~^] 23-2345
 match %[_~^]%<* beyond ([Ss]|['’][Ss])?%>*%[_~^] 23-13456
-match %[_~^]%<*%a* blind (%2%a*)?%>*%[_~^] 12-123   appendix 1.4
+match %[_~^]%<* blind (%2%a*)?([Ss]|['’][Ss])?%>*%[_~^] 12-123   appendix 1.4
 match %[_~^]%<*%a* braille %a*([Ss]|['’][Ss])?%>*%[_~^] 12-1235-123   10.9.3
 match %[_~^]%<*%a* children (%2%a*)?([Ss]|['’][Ss])?%>*%[_~^] 16-1345   10.9.3
 match %[_~^]%<* conceive ([Ss]|['’][Ss])?%>*%[_~^] 25-14-1236
@@ -1120,7 +1700,7 @@ match %[_~^]%<* declare ([Ss]|['’][Ss])?%>*%[_~^] 145-14-123
 match %[_~^]%<* declaring ([Ss]|['’][Ss])?%>*%[_~^] 145-14-123-1245
 match %[_~^]%<* either ([Ss]|['’][Ss])?%>*%[_~^] 15-24
 match %[_~^]%<* first (%2%a*)?([Ss]|['’][Ss])?%>*%[_~^] 124-34   10.9.3
-match %[_~^]%<*%a* friend (%2%a*)?%>*%[_~^] 124-1235   appendix 1.4
+match %[_~^]%<* friend (%2%a*)?([Ss]|['’][Ss])?%>*%[_~^] 124-1235   appendix 1.4
 match %[_~^]%<* good (%2%a*)?([Ss]|['’][Ss])?%>*%[_~^] 1245-145   10.9.3
 match %[_~^]%<*%a* great %a*([Ss]|['’][Ss])?%>*%[_~^] 1245-1235-2345   10.9.3
 match %[_~^]%<* herself ([Ss]|['’][Ss])?%>*%[_~^] 125-12456-124
@@ -1273,7 +1853,7 @@ nofor word declares  145-14-123-234
 nofor word declarings  145-14-123-1245-234
 nofor word eithers  15-24-234
 nofor word firsts  124-34-234   10.9.3
-nofor word friends  124-1235-234-234   appendix 1.4
+nofor word friends  124-1235-234   appendix 1.4
 nofor word goods  1245-145-234   10.9.3
 nofor word greats  1245-1235-2345-234   10.9.3
 nofor word herselfs  125-12456-124-234
@@ -1295,7 +1875,7 @@ nofor word paids  1234-145-234
 nofor word perceives  1234-12456-14-1236-234
 nofor word perceivings  1234-12456-14-1236-1245-234
 nofor word perhapss  1234-12456-125-234
-nofor word quicks  12345-13   10.9.3-234
+nofor word quicks  12345-13-234   10.9.3
 nofor word receives  1235-14-1236-234
 nofor word receivings  1235-14-1236-1245-234
 nofor word rejoices  1235-245-14-234
@@ -1348,7 +1928,7 @@ nofor word deceiving's  145-14-1236-1245-3-234
 nofor word declare's  145-14-123-3-234
 nofor word declaring's  145-14-123-1245-3-234
 nofor word either's  15-24-3-234
-nofor word first's  124-34   10.9.3-3-234
+nofor word first's  124-34-3-234   10.9.3
 nofor word friend's  124-1235-3-234   appendix 1.4
 nofor word good's  1245-145-3-234   10.9.3
 nofor word great's  1245-1235-2345-3-234   10.9.3
@@ -1358,8 +1938,8 @@ nofor word himself's  125-134-124-3-234
 nofor word immediate's  24-134-134-3-234
 nofor word its's  1346-234-3-234
 nofor word itself's  1346-124-3-234
-nofor word letter's  123-1235   10.9.3-3-234
-nofor word little's  123-123   10.9.3-3-234
+nofor word letter's  123-1235-3-234   10.9.3-3-234
+nofor word little's  123-123-3-234   10.9.3-3-234
 nofor word much's  134-16-3-234
 nofor word must's  134-34-3-234
 nofor word myself's  134-13456-124-3-234
@@ -1371,7 +1951,7 @@ nofor word paid's  1234-145-3-234
 nofor word perceive's  1234-12456-14-1236-3-234
 nofor word perceiving's  1234-12456-14-1236-1245-3-234
 nofor word perhaps's  1234-12456-125-3-234
-nofor word quick's  12345-13   10.9.3-3-234
+nofor word quick's  12345-13-3-234   10.9.3
 nofor word receive's  1235-14-1236-3-234
 nofor word receiving's  1235-14-1236-1245-3-234
 nofor word rejoice's  1235-245-14-3-234
@@ -1399,19 +1979,32 @@ word mst =
 
 contraction ab     about
 contraction abv    above
+contraction abvs
 contraction ac     according
+contraction acs
 contraction acr    across
+contraction acrs
 contraction af     after
 contraction afn    afternoon
+contraction afns
+contraction afs
 contraction afw    afterward
+contraction afws
 contraction ag     again
+contraction ags
 word agst =        against
+word agsts =
 contraction alm    almost
 contraction alr    already
+contraction alrs
 contraction al     also
+contraction als
 word alth =        although
+word alths =
 contraction alt    altogether
+contraction alts
 contraction alw    always
+contraction alws
 word bec =         because
 word bef =         before
 word beh =         behind
@@ -1423,6 +2016,7 @@ word bey =         beyond
 contraction bl     blind
 contraction brl    braille
 word chn =         children
+match %[_~^]%<*%a* chn (%2)|(%>*%[_~^]) =
 word concv =       conceive
 word concvg =      conceiving
 contraction cd     could
@@ -1432,6 +2026,7 @@ contraction dcl    declare
 contraction dclg   declaring
 contraction ei     either
 word fst =         first
+word fsts =
 contraction fr     friend
 contraction gd     good
 contraction grt    great
@@ -1452,8 +2047,12 @@ word onef =        oneself
 word ourvs =       ourselves
 contraction pd     paid
 word percv =       perceive
+word percvd =
 word percvg =      perceiving
+word percvr =
+word percvs =
 word perh =        perhaps
+word perhs =
 contraction qk     quick
 contraction rcv    receive
 contraction rcvg   receiving
@@ -1476,7 +2075,7 @@ contraction yrvs   yourselves
 #   10.9.6
 #TODO
 
-#   Appendex 1
+#   Appendix 1
 
 word abouts 1-12-1256-2345-234
 word almosts 1-123-134-135-34-234
@@ -1537,6 +2136,7 @@ match %[_~^]%<* aftermatch ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-1-2345-16
 match %[_~^]%<* aftermatches ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-1-2345-16-15-234
 match %[_~^]%<* aftermath ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-1-1456
 match %[_~^]%<* aftermeeting ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-15-15-2345-346
+match %[_~^]%<* aftermentioned ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-26-56-1345-1246
 match %[_~^]%<* aftermidday ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-24-145-5-145
 match %[_~^]%<* aftermidnight ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-24-145-1345-24-126-2345
 match %[_~^]%<* aftermost ([Ss]|['’][Ss])?%>*%[_~^] 1-124-134-135-34
@@ -1558,6 +2158,7 @@ match %[_~^]%<* aftertaste ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2345-1-34-15
 match %[_~^]%<* aftertax ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2345-1-1346
 match %[_~^]%<* aftertaxes ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2345-1-1346-15-234
 match %[_~^]%<* aftertea ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2345-15-1
+match %[_~^]%<* aftertheater ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2346-1-2345-12456
 match %[_~^]%<* aftertheatre ([Ss]|['’][Ss])?%>*%[_~^] 1-124-2346-1-2345-1235-15
 match %[_~^]%<* afterthought ([Ss]|['’][Ss])?%>*%[_~^] 1-124-1456-5-1256
 match %[_~^]%<* aftertime ([Ss]|['’][Ss])?%>*%[_~^] 1-124-5-2345
@@ -1571,6 +2172,7 @@ match %[_~^]%<* apperceiver ([Ss]|['’][Ss])?%>*%[_~^] 1-1234-1234-12456-14-123
 match %[_~^]%<* apperceiving ([Ss]|['’][Ss])?%>*%[_~^] 1-1234-1234-12456-14-1236-1245
 match %[_~^]%<* archdeceiver ([Ss]|['’][Ss])?%>*%[_~^] 345-16-145-14-1236-1235
 match %[_~^]%<* beforehand ([Ss]|['’][Ss])?%>*%[_~^] 23-124-125-12346
+match %[_~^]%<* beforementioned ([Ss]|['’][Ss])?%>*%[_~^] 23-124-134-26-56-1345-1246
 match %[_~^]%<* befriend ([Ss]|['’][Ss])?%>*%[_~^] 23-124-1235
 match %[_~^]%<* behindhand ([Ss]|['’][Ss])?%>*%[_~^] 23-125-125-12346
 match %[_~^]%<* belittle ([Ss]|['’][Ss])?%>*%[_~^] 23-123-123
@@ -1857,6 +2459,7 @@ match %[_~^]%<* must’ve ([Ss]|['’][Ss])?%>*%[_~^] 134-34-3-1236-15
 match %[_~^]%<* must've ([Ss]|['’][Ss])?%>*%[_~^] 134-34-3-1236-15
 match %[_~^]%<* musta ([Ss]|['’][Ss])?%>*%[_~^] 134-34-1
 match %[_~^]%<* mustard ([Ss]|['’][Ss])?%>*%[_~^] 134-34-345-145
+match %[_~^]%<* mustardy ([Ss]|['’][Ss])?%>*%[_~^] 134-34-345-145-13456
 match %[_~^]%<* mustier ([Ss]|['’][Ss])?%>*%[_~^] 134-34-24-12456
 match %[_~^]%<* mustiest ([Ss]|['’][Ss])?%>*%[_~^] 134-34-24-15-34
 match %[_~^]%<* mustily ([Ss]|['’][Ss])?%>*%[_~^] 134-34-24-123-13456
@@ -2012,6 +2615,8 @@ match %[_~^]%<* unrejoicefulness ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-1235-245-1
 match %[_~^]%<* unrejoicer ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-1235-245-14-1235
 match %[_~^]%<* unrejoicing ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-1235-245-14-1245
 match %[_~^]%<* unrejoicingly ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-1235-245-14-1245-123-13456
+match %[_~^]%<* unrepaid ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-1235-15-1234-145
+match %[_~^]%<* unsaid   ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-234-145
 match %[_~^]%<* walkabout ([Ss]|['’][Ss])?%>*%[_~^] 2456-1-123-13-1-12
 match %[_~^]%<* wellpaid ([Ss]|['’][Ss])?%>*%[_~^] 2456-15-123-123-1234-145
 match %[_~^]%<* westabout ([Ss]|['’][Ss])?%>*%[_~^] 2456-15-34-1-12
@@ -2032,6 +2637,8 @@ match %[_~^]%<* wouldn't ([Ss]|['’][Ss])?%>*%[_~^] 2456-145-1345-3-2345
 match %[_~^]%<* wouldn’t’ve ([Ss]|['’][Ss])?%>*%[_~^] 2456-145-1345-3-2345-3-1236-15
 match %[_~^]%<* wouldn't've ([Ss]|['’][Ss])?%>*%[_~^] 2456-145-1345-3-2345-3-1236-15
 match %[_~^]%<* wouldst ([Ss]|['’][Ss])?%>*%[_~^] 2456-145-34
+
+match %[_~^]%<* whereabouts (['’][Ss])?%>*%[_~^] 5-156-1-12-234
 
 nofor word 'twould  3-2345-2456-145
 nofor word 'twould've  3-2345-2456-145-3-1236-15
@@ -2080,6 +2687,7 @@ nofor word aftermatch 1-124-134-1-2345-16
 nofor word aftermatches  1-124-134-1-2345-16-15-234
 nofor word aftermath  1-124-134-1-1456
 nofor word aftermeeting  1-124-134-15-15-2345-346
+nofor word aftermentioned  1-124-134-26-56-1345-1246
 nofor word aftermidday  1-124-134-24-145-5-145
 nofor word aftermidnight  1-124-134-24-145-1345-24-126-2345
 nofor word aftermost  1-124-134-135-34
@@ -2101,6 +2709,7 @@ nofor word aftertaste  1-124-2345-1-34-15
 nofor word aftertax  1-124-2345-1-1346
 nofor word aftertaxes  1-124-2345-1-1346-15-234
 nofor word aftertea  1-124-2345-15-1
+nofor word aftertheater  1-124-2346-1-2345-12456
 nofor word aftertheatre  1-124-2346-1-2345-1235-15
 nofor word afterthought  1-124-1456-5-1256
 nofor word aftertime  1-124-5-2345
@@ -2114,6 +2723,7 @@ nofor word apperceiver  1-1234-1234-12456-14-1236-1235
 nofor word apperceiving  1-1234-1234-12456-14-1236-1245
 nofor word archdeceiver  345-16-145-14-1236-1235
 nofor word beforehand  23-124-125-12346
+nofor word beforementioned  23-124-134-26-56-1345-1246
 nofor word befriend  23-124-1235
 nofor word behindhand  23-125-125-12346
 nofor word belittle  23-123-123
@@ -2395,6 +3005,7 @@ nofor word muchness  134-16-56-234
 nofor word must've  134-34-3-1236-15
 nofor word musta  134-34-1
 nofor word mustard  134-34-345-145
+nofor word mustardy  134-34-345-145-13456
 nofor word mustier  134-34-24-12456
 nofor word mustiest  134-34-24-15-34
 nofor word mustily  134-34-24-123-13456
@@ -2545,6 +3156,8 @@ nofor word unrejoicefulness  136-1345-1235-245-14-56-123-56-234
 nofor word unrejoicer  136-1345-1235-245-14-1235
 nofor word unrejoicing  136-1345-1235-245-14-1245
 nofor word unrejoicingly  136-1345-1235-245-14-1245-123-13456
+nofor word unrepaid  136-1345-1235-15-1234-145
+nofor word unsaid  136-1345-234-145
 nofor word walkabout  2456-1-123-13-1-12
 nofor word wellpaid  2456-15-123-123-1234-145
 nofor word westabout  2456-15-34-1-12
@@ -2605,6 +3218,7 @@ nofor word aftermarkets  1-124-134-345-13-15-2345-234
 nofor word aftermatchs 1-124-134-1-2345-16-234
 nofor word aftermaths  1-124-134-1-1456-234
 nofor word aftermeetings  1-124-134-15-15-2345-346-234
+nofor word aftermentioneds  1-124-134-26-56-1345-1246-234
 nofor word aftermiddays  1-124-134-24-145-5-145-234
 nofor word aftermidnights  1-124-134-24-145-1345-24-126-2345-234
 nofor word aftermosts  1-124-134-135-34-234
@@ -2626,6 +3240,7 @@ nofor word aftertastes  1-124-2345-1-34-15-234
 nofor word aftertaxs  1-124-2345-1-1346-234
 nofor word aftertaxess  1-124-2345-1-1346-15-234-234
 nofor word afterteas  1-124-2345-15-1-234
+nofor word aftertheaters  1-124-2346-1-2345-12456-234
 nofor word aftertheatres  1-124-2346-1-2345-1235-15-234
 nofor word afterthoughts  1-124-1456-5-1256-234
 nofor word aftertimes  1-124-5-2345-234
@@ -2638,6 +3253,7 @@ nofor word apperceivers  1-1234-1234-12456-14-1236-1235-234
 nofor word apperceivings  1-1234-1234-12456-14-1236-1245-234
 nofor word archdeceivers  345-16-145-14-1236-1235-234
 nofor word beforehands  23-124-125-12346-234
+nofor word beforementioneds  23-124-134-26-56-1345-1246-234
 nofor word befriends  23-124-1235-234
 nofor word behindhands  23-125-125-12346-234
 nofor word belittles  23-123-123-234
@@ -2892,6 +3508,7 @@ nofor word muchnesss  134-16-56-234-234
 nofor word must'ves  134-34-3-1236-15-234
 nofor word mustas  134-34-1-234
 nofor word mustards  134-34-345-145-234
+nofor word mustardys  134-34-345-145-13456-234
 nofor word mustiers  134-34-24-12456-234
 nofor word mustiests  134-34-24-15-34-234
 nofor word mustilys  134-34-24-123-13456-234
@@ -3024,6 +3641,8 @@ nofor word unrejoicefulnesss  136-1345-1235-245-14-56-123-56-234-234
 nofor word unrejoicers  136-1345-1235-245-14-1235-234
 nofor word unrejoicings  136-1345-1235-245-14-1245-234
 nofor word unrejoicinglys  136-1345-1235-245-14-1245-123-13456-234
+nofor word unrepaids  136-1345-1235-15-1234-145-234
+nofor word unsaids  136-1345-234-145-234
 nofor word walkabouts  2456-1-123-13-1-12-234
 nofor word wellpaids  2456-15-123-123-1234-145-234
 nofor word westabouts  2456-15-34-1-12-234
@@ -3054,8 +3673,8 @@ nofor word aboutfacer's  1-12-124-1-14-12456-3-234
 nofor word aboutfacing's  1-12-124-1-14-346-3-234
 nofor word aboutturn's  1-12-2345-136-1235-1345-3-234
 nofor word aboutturned's  1-12-2345-136-1235-1345-1246-3-234
-nofor word aboveboards's  1-12-1236-12-135-345-145-3-234
-nofor word abovegrounds's  1-12-1236-1245-1235-46-145-3-234
+nofor word aboveboard's  1-12-1236-12-135-345-145-3-234
+nofor word aboveground's  1-12-1236-1245-1235-46-145-3-234
 nofor word abovementioned's  1-12-1236-134-26-56-1345-1246-3-234
 nofor word accordingly's  1-14-123-13456-3-234
 nofor word aforesaid's  1-123456-15-234-145-3-234
@@ -3086,10 +3705,11 @@ nofor word afterlives's  1-124-123-24-1236-15-234-3-234
 nofor word afterlunch's  1-124-123-136-1345-16-3-234
 nofor word afterlunches's  1-124-123-136-1345-16-15-234-3-234
 nofor word aftermarket's  1-124-134-345-13-15-2345-3-234
-nofor word aftermatch 1-124-134-1-2345-16-3-234
+nofor word aftermatch's 1-124-134-1-2345-16-3-234
 nofor word aftermatches's  1-124-134-1-2345-16-15-234-3-234
 nofor word aftermath's  1-124-134-1-1456-3-234
 nofor word aftermeeting's  1-124-134-15-15-2345-346-3-234
+nofor word aftermentioned's  1-124-134-26-56-1345-1246-3-234
 nofor word aftermidday's  1-124-134-24-145-5-145-3-234
 nofor word aftermidnight's  1-124-134-24-145-1345-24-126-2345-3-234
 nofor word aftermost's  1-124-134-135-34-3-234
@@ -3111,6 +3731,7 @@ nofor word aftertaste's  1-124-2345-1-34-15-3-234
 nofor word aftertax's  1-124-2345-1-1346-3-234
 nofor word aftertaxes's  1-124-2345-1-1346-15-234-3-234
 nofor word aftertea's  1-124-2345-15-1-3-234
+nofor word aftertheater's  1-124-2346-1-2345-12456-3-234
 nofor word aftertheatre's  1-124-2346-1-2345-1235-15-3-234
 nofor word afterthought's  1-124-1456-5-1256-3-234
 nofor word aftertime's  1-124-5-2345-3-234
@@ -3124,6 +3745,7 @@ nofor word apperceiver's  1-1234-1234-12456-14-1236-1235-3-234
 nofor word apperceiving's  1-1234-1234-12456-14-1236-1245-3-234
 nofor word archdeceiver's  345-16-145-14-1236-1235-3-234
 nofor word beforehand's  23-124-125-12346-3-234
+nofor word beforementioned's  23-124-134-26-56-1345-1246-3-234
 nofor word befriend's  23-124-1235-3-234
 nofor word behindhand's  23-125-125-12346-3-234
 nofor word belittle's  23-123-123-3-234
@@ -3405,6 +4027,7 @@ nofor word muchness's  134-16-56-234-3-234
 nofor word must've's  134-34-3-1236-15-3-234
 nofor word musta's  134-34-1-3-234
 nofor word mustard's  134-34-345-145-3-234
+nofor word mustardy's  134-34-345-145-13456-3-234
 nofor word mustier's  134-34-24-12456-3-234
 nofor word mustiest's  134-34-24-15-34-3-234
 nofor word mustily's  134-34-24-123-13456-3-234
@@ -3555,6 +4178,8 @@ nofor word unrejoicefulness's  136-1345-1235-245-14-56-123-56-234-3-234
 nofor word unrejoicer's  136-1345-1235-245-14-1235-3-234
 nofor word unrejoicing's  136-1345-1235-245-14-1245-3-234
 nofor word unrejoicingly's  136-1345-1235-245-14-1245-123-13456-3-234
+nofor word unrepaid's  136-1345-1235-15-1234-145-3-234
+nofor word unsaid's  136-1345-234-145-3-234
 nofor word walkabout's  2456-1-123-13-1-12-3-234
 nofor word wellpaid's  2456-15-123-123-1234-145-3-234
 nofor word westabout's  2456-15-34-1-12-3-234
@@ -3573,9 +4198,12 @@ nofor word wouldn't's  2456-145-1345-3-2345-3-234
 nofor word wouldn't've's  2456-145-1345-3-2345-3-1236-15-3-234
 nofor word wouldst's  2456-145-34-3-234
 
+nofor word whereabouts's  5-156-1-12-234-234
+
 contraction abface      aboutface
 contraction abturn      aboutturn
 contraction acly        accordingly
+contraction aclys
 contraction afbattle    afterbattle
 contraction afburn      afterburn
 contraction afclap      afterclap
@@ -3600,15 +4228,24 @@ contraction bloodlr     bloodletter
 contraction boyfr       boyfriend
 contraction brld        brailled
 contraction brlr        brailler
+contraction brlrs
+contraction brls
+contraction brlx
 contraction brly        brailley
 contraction colorbl     colorblind
 contraction cda         coulda
+contraction cds
 contraction dcvd        deceived
 contraction dcvr        deceiver
+contraction dcvrs
+contraction dcvs
 contraction dcld        declared
 contraction dclr        declarer
+contraction dclrs
+contraction dcls
 contraction defr        defriend
 contraction defr        defriend
+contraction eis
 contraction feelgd      feelgood
 contraction frlies      friendlies
 contraction frly        friendly
@@ -3639,10 +4276,15 @@ contraction grtniece    greatniece
 contraction grtuncle    greatuncle
 contraction guyfr       guyfriend
 contraction hatelr      hateletter
+word herfs =
 contraction hmbo        himbo
 contraction hmboes      himboes
+contraction hmfs
 contraction illpd       illpaid
 contraction immly       immediately
+contraction immlys
+contraction imms
+contraction xfs
 contraction knockab     knockabout
 contraction ladyfr      ladyfriend
 contraction layab       layabout
@@ -3661,16 +4303,33 @@ contraction llneck      littleneck
 contraction llr         littler
 contraction lovelr      loveletter
 contraction manfr       manfriend
+word mchs =
 contraction midafn      midafternoon
 contraction misbrl      misbraille
 contraction misbrld     misbrailled
 contraction missd       missaid
+word msta =
+word msts =
+word msty =
+contraction myfs
+contraction necs
+contraction neis
 contraction newslr      newsletter
+contraction newslrs
+word onefs =
+word ourvss =
+contraction pds
+word percvd =
+word percvg =
+word percvr =
+word percvrs =
+word percvs =
 contraction poorlypd    poorlypaid
 contraction prcv        preceive
 contraction prcvr       preceiver
 contraction prcvg       preceiving
 contraction prepd       prepaid
+contraction prepds
 contraction purbl       purblind
 contraction purblly     purblindly
 contraction qkdraw      quickdraw
@@ -3688,53 +4347,123 @@ contraction rebrld      rebrailled
 contraction rebrlr      rebrailler
 contraction rcvd        received
 contraction rcvr        receiver
+contraction rcvrs
+contraction rcvs
 contraction rjcd        rejoiced
-contraction rjcr        rejoicer
+contraction rjcr
+contraction rjcrs
+contraction rjcs        rejoicer
 contraction rjcgly      rejoicingly
+contraction rjcglys
 contraction relr        reletter
 contraction repd        repaid
+contraction repds
 contraction runab       runabout
+word schs =
+contraction sds
+word shds =
+contraction tds
+word tgrness =
+contraction tgrs
+word themvss =
+word thyfs =
+contraction tms
+contraction tns
 contraction turnab      turnabout
 contraction unac        unaccording
 contraction unacly      unaccordingly
+contraction unaclys
+contraction unacs	
 contraction unblfold    unblindfold
 contraction unbrl       unbraille
 contraction unbrld      unbrailled
 contraction undcv       undeceive
 contraction undcvd      undeceived
 contraction undcvr      undeceiver
+contraction undcvs
 contraction undcvg      undeceiving
 contraction undcl       undeclare
 contraction undcld      undeclared
+contraction undcls
 contraction unfr        unfriend
 contraction unfrly      unfriendly
 contraction unnec       unnecessary
+contraction unnecs
 contraction unpd        unpaid
+contraction unpds
+word unpercv =
+word unpercvd =
+word unpercvg =
+word unpercvrr =
+word unpercvs =
 contraction unqk        unquick
 contraction unrcvd      unreceived
 contraction unrjc       unrejoice
 contraction unrjcd      unrejoiced
 contraction unrjcr      unrejoicer
+contraction unrjcs
 contraction unrjcg      unrejoicing
 contraction unrjcgly    unrejoicingly
+contraction unrepd      unrepaid
+contraction unsd        unsaid
+contraction unsds
 contraction walkab      walkabout
+contraction wds
 contraction wellpd      wellpaid
 contraction womanfr     womanfriend
 contraction wda         woulda
+contraction yrs
+contraction yrfs
+contraction yrvss
 
 #   Appendix 1.2
 
 #sufword acrosses 1-14-1235-135-234-234-15-234
-sufword dafter 145-1-124-2345-12456
-sufword drafter 145-1235-1-124-2345-12456
-sufword grafter 1245-1235-1-124-2345-12456
-sufword rafter 1235-1-124-2345-12456
 
-#   extra shortforms
-
-match %[_~^]%<* unsaid ([Ss]|['’][Ss])?%>*%[_~^] 136-1345-234-145
 
 #   misc
 
+sufword preadmit 1234-1235-15-1-145-134-24-2345
 word rared 1235-1-1235-1246
-word firedrill 124-24-1235-15-145-1235-24-123-123
+
+contraction blc
+contraction bldg
+contraction blt
+contraction blvd
+contraction llb
+contraction llc
+contraction lld
+contraction llp
+
+contraction .com
+contraction .org
+contraction .gov
+contraction .edu
+contraction .mil
+contraction .net
+
+word   somesch 234-135-134-15-234-14-125
+
+contraction blcup
+contraction grtsamada
+
+# Shape symbols require a grade 1 indicator (Section 3.22.1)
+contraction \x25a0 ■ filled (solid) square
+contraction \x25a1 □ square
+contraction \x25a7 ▧ shaded square (upper left to lower right)
+contraction \x25b2 ▲ filled (solid) (equilateral) triangle
+contraction \x25b3 △ regular (equilateral) triangle
+contraction \x25cb ○ circle
+contraction \x25cd ◍ shaded circle
+
+
+
+# Punctuation in strange places require grade 1 indicator
+# note, forward direction handled with match elsewhere
+
+nofor always , 56-2
+nofor always ; 56-23
+nofor always : 56-25
+nofor always . 56-256
+nofor always ! 56-235
+nofor always ? 56-236

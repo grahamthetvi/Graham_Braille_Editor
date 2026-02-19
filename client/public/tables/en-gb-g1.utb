@@ -1,5 +1,30 @@
 # liblouis: U.K. English Grade 1 table
 #
+# ------------
+#-name: British English grade 1
+#-index-name: English, U.K., uncontracted
+#-display-name: English uncontracted braille as used in the U.K.
+#
+#+language:en
+#+region:en-GB
+#+type:literary
+#+contraction:no
+#+grade:1
+#+system:bauk
+# Marked as "direction:forward" by Bue Vester-Andersen
+# as tests only run forward.
+#+direction:forward
+#
+# TODO: Please correct the metadata above. It is not meant to be
+# accurate nor complete. It hasn't been verified by the table
+# author yet. It is merely an attempt by the liblouis maintainers
+# to get some sensible initial values in place.
+#
+# TODO: Please add a reference to official documentation about
+# the implemented braille code. Preferably submit the documents
+# to https://github.com/liblouis/braille-specs.
+# ------------
+#
 # Based on the braille contraction modules in BRLTTY
 #
 # Copyright (C) 1995-2004 by The BRLTTY Team.
@@ -28,222 +53,46 @@ include text_nabcc.dis All display opcodes
 include ukchardefs.cti All character definition opcodes
 
 
-# Braille indicators
-numsign 3456  number sign, just a dots operand
-multind 56-6 letsign capsletter
-letsign 56
-capsletter 6
-begcapsword 6-6
-endcapsword 6-3
-emphclass italic
-emphclass underline
-emphclass bold
-begemph italic 46
-endemph italic 46-3
-begemph bold 46-46
-endemph bold 46-3
-begcomp 6-346
-endcomp 6-346
-
-# the decimal digits
-include litdigits6Dots.uti
-
-# Letters are defined in en-chardefs
-
-#single letter words
-largesign a 1
-largesign A 1
-word I 24
-word O 135
-word o 135
-
-# abbreviations
-contraction ie
-word i.e. 24-256-15-256
-contraction ok
-word o.k. 135-256-13-256
-
-# Roman Numerals
-contraction ii
-contraction iii
-contraction iv
-contraction vi
-contraction vii
-contraction viii
-contraction ix
-contraction xi
-contraction xii
-contraction xiii
-
-
-# punctuation
-prepunc " 236
-postpunc " 356
-always " 5
-prepunc ' 6-236
-postpunc ' 356-3
-postpunc '' 356
-postpunc ''' 356-3-356
-
-always ' 3
-word 'ave 3-1-1236-15
-word ’ave 3-1-1236-15
-midendword 'an 3-1-1345
-midendword ’an 3-1-1345
-endword 'ah 3-1-125
-endword ’ah 3-1-125
-midendword 'am 3-1-134
-midendword ’am 3-1-134
-endword 'd 3-145
-endword ’d 3-145
-word 'em 3-15-134
-word ’em 3-15-134
-word 'ear 3-15-1-1235
-word ’ear 3-15-1-1235
-word goin' 1245-135-24-1345-3
-word goin’ 1245-135-24-1345-3
-begword ha'p 125-1-3-1234
-begword ha’p 125-1-3-1234
-endword 'll 3-123-123
-endword ’ll 3-123-123
-endword 'm 3-134
-endword ’m 3-134
-endword 'n 3-1345
-endword ’n 3-1345
-begword o'd 135-3-145
-begword o’d 135-3-145
-begword o'l 135-3-123
-begword o’l 135-3-123
-word 'ome 3-135-134-15
-word ’ome 3-135-134-15
-endword 're 3-1235-15
-endword ’re 3-1235-15
-endword 'ry 3-1235-13456
-endword ’ry 3-1235-13456
-endword 'r 3-1235
-endword ’r 3-1235
-endword 's 3-234
-endword ’s 3-234
-endword 't 3-2345
-endword ’t 3-2345
-word 'tis =
-word 'twas =
-word 'uns 3-136-1345-234
-word ’uns 3-136-1345-234
-endword 've 3-1236-15
-endword ’ve 3-1236-15
-midnum , 3
-always , 2
-midnum . 2
-#decpoint . 2 # removed to sort out translations such as p.11
-always . 256
-always ; 23
-midnum : 3456
-always : 25
-#endnum ! 6-235
-always ! 235
-always # 4-3456
-midnum / 456-34-3456
-always / 456-34
-always ? 236
-endnum % 0-25-1234
-always % 25-1234
-midnum ^ 346-3456
-always ^ 456-126
-always ~ 4-156
-always & 4-12346
-midnum * 0-56-236-3456
-always * 35-35
-repeated *** 35-35-0-35-35-0-35-35
-always ( 2356
-prepunc ( 2356
-postpunc ) 2356
-begword ( 2356
-endword ) 2356
-always [ 6-2356
-always ] 2356-3
-always { 46-2356
-always } 46-2356
-always -com 36-14-135-134
-endword -to 36-2345-135 pointed-to resource
-endword -by 36-12-13456 used-by
-# always _ 78
-prepunc `` 236
-postpunc ` 6-236
-prepunc ` 6-236
-postpunc ’ 356-3 end single curly quote
-prepunc ’ 356-3
-always ‘ 6-236 start single curly quote
-always ` 4
-always @ 2346
-always \\ 5-16
-always | 5-123
-repeated \x00a0 0 no break space
-repeated --- 36-36-36
-
-# repeated ___ 78-78-78
-repeated ___ 46-46-46
-
-repeated ::: 25-25-25
-
-repeated === 56-2356-56-2356-56-2356
-repeated ~~~ 4-156-4-156-4-156
-always \s-\s 36-36
-always \s-\scom 36-36-14-135-134
-always ... 3-3-3
-always .\s.\s. 3-3-3 . . .
-# always  \x2026 3-3-3 # 8230			MS Word smart ellipsis
-
-# the hyphen
-always \s–\s 36-36
-#always - 36
-repeated ­­­ 36-36-36
-always \s­\s 36-36
-midword - 36
-joinword - 36
-begword - 36
-hyphen - 36
-
 # accented letters
 
-uplow \x00C0\x00E0 1				# a with grave
-uplow \x00C1\x00E1 1				# a with acute
-uplow \x00C2\x00E2 1				# a with circumflex
-uplow \x00C3\x00E3 1				# a with tilde
-uplow \x00C4\x00E4 1				# a with dieresis
-uplow \x00C5\x00E5 1				# a with ring above
-uplow \x00C6\x00E6 1				# letter ae
-uplow \x00C7\x00E7 14				# c with cedilla
-uplow \x00C8\x00E8 15				# e with grave
-uplow \x00C9\x00E9 15				# e with acute
-uplow \x00CA\x00EA 15				# e with circumflex
-uplow \x00CB\x00EB 15				# e with dieresis
-uplow \x00CC\x00EC 24				# i with grave above
-uplow \x00CD\x00ED 24				# i with acute above
-uplow \x00CE\x00EE 24				# i with circumflex
-uplow \x00CF\x00EF 24				# i with dieresis
-uplow \x00D0\x00F0 15				# letter eth
-uplow \x00D1\x00F1 1345			# n with tilde
-uplow \x00D2\x00F2 135			# o with grave above
-uplow \x00D3\x00F3 135			# o with acute above
-uplow \x00D4\x00F4 135			# o with circumflex
-uplow \x00D5\x00F5 135			# o with tilde
-uplow \x00D6\x00F6 135			# o with dieresis
+lowercase \x00E0 1				# a with grave
+lowercase \x00E1 1				# a with acute
+lowercase \x00E2 1				# a with circumflex
+lowercase \x00E3 1				# a with tilde
+lowercase \x00E4 1				# a with dieresis
+lowercase \x00E5 1				# a with ring above
+lowercase \x00E6 1				# letter ae
+lowercase \x00E7 14				# c with cedilla
+lowercase \x00E8 15				# e with grave
+lowercase \x00E9 15				# e with acute
+lowercase \x00EA 15				# e with circumflex
+lowercase \x00EB 15				# e with dieresis
+lowercase \x00EC 24				# i with grave above
+lowercase \x00ED 24				# i with acute above
+lowercase \x00EE 24				# i with circumflex
+lowercase \x00EF 24				# i with dieresis
+lowercase \x00F0 15				# letter eth
+lowercase \x00F1 1345			# n with tilde
+lowercase \x00F2 135			# o with grave above
+lowercase \x00F3 135			# o with acute above
+lowercase \x00F4 135			# o with circumflex
+lowercase \x00F5 135			# o with tilde
+lowercase \x00F6 135			# o with dieresis
 
 # \x00D7	× multiplication sign	----------------------
 
-uplow \x00D8\x00F8 135			# o with stroke
-uplow \x00D9\x00F9 136			# u with grave above
-uplow \x00DA\x00FA 136			# u with acute above
-uplow \x00DB\x00FB 136			# u with circumflex above
-uplow \x00DC\x00FC 136				# u with dieeresis
-uplow \x00DD\x00FD 13456		# y with acute above
-uplow \x00DE\x00FE 2345			# letter thorn
+lowercase \x00F8 135			# o with stroke
+lowercase \x00F9 136			# u with grave above
+lowercase \x00FA 136			# u with acute above
+lowercase \x00FB 136			# u with circumflex above
+lowercase \x00FC 136				# u with dieeresis
+lowercase \x00FD 13456		# y with acute above
+lowercase \x00FE 2345			# letter thorn
 letter \x00DF 2346		# small sharp s
-uplow \x0174\x0175 2456 w with circumflex
-uplow \x0176\x0177 13456 # y with circumflex
-uplow \x0178\x00ff 13456 # y with diaeresis
-uplow \x1EF2\x1EF3 13456 # y with grave
+lowercase \x0175 2456 w with circumflex
+lowercase \x0177 13456 # y with circumflex
+lowercase \x00ff 13456 # y with diaeresis
+lowercase \x1EF3 13456 # y with grave
 
 largesign \x00C0 4-1      [C0] upper a grave
 largesign \x00E0   4-1      [E0] lower a grave
@@ -355,27 +204,262 @@ hyphen 	\x2010 36		 # 8208			hyphen
 # punctuation \x2011 36		 # 8209			non-breaking hyphen
 punctuation \x2011 23478	# 8209  non-breaking hyphen
 
-
+punctuation \x2212 36
+noback always \x2212 36
+always \s\x2212\s 36-36
+midnum \x2013 36-3456
 always	\x2013 56-36		 # 8211		smart minus sign
 
 
-always	\x201C 236	 # 8220			smart opening double quote
-always	\x201D 356	 # 8221			smart closing double quote
-always	\x201E 236	 # 8222			smart double low quotation mark
-always	\x201F 356	 # 8223			smart double high reverse quotation mark
+noback always	\x201C 236	 # 8220			smart opening double quote
+noback always	\x201D 356	 # 8221			smart closing double quote
+noback always	\x201E 236	 # 8222			smart double low quotation mark
+noback always	\x201F 356	 # 8223			smart double high reverse quotation mark
+
+# Uppercase letters
+base uppercase \x00C0 \x00E0		# a with grave
+base uppercase \x00C1 \x00E1		# a with acute
+base uppercase \x00C2 \x00E2		# a with circumflex
+base uppercase \x00C3 \x00E3		# a with tilde
+base uppercase \x00C4 \x00E4		# a with dieresis
+base uppercase \x00C5 \x00E5		# a with ring above
+base uppercase \x00C6 \x00E6		# letter ae
+base uppercase \x00C7 \x00E7		# c with cedilla
+base uppercase \x00C8 \x00E8		# e with grave
+base uppercase \x00C9 \x00E9		# e with acute
+base uppercase \x00CA \x00EA		# e with circumflex
+base uppercase \x00CB \x00EB		# e with dieresis
+base uppercase \x00CC \x00EC		# i with grave above
+base uppercase \x00CD \x00ED		# i with acute above
+base uppercase \x00CE \x00EE		# i with circumflex
+base uppercase \x00CF \x00EF		# i with dieresis
+base uppercase \x00D0 \x00F0		# letter eth
+base uppercase \x00D1 \x00F1		# n with tilde
+base uppercase \x00D2 \x00F2		# o with grave above
+base uppercase \x00D3 \x00F3		# o with acute above
+base uppercase \x00D4 \x00F4		# o with circumflex
+base uppercase \x00D5 \x00F5		# o with tilde
+base uppercase \x00D6 \x00F6		# o with dieresis
+base uppercase \x00D8 \x00F8		# o with stroke
+base uppercase \x00D9 \x00F9		# u with grave above
+base uppercase \x00DA \x00FA		# u with acute above
+base uppercase \x00DB \x00FB		# u with circumflex above
+base uppercase \x00DC \x00FC		# u with dieeresis
+base uppercase \x00DD \x00FD		# y with acute above
+base uppercase \x00DE \x00FE		# letter thorn
+base uppercase \x0174 \x0175		# w with circumflex
+base uppercase \x0176 \x0177		# y with circumflex
+base uppercase \x0178 \x00ff		# y with diaeresis
+base uppercase \x1EF2 \x1EF3		# y with grave
+
+# Braille indicators
+numsign 3456  number sign, just a dots operand
+multind 56-6 letsign capsletter
+letsign 56
+capsletter 6
+begcapsword 6-6
+endcapsword 6-3
+emphclass italic
+emphclass underline
+emphclass bold
+begemph italic 46
+endemph italic 46-3
+begemph bold 46-46
+endemph bold 46-3
+begcomp 6-346
+endcomp 6-346
+
+# the decimal digits
+include litdigits6Dots.uti
+
+# Letters are defined in en-chardefs
+
+#single letter words
+largesign a 1
+largesign A 1
+word I 24
+word O 135
+word o 135
+
+# abbreviations
+contraction ie
+word i.e. 24-256-15-256
+contraction ok
+word o.k. 135-256-13-256
+contraction eg
+
+# Roman Numerals
+contraction ii
+contraction iii
+contraction iv
+contraction vi
+contraction vii
+contraction viii
+contraction ix
+contraction xi
+contraction xii
+contraction xiii
+
+
+# punctuation
+prepunc " 236
+postpunc " 356
+always \s-" 36-36-356
+always \s-” 36-36-356
+always ..." 3-3-3-356
+always …" 3-3-3-356
+always ...” 3-3-3-356
+always …” 3-3-3-356
+always ?" 236-356
+word " 236
+begnum ' 3
+prepunc ' 6-236
+postpunc ' 356-3
+postpunc '' 356
+postpunc ''' 356-3-356
+
+noback always ' 3
+word 'ave 3-1-1236-15
+word ’ave 3-1-1236-15
+midendword 'an 3-1-1345
+midendword ’an 3-1-1345
+endword 'ah 3-1-125
+endword ’ah 3-1-125
+midendword 'am 3-1-134
+midendword ’am 3-1-134
+word c'mon 14-3-134-135-1345
+word c’mon 14-3-134-135-1345
+endword 'd 3-145
+endword ’d 3-145
+begword d' 145-3
+begword d’ 145-3
+word 'em 3-15-134
+word ’em 3-15-134
+word 'ear 3-15-1-1235
+word ’ear 3-15-1-1235
+midendword e'e 15-3-15
+midendword e’e 15-3-15
+word goin' 1245-135-24-1345-3
+word goin’ 1245-135-24-1345-3
+begword ha'p 125-1-3-1234
+begword ha’p 125-1-3-1234
+endword 'll 3-123-123
+endword ’ll 3-123-123
+endword 'm 3-134
+endword ’m 3-134
+endword 'n 3-1345
+endword ’n 3-1345
+begword o'd 135-3-145
+begword o’d 135-3-145
+begword o'l 135-3-123
+begword o’l 135-3-123
+word 'ome 3-135-134-15
+word ’ome 3-135-134-15
+endword 're 3-1235-15
+endword ’re 3-1235-15
+endword 'ry 3-1235-13456
+endword ’ry 3-1235-13456
+endword 'r 3-1235
+endword ’r 3-1235
+endword 's 3-234
+endword ’s 3-234
+endword 't 3-2345
+endword ’t 3-2345
+word 'tis =
+word 'twas =
+word 'uns 3-136-1345-234
+word ’uns 3-136-1345-234
+endword 've 3-1236-15
+endword ’ve 3-1236-15
+midnum , 3
+noback always , 2
+midnum . 2
+#decpoint . 2 # removed to sort out translations such as p.11
+noback always . 256
+noback always ; 23
+midnum : 3456
+noback always : 25
+#endnum ! 6-235
+noback always ! 235
+begnum # 4
+always # 4-3456
+midnum / 456-34-3456
+always / 456-34
+always // 345
+noback always ? 236
+endnum % 0-25-1234
+always % 25-1234
+midnum ^ 346-3456
+always ^ 456-126
+always ~ 4-156
+always & 4-12346
+midnum * 0-56-236-3456
+always * 35-35
+repeated *** 35-35-0-35-35-0-35-35
+noback always ( 2356
+prepunc ( 2356
+postpunc ) 2356
+begword ( 2356
+endword ) 2356
+always [ 6-2356
+always ] 2356-3
+always { 46-2356
+always } 46-2356
+always -com 36-14-135-134
+endword -to 36-2345-135 pointed-to resource
+endword -by 36-12-13456 used-by
+# always _ 78
+prepunc `` 236
+postpunc ` 6-236
+prepunc ` 6-236
+postpunc ’ 356-3 end single curly quote
+prepunc ’ 356-3
+always ‘ 6-236 start single curly quote
+noback always ` 4
+begword @ 4-2346
+noback always @ 2346
+always \\ 5-16
+always | 5-123
+repeated \x00a0 0 no break space
+repeated --- 36-36-36
+
+# repeated ___ 78-78-78
+repeated ___ 46-46-46
+
+repeated ::: 25-25-25
+
+repeated === 56-2356-56-2356-56-2356
+repeated ~~~ 4-156-4-156-4-156
+always \s-\s 36-36
+always \s-\scom 36-36-14-135-134
+always ... 3-3-3
+always .\s.\s. 3-3-3 . . .
+# always  \x2026 3-3-3 # 8230			MS Word smart ellipsis
+
+# the hyphen
+always \s–\s 36-36
+#always - 36
+repeated ­­­ 36-36-36
+always \s­\s 36-36
+midword - 36
+joinword - 36
+begword - 36
+hyphen - 36
+
 
 
 # mathematical symbols
 #decpoint . 2 # removed to sort out translations such as p.11
-always < 246
+noback always < 246
 joinword = 56-2356
 joinnum = 56-2356
-always > 135
+noback always > 135
 midnum + 0-56-235-3456
 begnum + 56-235
 joinnum + 56-235
 joinword + 56-235
-midnum - 36-3456
+midnum - 36-3456 removed for verse references
+midnum \x2013 36
 #always - 36
 joinnum × 56-236
 joinword × 56-236
@@ -391,7 +475,7 @@ sign ™ 45-2345 trademark
 sign ® 45-1235 registered
 always ¶ 1234-345 paragraph
 always § 234-3 section
-always ° 356 degrees
+noback always ° 356 degrees
 begnum $ 256
 always $ 4-256
 always ¢ 4-14 cents
@@ -401,31 +485,31 @@ always ¥ 4-13456 yen
 always µ 2-134 mu
 
 # special character sequences
-compbrl :// URLs
-compbrl www.
+literal :// URLs
+literal www.
 
-compbrl .com
-compbrl .edu
-compbrl .gov
-compbrl .mil
-compbrl .net
-compbrl .org
-compbrl .co.uk
-# include countries.cti
-
-compbrl .doc
+literal .com
+literal .edu
+literal .gov
+literal .mil
+literal .net
+literal .org
+literal .doc
 compbrl .xml
 compbrl .xsl
-compbrl .htm
-compbrl .html
-compbrl .tex
-compbrl .txt
-compbrl .gif
-compbrl .jpg
-compbrl .png
-compbrl .wav
-compbrl .tar
-compbrl .zi
+literal .htm
+literal .html
+literal .tex
+literal .txt
+literal .gif
+literal .jpg
+literal .png
+literal .wav
+literal .tar
+literal .zip
+literal .uk
+
+# include countries.cti
 
 # Problems handled with context
 #context _$l["."]$l @256 U.S.
