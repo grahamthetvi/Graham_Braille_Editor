@@ -7,7 +7,7 @@ export default defineConfig({
 
   // Set base to the repo name for GitHub Pages deployment.
   // Override via VITE_BASE_URL env var if needed.
-  base: process.env.VITE_BASE_URL ?? '/GrahamBrailleWriter/',
+  base: process.env.VITE_BASE_URL ?? '/',
 
   worker: {
     // ES module workers allow static/dynamic imports and fetch()-based loading
