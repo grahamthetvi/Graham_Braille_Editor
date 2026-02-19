@@ -31,11 +31,10 @@ async function initLiblouis() {
     // @ts-ignore
     // @ts-ignore
     const liblouisModule = await import(/* @vite-ignore */ 'liblouis-js');
-    const liblouis = liblouisModule.default || liblouisModule;
+    const factory = (liblouisModule as any).default || liblouisModule;
 
     // liblouis-js exposes an async factory; initialise with the WASM blob URL.
-    // The default export might be the factory itself.
-    const instance = await (liblouis.default || liblouis)({ wasmBinaryFile: '/liblouis.wasm' });
+    const instance = await factory({ wasmBinaryFile: '/liblouis.wasm' });
     translateFn = (table: string, text: string) =>
       instance.translateString(table, text) as string;
 
