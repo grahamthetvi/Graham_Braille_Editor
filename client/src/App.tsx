@@ -85,6 +85,7 @@ export default function App() {
   }, [pageSettings]);
 
   const [showPageSettings, setShowPageSettings] = useState(false);
+  const [showPrint, setShowPrint] = useState(false);
 
   const { translate, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
@@ -184,7 +185,7 @@ export default function App() {
       {/* ── Header toolbar ───────────────────────────────────────────────── */}
       <header className="app-header">
         <div className="app-title">
-          <h1>Braille Vibe</h1>
+          <h1>Graham Braille Editor</h1>
           <span className="subtitle">Braille Editing &amp; Embossing Suite</span>
         </div>
 
@@ -253,6 +254,16 @@ export default function App() {
             Download BRF
           </button>
 
+          {/* Print to Embosser toggle */}
+          <button
+            className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
+            onClick={() => setShowPrint(s => !s)}
+            aria-expanded={showPrint}
+            title="Toggle Print to Embosser panel"
+          >
+            🖨 Print
+          </button>
+
           {/* Theme toggle */}
           <button
             className="theme-toggle"
@@ -263,6 +274,13 @@ export default function App() {
             {themeLabels[theme]}
           </button>
         </div>
+
+        {/* Compact print bar — full-width row below the toolbar */}
+        {showPrint && (
+          <div className="header-print-bar">
+            <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} compact />
+          </div>
+        )}
       </header>
 
       {/* ── Main two-pane layout ─────────────────────────────────────────── */}
@@ -381,7 +399,6 @@ export default function App() {
             )}
           </section>
 
-          <PrintPanel brf={translatedText} bridgeConnected={bridgeConnected} />
         </aside>
       </main>
 

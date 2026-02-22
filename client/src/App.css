@@ -412,7 +412,89 @@ body {
   font-style: italic;
 }
 
-/* ── Print Panel ─────────────────────────────────────────────────────────── */
+/* ── Active toolbar button (e.g. Print toggle when panel is open) ─────────── */
+
+.toolbar-btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.toolbar-btn--active:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+/* ── Header print bar (compact, full-width row below the toolbar) ──────────── */
+
+.header-print-bar {
+  flex-basis: 100%; /* forces a new row inside the flex-wrap header */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.print-panel-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.print-panel-compact label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.print-panel-compact .printer-input {
+  flex: 1;
+  min-width: 160px;
+  max-width: 320px;
+  padding: 0.3rem 0.5rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.print-panel-compact .printer-input:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.print-panel-compact .printer-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bridge-badge {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  border-radius: 4px;
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.print-status-ok {
+  font-size: 0.78rem;
+  color: var(--success);
+  white-space: nowrap;
+}
+
+.print-status-err {
+  font-size: 0.78rem;
+  color: var(--error);
+}
+
+/* ── Print Panel (vertical — kept for future use) ────────────────────────── */
 
 .print-panel {
   padding: 0.75rem 1rem;
