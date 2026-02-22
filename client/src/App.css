@@ -15,11 +15,19 @@ body {
 }
 
 #root {
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Root app container — fills #root and establishes the column layout */
+.app-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   max-width: 100%;
-  padding: 0;
   text-align: left;
 }
 
@@ -200,12 +208,12 @@ body {
 }
 
 .side-pane {
-  width: 360px;
-  min-width: 280px;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border);
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* ── Pane title ──────────────────────────────────────────────────────────── */
@@ -392,7 +400,7 @@ body {
   font-size: 1.1rem;
   line-height: 1.55;
   white-space: pre;
-  overflow-x: auto;
+  overflow-x: hidden;
   color: var(--braille-color);
 }
 
