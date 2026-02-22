@@ -23,6 +23,7 @@
   --focus-ring: #58a6ff;
   --focus-ring-width: 3px;
   --braille-color: #58a6ff;
+  --page-bg: #1c2128;          /* Dark "paper" — slightly lighter than bg */
 
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -55,6 +56,7 @@
   --focus-ring: #0969da;
   --focus-ring-width: 3px;
   --braille-color: #0969da;
+  --page-bg: #ffffff;          /* White paper for light theme */
 
   color-scheme: light;
 }
@@ -79,6 +81,7 @@
   --focus-ring: #ffff00;
   --focus-ring-width: 4px;
   --braille-color: #ffff00;
+  --page-bg: #000000;          /* Black paper for high-contrast */
 
   color-scheme: dark;
 }

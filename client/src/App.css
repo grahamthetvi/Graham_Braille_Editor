@@ -222,12 +222,92 @@ body {
 
 .brf-preview {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1rem 0;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+}
+
+/* Title row: "BRF Preview" label + ⚙ Layout button side by side */
+.pane-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.pane-title-row .pane-title {
+  margin: 0;
+}
+
+.layout-settings-btn {
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  background: var(--bg-overlay);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.layout-settings-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.layout-settings-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Page layout settings panel */
+.page-settings-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0.6rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.settings-field input[type="number"] {
+  width: 4.5rem;
+  padding: 0.2rem 0.4rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.settings-field input[type="number"]:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  flex-basis: 100%;
 }
 
 .preview-loading {
@@ -273,22 +353,47 @@ body {
   color: var(--error);
 }
 
-.brf-output {
+/* ── Paginated braille page view (Word-like) ─────────────────────────────── */
+
+.brf-pages-container {
   flex: 1;
-  margin: 0;
-  padding: 0.6rem;
-  background: var(--bg-overlay);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  /* Wide Unicode-safe font for braille dots */
-  font-family: 'Segoe UI', 'Noto Sans', system-ui, sans-serif;
-  font-size: 1.4rem;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
   overflow-y: auto;
-  color: var(--braille-color);
+  background: #3c3c3c;
+  padding: 0.75rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
   min-height: 0;
+}
+
+.brf-page {
+  background: var(--page-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.brf-page-number {
+  font-family: system-ui, sans-serif;
+  font-size: 0.62rem;
+  text-align: center;
+  color: #888;
+  margin-bottom: 0.25rem;
+  user-select: none;
+}
+
+.brf-page-content {
+  margin: 0;
+  /* Monospace so braille characters line up correctly at cellsPerRow width */
+  font-family: 'Courier New', 'Noto Sans Mono', 'Consolas', monospace;
+  font-size: 1.1rem;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--braille-color);
 }
 
 .brf-placeholder {

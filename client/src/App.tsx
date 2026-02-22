@@ -5,6 +5,7 @@ import { StatusBar } from './components/StatusBar';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille } from './hooks/useBraille';
 import { asciiToUnicodeBraille } from './utils/braille';
+import { formatBrfPages, formatBrfForOutput } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import './App.css';
 
@@ -15,10 +16,12 @@ import './App.css';
  *   • Monaco Editor captures text (debounced 500 ms).
  *   • Text + selected table → braille Web Worker (liblouis WASM, off-main-thread).
  *   • Worker translates in chunks for large documents, streaming PROGRESS events.
- *   • Translated BRF displayed as Unicode braille in the preview pane.
- *   • Download button exports the raw BRF file.
+ *   • Translated BRF is paginated by page layout settings and displayed as
+ *     discrete page blocks (Word-like scrolling view).
+ *   • Download button exports the formatted BRF file (CRLF + form feeds).
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
+ *   • Page layout settings (cells per row, lines per page) persist to localStorage.
  */
 
 type Theme = 'dark' | 'light' | 'high-contrast';
@@ -34,6 +37,13 @@ const themeLabels: Record<Theme, string> = {
   light: 'Hi-Con',
   'high-contrast': 'Dark',
 };
+
+interface PageSettings {
+  cellsPerRow: number;
+  linesPerPage: number;
+}
+
+const DEFAULT_PAGE_SETTINGS: PageSettings = { cellsPerRow: 40, linesPerPage: 25 };
 
 export default function App() {
   const [bridgeConnected, setBridgeConnected] = useState(false);
@@ -59,6 +69,22 @@ export default function App() {
       prev === 'dark' ? 'light' : prev === 'light' ? 'high-contrast' : 'dark'
     );
   }
+
+  // ── Page layout settings ─────────────────────────────────────────────────
+  const [pageSettings, setPageSettings] = useState<PageSettings>(() => {
+    try {
+      const s = localStorage.getItem('braille-vibe-page-settings');
+      return s ? (JSON.parse(s) as PageSettings) : DEFAULT_PAGE_SETTINGS;
+    } catch {
+      return DEFAULT_PAGE_SETTINGS;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('braille-vibe-page-settings', JSON.stringify(pageSettings));
+  }, [pageSettings]);
+
+  const [showPageSettings, setShowPageSettings] = useState(false);
 
   const { translate, translatedText, isLoading, progress, error, workerReady } =
     useBraille();
@@ -93,6 +119,9 @@ export default function App() {
 
   // ── File upload ──────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Separate state that is only set on file load; passed as `value` to Editor
+  // so Monaco's content is replaced. Kept out of inputText feedback loop.
+  const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -101,6 +130,7 @@ export default function App() {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       setInputText(text);
+      setFileContent(text);
       translate(text, selectedTable);
     };
     reader.readAsText(file, 'utf-8');
@@ -111,7 +141,12 @@ export default function App() {
   // ── BRF download ─────────────────────────────────────────────────────────
   function handleDownloadBrf() {
     if (!translatedText) return;
-    const blob = new Blob([translatedText], { type: 'text/plain;charset=utf-8' });
+    const formatted = formatBrfForOutput(
+      translatedText,
+      pageSettings.cellsPerRow,
+      pageSettings.linesPerPage,
+    );
+    const blob = new Blob([formatted], { type: 'text/plain;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href     = url;
@@ -120,8 +155,26 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  // ── Displayed braille output ─────────────────────────────────────────────
+  // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
+  const brfPages = unicodeBraille
+    ? formatBrfPages(unicodeBraille, pageSettings.cellsPerRow, pageSettings.linesPerPage)
+    : [];
+
+  // ── Page settings input handlers ─────────────────────────────────────────
+  function handleCellsChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseInt(e.target.value, 10);
+    if (!isNaN(v) && v >= 10 && v <= 100) {
+      setPageSettings(s => ({ ...s, cellsPerRow: v }));
+    }
+  }
+
+  function handleLinesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseInt(e.target.value, 10);
+    if (!isNaN(v) && v >= 5 && v <= 50) {
+      setPageSettings(s => ({ ...s, linesPerPage: v }));
+    }
+  }
 
   return (
     <div className="app-layout">
@@ -220,6 +273,8 @@ export default function App() {
           <Editor
             onTextChange={handleTextChange}
             monacoTheme={monacoThemeMap[theme]}
+            value={fileContent}
+            cellsPerRow={pageSettings.cellsPerRow}
           />
         </section>
 
@@ -230,12 +285,55 @@ export default function App() {
             aria-label="Braille preview output"
             aria-live="polite"
           >
-            <div className="pane-title">
-              BRF Preview
-              {isLoading && translatedText && (
-                <span className="preview-loading"> — translating…</span>
-              )}
+            {/* Pane title row with settings toggle */}
+            <div className="pane-title-row">
+              <div className="pane-title">
+                BRF Preview
+                {isLoading && translatedText && (
+                  <span className="preview-loading"> — translating…</span>
+                )}
+              </div>
+              <button
+                className="layout-settings-btn"
+                onClick={() => setShowPageSettings(s => !s)}
+                aria-expanded={showPageSettings}
+                aria-controls="page-settings-panel"
+                title="Configure page layout (cells per row, lines per page)"
+              >
+                ⚙ Layout
+              </button>
             </div>
+
+            {/* Page layout settings panel */}
+            {showPageSettings && (
+              <div id="page-settings-panel" className="page-settings-panel">
+                <label className="settings-field">
+                  <span>Cells / row</span>
+                  <input
+                    type="number"
+                    min={10}
+                    max={100}
+                    value={pageSettings.cellsPerRow}
+                    onChange={handleCellsChange}
+                    aria-label="Braille cells per row"
+                  />
+                </label>
+                <label className="settings-field">
+                  <span>Lines / page</span>
+                  <input
+                    type="number"
+                    min={5}
+                    max={50}
+                    value={pageSettings.linesPerPage}
+                    onChange={handleLinesChange}
+                    aria-label="Lines per page"
+                  />
+                </label>
+                <p className="settings-hint">
+                  Common: 40 × 25 (letter), 32 × 28 (A4)
+                </p>
+              </div>
+            )}
 
             {/* Progress bar for chunked large-document translation */}
             {isLoading && progress > 0 && progress < 100 && (
@@ -258,13 +356,22 @@ export default function App() {
               </p>
             )}
 
-            {unicodeBraille ? (
-              <pre
-                className="brf-output"
-                aria-label="Unicode braille output"
-              >
-                {unicodeBraille}
-              </pre>
+            {/* Paginated Word-like braille output */}
+            {brfPages.length > 0 ? (
+              <div className="brf-pages-container" aria-label="Braille pages">
+                {brfPages.map((pageContent, i) => (
+                  <div
+                    key={i}
+                    className="brf-page"
+                    aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
+                  >
+                    <div className="brf-page-number" aria-hidden="true">
+                      p. {i + 1}
+                    </div>
+                    <pre className="brf-page-content">{pageContent}</pre>
+                  </div>
+                ))}
+              </div>
             ) : (
               <p className="brf-placeholder" aria-live="polite">
                 {workerReady
