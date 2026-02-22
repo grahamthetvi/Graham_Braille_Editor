@@ -30,7 +30,7 @@ var (
 	procStartPage   = winspool.NewProc("StartPagePrinter")
 	procWrite       = winspool.NewProc("WritePrinter")
 	procEndPage     = winspool.NewProc("EndPagePrinter")
-	procEndDoc      = winspool.NewProc("EndDocPrinterW")
+	procEndDoc      = winspool.NewProc("EndDocPrinter")
 	procClose       = winspool.NewProc("ClosePrinter")
 )
 
