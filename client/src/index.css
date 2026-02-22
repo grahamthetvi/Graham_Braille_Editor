@@ -1,147 +1,108 @@
+/* Global resets — all application layout lives in App.css */
+
+/* ── Theme: CSS Custom Properties ─────────────────────────────────────────── */
+
 :root {
-<<<<<<< HEAD
+  /* Dark theme (default) */
+  --bg: #0f1117;
+  --bg-surface: #161b22;
+  --bg-overlay: #21262d;
+  --border: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --accent: #58a6ff;
+  --accent-hover: #1f6feb;
+  --accent-text: #ffffff;
+  --success: #3fb950;
+  --error: #f85149;
+  --warning: #d29922;
+  --warning-bg: #2d1b00;
+  --warning-border: #9a6700;
+  --error-bg: #300a0a;
+  --error-border: #6b1f1f;
+  --focus-ring: #58a6ff;
+  --focus-ring-width: 3px;
+  --braille-color: #58a6ff;
+  --page-bg: #1c2128;          /* Dark "paper" — slightly lighter than bg */
+
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-=======
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
->>>>>>> 80da415c0a8aad56d13cba70eb196595486bd412
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color-scheme: dark;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-<<<<<<< HEAD
-=======
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+[data-theme="light"] {
+  --bg: #ffffff;
+  --bg-surface: #f6f8fa;
+  --bg-overlay: #eaeef2;
+  --border: #d0d7de;
+  --text-primary: #1f2328;
+  --text-secondary: #656d76;
+  --accent: #0969da;
+  --accent-hover: #0757ba;
+  --accent-text: #ffffff;
+  --success: #1a7f37;
+  --error: #d1242f;
+  --warning: #9a6700;
+  --warning-bg: #fff8c5;
+  --warning-border: #d1a317;
+  --error-bg: #fff0ee;
+  --error-border: #ffd8d3;
+  --focus-ring: #0969da;
+  --focus-ring-width: 3px;
+  --braille-color: #0969da;
+  --page-bg: #ffffff;          /* White paper for light theme */
+
+  color-scheme: light;
 }
 
->>>>>>> 80da415c0a8aad56d13cba70eb196595486bd412
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+[data-theme="high-contrast"] {
+  --bg: #000000;
+  --bg-surface: #000000;
+  --bg-overlay: #1a1a1a;
+  --border: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --accent: #ffff00;
+  --accent-hover: #e6e600;
+  --accent-text: #000000;
+  --success: #00ff00;
+  --error: #ff6b6b;
+  --warning: #ffcc00;
+  --warning-bg: #1a1a00;
+  --warning-border: #ffcc00;
+  --error-bg: #1a0000;
+  --error-border: #ff6b6b;
+  --focus-ring: #ffff00;
+  --focus-ring-width: 4px;
+  --braille-color: #ffff00;
+  --page-bg: #000000;          /* Black paper for high-contrast */
+
+  color-scheme: dark;
 }
 
-<<<<<<< HEAD
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  width: 100%;
-}
+/* ── Skip Navigation Link ─────────────────────────────────────────────────── */
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-  margin-bottom: 2rem;
-}
-
-.status-bar {
-  margin-bottom: 2rem;
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: bold;
-  color: #646cff;
+  font-size: 0.9rem;
+  z-index: 9999;
+  border-radius: 0 0 4px 0;
+  text-decoration: none;
+  transition: top 0.1s;
 }
 
-.editor-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  text-align: left;
+.skip-link:focus {
+  top: 0;
 }
-
-@media (max-width: 768px) {
-  .editor-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-.input-group, .output-group {
-  display: flex;
-  flex-direction: column;
-}
-
-label {
-  margin-bottom: 0.5rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-textarea {
-  width: 100%;
-  height: 300px;
-  padding: 1rem;
-  font-size: 1.2rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #1a1a1a;
-  color: white;
-  resize: vertical;
-}
-
-.braille-output {
-  width: 100%;
-  height: 300px;
-  padding: 1rem;
-  font-size: 2rem; /* Initial braille size */
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: #f0f0f0;
-  color: black;
-  overflow-y: auto;
-  white-space: pre-wrap;
-  font-weight: bold;
-}
-=======
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
-}
->>>>>>> 80da415c0a8aad56d13cba70eb196595486bd412

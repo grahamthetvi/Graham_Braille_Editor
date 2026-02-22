@@ -8,26 +8,31 @@
  *
  *   1. Fetches public/wasm/liblouis.wasm and checks the first four bytes.
  *      • If they match the WASM magic (0x00 0x61 0x73 0x6D), a true
- *        WebAssembly binary is present and is instantiated via
- *        WebAssembly.instantiateStreaming(), with the Emscripten glue loaded
- *        from public/wasm/liblouis.js.
+ *        WebAssembly binary is present and is instantiated via the
+ *        Emscripten glue loaded from public/wasm/liblouis.js.
  *      • Otherwise the file contains the asm.js fallback that the setup
- *        script writes when no compiled WASM binary is found.  In that case
- *        the file is executed as JavaScript via new Function(src).call(self).
- *   2. Fetches and executes public/wasm/easy-api.js the same way.
+ *        script writes when no compiled WASM binary is found.
+ *   2. Fetches and executes public/wasm/easy-api.js.
  *   3. Enables on-demand table loading from public/tables/.
+ *
+ * Heavy-text chunking
+ * ────────────────────
+ * Texts above CHUNK_THRESHOLD characters are split into chunks at paragraph
+ * boundaries (or by character count as a fallback). Each chunk is translated
+ * independently and joined. PROGRESS messages are sent after each chunk so
+ * the UI can render a live progress bar.
  *
  * Message protocol  (main → worker):
  *   { text: string, table?: string, mathCode?: string }
  *
  * Message protocol  (worker → main):
  *   { type: 'READY' }
- *   { type: 'RESULT', result: string }
- *   { type: 'ERROR',  error:  string }
+ *   { type: 'RESULT',   result: string }
+ *   { type: 'PROGRESS', percent: number }   // 0–100, during chunked jobs
+ *   { type: 'ERROR',    error:  string }
  */
 
 // ─── Type shims for globals set by the loaded scripts ───────────────────────
-declare const WorkerGlobalScope: unknown;
 
 interface LiblouisEasyApi {
   setLiblouisBuild(capi: object): void;
@@ -44,16 +49,64 @@ interface LiblouisModule {
   ccall: (...args: unknown[]) => unknown;
 }
 
+// ─── Chunking constants ───────────────────────────────────────────────────────
+
+/**
+ * Texts shorter than this are translated in a single call (no progress events).
+ * Texts at or above this are split for streaming progress feedback.
+ * ~5 000 chars ≈ 900 words — a comfortable chunk for liblouis.
+ */
+const CHUNK_THRESHOLD = 5_000;
+const CHUNK_MAX_SIZE  = 5_000;
+
+/**
+ * Split `text` into chunks no larger than `maxSize`, breaking preferentially
+ * at double-newline (paragraph) boundaries, then single-newline boundaries,
+ * then at the hard character limit.
+ *
+ * The BRF separators between chunks are determined by whatever whitespace the
+ * source text already contains at the split point — no synthetic newlines are
+ * inserted, so the translated output mirrors the source structure.
+ */
+function splitIntoChunks(text: string, maxSize = CHUNK_MAX_SIZE): string[] {
+  if (text.length <= maxSize) return [text];
+
+  const chunks: string[] = [];
+  let start = 0;
+
+  while (start < text.length) {
+    let end = start + maxSize;
+
+    if (end >= text.length) {
+      chunks.push(text.slice(start));
+      break;
+    }
+
+    // Prefer a paragraph break (double newline) within the window
+    const paraBreak = text.lastIndexOf('\n\n', end);
+    if (paraBreak > start) {
+      end = paraBreak + 2; // include both newline characters
+    } else {
+      // Fall back to any single newline
+      const lineBreak = text.lastIndexOf('\n', end);
+      if (lineBreak > start) {
+        end = lineBreak + 1;
+      }
+      // Otherwise accept the hard boundary at maxSize
+    }
+
+    chunks.push(text.slice(start, end));
+    start = end;
+  }
+
+  return chunks;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
  * Fetch a URL and execute the response body as JavaScript in the worker's
- * global scope (this = self).  Used for non-ES-module scripts that cannot
- * be loaded with a static import statement.
- *
- * Note: new Function() executes in global (non-strict) context, which lets
- * the Emscripten output and easy-api UMD wrapper write globals onto `self`
- * exactly as they would with importScripts().
+ * global scope.  Used for non-ES-module scripts (Emscripten glue, easy-api).
  */
 async function execRemoteScript(url: string): Promise<void> {
   const resp = await fetch(url);
@@ -61,31 +114,20 @@ async function execRemoteScript(url: string): Promise<void> {
     throw new Error(`Failed to fetch ${url} — HTTP ${resp.status}`);
   }
   const src = await resp.text();
-  // eslint-disable-next-line no-new-func
+  // new Function executes in global scope so Emscripten/easy-api globals land on `self`
   new Function(src).call(self);
 }
 
 // ─── Initialisation ──────────────────────────────────────────────────────────
 
-// Vite injects import.meta.env.BASE_URL at build time, giving us the correct
-// path prefix whether we are running in dev or on GitHub Pages.
 const BASE = (import.meta.env.BASE_URL as string).replace(/\/$/, '');
 
-let ready = false;
+let ready   = false;
 let liblouis: LiblouisEasyApi | undefined;
 
 async function init(): Promise<void> {
-  // ------------------------------------------------------------------
-  // Step 1: load the main liblouis build.
-  //
-  // The setup script writes one of:
-  //   • A real WASM binary  → public/wasm/liblouis.wasm  (magic: 00 61 73 6D)
-  //   • An asm.js fallback  → public/wasm/liblouis.wasm  (plain text JS)
-  //
-  // We detect which is present by inspecting the first four bytes, then
-  // initialise accordingly.
-  // ------------------------------------------------------------------
-  const wasmUrl = `${BASE}/wasm/liblouis.wasm`;
+  // ── Step 1: detect & load WASM or asm.js build ──────────────────────────
+  const wasmUrl  = `${BASE}/wasm/liblouis.wasm`;
   const wasmResp = await fetch(wasmUrl);
   if (!wasmResp.ok) {
     throw new Error(
@@ -103,24 +145,15 @@ async function init(): Promise<void> {
     header[3] === 0x6d;
 
   if (isRealWasm) {
-    // ── True WebAssembly path ──────────────────────────────────────
-    // Pre-load the Emscripten JS glue (separate file, not the .wasm itself)
-    // and then supply the already-fetched WASM bytes via Module.wasmBinary so
-    // Emscripten uses WebAssembly instead of asm.js.
     (self as unknown as Record<string, unknown>)['Module'] = { wasmBinary: rawBuffer };
     await execRemoteScript(`${BASE}/wasm/liblouis.js`);
   } else {
-    // ── asm.js fallback path ───────────────────────────────────────
-    // The setup script found no compiled WASM and wrote the asm.js build to
-    // the .wasm slot as a functional fallback.  Execute it as JavaScript.
     const src = new TextDecoder().decode(rawBuffer);
-    // eslint-disable-next-line no-new-func
+    // new Function executes in global scope so the asm.js IIFE lands on `self`
     new Function(src).call(self);
   }
 
-  // Wait for Emscripten's runtime to complete its synchronous initialisation.
-  // (doRun() is called synchronously by the asm.js IIFE, so calledRun is
-  // typically already true here, but we handle the async case defensively.)
+  // Wait for Emscripten runtime to complete initialisation.
   const capi = (self as unknown as Record<string, unknown>)['liblouis_emscripten'] as LiblouisModule;
   if (capi && !capi.calledRun) {
     await new Promise<void>((resolve) => {
@@ -128,14 +161,10 @@ async function init(): Promise<void> {
     });
   }
 
-  // ------------------------------------------------------------------
-  // Step 2: load the Easy API wrapper.
-  // ------------------------------------------------------------------
+  // ── Step 2: load the Easy API wrapper ───────────────────────────────────
   await execRemoteScript(`${BASE}/wasm/easy-api.js`);
 
-  // ------------------------------------------------------------------
-  // Step 3: wire up and configure the Easy API.
-  // ------------------------------------------------------------------
+  // ── Step 3: wire up and configure the Easy API ───────────────────────────
   liblouis = (self as unknown as Record<string, unknown>)['liblouis'] as LiblouisEasyApi;
   if (!liblouis || typeof liblouis.translateString !== 'function') {
     throw new Error('easy-api.js did not expose a liblouis instance on self');
@@ -143,7 +172,7 @@ async function init(): Promise<void> {
 
   if (capi) liblouis.setLiblouisBuild(capi);
 
-  liblouis.setLogLevel(30000);   // suppress debug noise; keep WARN+
+  liblouis.setLogLevel(30000); // suppress debug noise; keep WARN+
   liblouis.enableOnDemandTableLoading(`${BASE}/tables/`);
 
   ready = true;
@@ -297,7 +326,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
     return;
   }
 
-  if (!text.trim()) {
+  if (!text || !text.trim()) {
     self.postMessage({ type: 'RESULT', result: '' });
     return;
   }
@@ -307,18 +336,27 @@ self.addEventListener('message', async (event: MessageEvent) => {
   try {
     if (text.length <= CHUNK_THRESHOLD) {
       // ── Direct translation (small text) ─────────────────────────────────
-      const result = await translateDocumentWithMath(text, table, mathCode);
+      const result = liblouis.translateString(table, text);
+      if (result === null) {
+        throw new Error(`translateString returned null — check table "${table}"`);
+      }
       self.postMessage({ type: 'RESULT', result });
     } else {
       // ── Chunked translation (large text) ─────────────────────────────────
-      const chunks = splitIntoChunks(text, CHUNK_THRESHOLD);
+      const chunks  = splitIntoChunks(text);
       const results: string[] = [];
 
       for (let i = 0; i < chunks.length; i++) {
-        const part = await translateDocumentWithMath(chunks[i], table, mathCode);
+        const part = liblouis.translateString(table, chunks[i]);
+        if (part === null) {
+          throw new Error(
+            `translateString returned null on chunk ${i + 1}/${chunks.length} — check table "${table}"`
+          );
+        }
         results.push(part);
 
-        // Report progress after each chunk
+        // Report progress after each chunk (received by main thread in real-time
+        // because the worker runs on a separate OS thread).
         const percent = Math.round(((i + 1) / chunks.length) * 100);
         self.postMessage({ type: 'PROGRESS', percent });
       }
