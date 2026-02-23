@@ -19,7 +19,14 @@ const BRF_TO_UNICODE_OFFSETS = [
 export function asciiToUnicodeBraille(asciiString: string): string {
     let unicodeStr = "";
     for (let i = 0; i < asciiString.length; i++) {
-        const charCode = asciiString.charAt(i).toUpperCase().charCodeAt(0);
+        let charCode = asciiString.charCodeAt(i);
+
+        // Map lowercase / extended ASCII (0x60 - 0x7F) down to standard BRF (0x40 - 0x5F)
+        // This handles a-z -> A-Z, as well as {, |, }, ~ -> [, \, ], ^
+        if (charCode >= 0x60 && charCode <= 0x7F) {
+            charCode -= 0x20;
+        }
+
         const index = charCode - 0x20;
 
         if (index >= 0 && index < 64) {
