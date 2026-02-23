@@ -78,11 +78,13 @@ func sendToPrinter(printerName string, data []byte) error {
 	if ret == 0 {
 		return fmt.Errorf("StartDocPrinterW failed: %w", lastErr)
 	}
+	defer procEndDoc.Call(hPrinter) //nolint:errcheck
 
 	ret, _, lastErr = procStartPage.Call(hPrinter)
 	if ret == 0 {
 		return fmt.Errorf("StartPagePrinter failed: %w", lastErr)
 	}
+	defer procEndPage.Call(hPrinter) //nolint:errcheck
 
 	var written uint32
 	ret, _, lastErr = procWrite.Call(
@@ -97,9 +99,6 @@ func sendToPrinter(printerName string, data []byte) error {
 	if int(written) != len(data) {
 		return fmt.Errorf("WritePrinter wrote %d of %d bytes", written, len(data))
 	}
-
-	procEndPage.Call(hPrinter) //nolint:errcheck
-	procEndDoc.Call(hPrinter)  //nolint:errcheck
 
 	return nil
 }
