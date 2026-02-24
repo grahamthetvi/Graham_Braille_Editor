@@ -244,6 +244,23 @@ async function translateMath(latex: string, mathCode: string): Promise<string> {
 }
 
 /**
+ * Translates a block of text while preserving exact newline boundaries.
+ * Liblouis tables often digest or alter newlines; manually splitting guarantees layout.
+ */
+function translateTextPreservingNewlines(text: string, table: string): string {
+  if (!text) return '';
+  const lines = text.split('\n');
+  return lines.map(line => {
+    if (!line) return '';
+    const hasCR = line.endsWith('\r');
+    const cleanLine = hasCR ? line.slice(0, -1) : line;
+    if (!cleanLine) return hasCR ? '\r' : '';
+    const translated = liblouis!.translateString(table, cleanLine) || '';
+    return hasCR ? translated + '\r' : translated;
+  }).join('\n');
+}
+
+/**
  * Extracts math blocks, translates them, and translates the surrounding text.
  */
 async function translateDocumentWithMath(text: string, textTable: string, mathCode: string): Promise<string> {
@@ -261,7 +278,7 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
     // Translate the text *before* the math
     const textBefore = text.slice(lastIndex, match.index);
     if (textBefore) {
-      result += liblouis.translateString(textTable, textBefore) || '';
+      result += translateTextPreservingNewlines(textBefore, textTable);
     }
 
     // Determine which capture group matched (block is match[2], inline is match[4])
@@ -277,7 +294,7 @@ async function translateDocumentWithMath(text: string, textTable: string, mathCo
   // Translate any remaining text after the last math block
   const remainingText = text.slice(lastIndex);
   if (remainingText) {
-    result += liblouis.translateString(textTable, remainingText) || '';
+    result += translateTextPreservingNewlines(remainingText, textTable);
   }
 
   return result;
