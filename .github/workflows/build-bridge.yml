@@ -81,11 +81,32 @@ jobs:
         name: bridge-macos
         path: bridge/braillevibe-bridge-macos.zip
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          bridge/braillevibe-bridge-linux.zip
-          bridge/braillevibe-bridge-windows.zip
-          bridge/braillevibe-bridge-macos.zip
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-linux
+          path: out
+          
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-windows
+          path: out
+          
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-macos
+          path: out
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: out/*
