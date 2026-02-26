@@ -1,4 +1,4 @@
-// Braille Vibe Bridge
+// Graham Bridge
 //
 // A small HTTP server that runs locally on the user's machine and provides
 // raw print access to Braille embossers (especially ViewPlus devices).
@@ -119,7 +119,7 @@ func main() {
 		mux.HandleFunc("/status", withCORS(statusHandler))
 		mux.HandleFunc("/print", withCORS(printHandler))
 
-		log.Printf("Braille Vibe Bridge listening on http://%s", listenAddr)
+		log.Printf("Graham Bridge listening on http://%s", listenAddr)
 		if err := http.ListenAndServe(listenAddr, mux); err != nil {
 			log.Fatalf("server error: %v", err)
 		}
@@ -130,8 +130,8 @@ func main() {
 
 func onReady() {
 	systray.SetIcon(iconData)
-	systray.SetTitle("Braille Vibe Bridge")
-	systray.SetTooltip("Braille Vibe HTTP Print Bridge")
+	systray.SetTitle("Graham Bridge")
+	systray.SetTooltip("Graham Bridge – HTTP Print Server")
 
 	mStatus := systray.AddMenuItem("Status: Running on port 8080", "Bridge is running")
 	mStatus.Disable()
@@ -154,7 +154,7 @@ func onReady() {
 
 func onExit() {
 	// cleanup if necessary
-	log.Println("Shutting down bridge...")
+	log.Println("Shutting down Graham Bridge...")
 }
 
 func openBrowser(url string) {

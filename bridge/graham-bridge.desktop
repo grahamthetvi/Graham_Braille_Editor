@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=Braille Vibe Bridge
+Name=Graham Bridge
 Comment=Bridge server for printing BRF files to local embossers
-Exec=bridge-linux-amd64
+Exec=graham-bridge-linux-amd64
 Icon=printer
 Terminal=false
 Type=Application
