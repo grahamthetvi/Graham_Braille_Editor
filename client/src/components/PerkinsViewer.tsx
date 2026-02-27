@@ -51,8 +51,19 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
             <div className="perkins-paper-feed">
                 <div className="perkins-paper">
                     <span className="perkins-paper-label">Current Character</span>
-                    <div className="perkins-paper-char">
-                        {isSpace ? '[Space]' : currentChar}
+                    <div className="perkins-paper-display">
+                        <div className="perkins-paper-char">
+                            {isSpace ? '[Space]' : currentChar}
+                        </div>
+                        {/* Visual Braille Cell Reference */}
+                        <div className="perkins-visual-cell" aria-hidden="true">
+                            <div className={`visual-dot ${dots[0] ? 'active' : ''}`}>1</div>
+                            <div className={`visual-dot ${dots[3] ? 'active' : ''}`}>4</div>
+                            <div className={`visual-dot ${dots[1] ? 'active' : ''}`}>2</div>
+                            <div className={`visual-dot ${dots[4] ? 'active' : ''}`}>5</div>
+                            <div className={`visual-dot ${dots[2] ? 'active' : ''}`}>3</div>
+                            <div className={`visual-dot ${dots[5] ? 'active' : ''}`}>6</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -67,19 +78,38 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
                 <div className="perkins-keyboard-layout">
 
                     <div className="perkins-keys-side left-side">
-                        <button className={`perkins-key key-dot3 ${dots[2] ? 'active' : ''}`}><span>3</span></button>
-                        <button className={`perkins-key key-dot2 ${dots[1] ? 'active' : ''}`}><span>2</span></button>
-                        <button className={`perkins-key key-dot1 ${dots[0] ? 'active' : ''}`}><span>1</span></button>
+                        <button className={`perkins-key key-dot3 ${dots[2] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 3</span>
+                        </button>
+                        <button className={`perkins-key key-dot2 ${dots[1] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 2</span>
+                        </button>
+                        <button className={`perkins-key key-dot1 ${dots[0] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 1</span>
+                        </button>
                     </div>
 
                     <button className={`perkins-spacebar ${isSpace ? 'active' : ''}`}>
                         <div className="spacebar-ridge"></div>
+                        <span className="spacebar-label">Space</span>
                     </button>
 
                     <div className="perkins-keys-side right-side">
-                        <button className={`perkins-key key-dot4 ${dots[3] ? 'active' : ''}`}><span>4</span></button>
-                        <button className={`perkins-key key-dot5 ${dots[4] ? 'active' : ''}`}><span>5</span></button>
-                        <button className={`perkins-key key-dot6 ${dots[5] ? 'active' : ''}`}><span>6</span></button>
+                        <button className={`perkins-key key-dot4 ${dots[3] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 4</span>
+                        </button>
+                        <button className={`perkins-key key-dot5 ${dots[4] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 5</span>
+                        </button>
+                        <button className={`perkins-key key-dot6 ${dots[5] ? 'active' : ''}`}>
+                            <div className="key-cap-indicator"></div>
+                            <span>Dot 6</span>
+                        </button>
                     </div>
 
                 </div>
