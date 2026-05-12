@@ -10,7 +10,7 @@ function pointInPolygonEvenOdd(x: number, y: number, verts: { x: number; y: numb
     const xj = verts[j].x;
     const yj = verts[j].y;
     if ((yi > y) !== (yj > y)) {
-      const xInt = ((yj - yi) * (x - xi)) / (yj - yi + 1e-12) + xi;
+      const xInt = xi + ((xj - xi) * (y - yi)) / (yj - yi + 1e-12);
       if (x < xInt) inside = !inside;
     }
   }
@@ -115,7 +115,6 @@ export class GraphicCanvas extends GridCanvas {
    * Symmetric heart outline (parametric curve), apex upward on the braille grid.
    * `radius` controls horizontal half-extent (similar spirit to drawCircle radius).
    */
-<<<<<<< cursor/simple-shapes-size-9b01
   drawHeart(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
     const verts = this.heartVertices(cx, cy, radius);
@@ -130,29 +129,6 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   drawPolygon(cx: number, cy: number, radius: number, sides: number, angleDegrees: number, filled = false) {
-=======
-  drawHeart(cx: number, cy: number, radius: number) {
-    if (radius <= 0) return;
-    const scale = radius / 16;
-    const steps = Math.max(48, Math.min(200, Math.ceil(radius * 4)));
-    let prevX = 0;
-    let prevY = 0;
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * 2 * Math.PI;
-      const hx = 16 * Math.pow(Math.sin(t), 3);
-      const hy = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-      const x = Math.round(cx + hx * scale);
-      const y = Math.round(cy - hy * scale);
-      if (i > 0) {
-        this.drawLine(prevX, prevY, x, y);
-      }
-      prevX = x;
-      prevY = y;
-    }
-  }
-
-  drawPolygon(cx: number, cy: number, radius: number, sides: number, angleDegrees: number) {
->>>>>>> main
     if (sides < 3) return;
     const points: { x: number; y: number }[] = [];
     const angleRad = (angleDegrees * Math.PI) / 180;
@@ -351,16 +327,11 @@ function clampSides(sides: number): number {
   return Number.isFinite(n) && n >= 3 ? n : 3;
 }
 
-<<<<<<< cursor/simple-shapes-size-9b01
 export function generateSimpleShape(kind: SimpleShapeKind, radius: number, filled: boolean): GraphicResult {
-=======
-export function generateSimpleShape(kind: SimpleShapeKind, radius: number): GraphicResult {
->>>>>>> main
   const r = clampRadius(radius);
   const span = kind === 'heart' ? r * 2.2 : r * 2;
   const cellsW = Math.ceil(span / 2) + 2;
   const cellsH = Math.ceil(span / 3) + 2;
-<<<<<<< cursor/simple-shapes-size-9b01
   const canvas = new GraphicCanvas(cellsW, cellsH);
   const cx = cellsW;
   const cy = cellsH * 1.5;
@@ -389,33 +360,5 @@ export function generatePolygon(radius: number, sides: number, angle: number, fi
   return {
     brf: canvas.renderToBRF(),
     summary: `Polygon with ${n} sides (size ${r}${fillNote})`,
-=======
-  const canvas = new GraphicCanvas(cellsW, cellsH);
-  const cx = cellsW;
-  const cy = cellsH * 1.5;
-  if (kind === 'circle') {
-    canvas.drawCircle(cx, cy, r);
-  } else {
-    canvas.drawHeart(cx, cy, r);
-  }
-  const label = kind === 'circle' ? 'Circle' : 'Heart';
-  return {
-    brf: canvas.renderToBRF(),
-    summary: `${label} (size ${r})`,
-  };
-}
-
-export function generatePolygon(radius: number, sides: number, angle: number): GraphicResult {
-  const r = clampRadius(radius);
-  const n = clampSides(sides);
-  const cellsW = Math.ceil((r * 2) / 2) + 2;
-  const cellsH = Math.ceil((r * 2) / 3) + 2;
-  const canvas = new GraphicCanvas(cellsW, cellsH);
-  canvas.drawPolygon(cellsW, cellsH * 1.5, r, n, angle);
-
-  return {
-    brf: canvas.renderToBRF(),
-    summary: `Polygon with ${n} sides (size ${r})`,
->>>>>>> main
   };
 }
