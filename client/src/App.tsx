@@ -5,6 +5,7 @@ import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
+import { StlExportDialog } from './components/StlExportDialog';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
@@ -25,6 +26,8 @@ import {
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
+import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
+import type { BuildBrailleStlOptions } from './utils/brailleStl';
 import './App.css';
 
 /**
@@ -38,6 +41,7 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
  *   • Download button exports the formatted BRF file (CRLF + form feeds).
+ *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
  *   • Page layout settings (cells, lines, paper format, ViewPlus padding) persist to localStorage.
@@ -110,6 +114,7 @@ export default function App() {
   );
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
+  const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -409,6 +414,16 @@ export default function App() {
     paragraphStarts,
   ]);
 
+  const stlBuildBase = useMemo(
+    (): Omit<BuildBrailleStlOptions, 'unicodeLines'> => ({
+      dimensions: defaultBanaBrailleDimensionsMm(),
+      plateThicknessMm: 2,
+      plateBorderMm: 2,
+      cylinderSegments: 12,
+    }),
+    [],
+  );
+
   // ── Scroll & Highlight Sync ──────────────────────────────────────────────
   const brfContainerRef = useRef<HTMLDivElement>(null);
   const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
@@ -594,6 +609,16 @@ export default function App() {
             aria-label="Download translated BRF file"
           >
             Download BRF
+          </button>
+
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowStlExportDialog(true)}
+            disabled={!translatedText || isPerkinsMode}
+            title="Export the paginated Braille preview as a 3D STL (BANA midpoint dot spacing, millimeters) for 3D printing."
+            aria-label="Export Braille layout as STL for 3D printing"
+          >
+            Export STL
           </button>
 
           <button
@@ -1054,6 +1079,16 @@ export default function App() {
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} isFirstVisit={!hasSeenWelcome} />}
+
+      {showStlExportDialog && (
+        <StlExportDialog
+          onClose={() => setShowStlExportDialog(false)}
+          pageCount={brfPages.length}
+          unicodePages={brfPages}
+          buildBase={stlBuildBase}
+          disabled={!translatedText || isPerkinsMode}
+        />
+      )}
 
       {/* ── Drafts Modal ───────────────────────────────────────── */}
       {showDrafts && !isChecking && (
