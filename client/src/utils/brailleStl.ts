@@ -1,7 +1,9 @@
 import { extractDots } from './braille';
 import type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 import { addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl } from './brailleStlMesh';
+import { emitVectorPrintTextExtrusion, measureVectorPrintText, type VectorPrintFit } from './extrudeVectorPrintText';
 import { LOGO_ALPHA_THRESHOLD, type SerializableLogoRaster } from './logoRaster';
+import type { Font } from 'opentype.js';
 
 export type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 export { defaultBanaBrailleDimensionsMm, BANA_DIMENSION_RANGES_MM } from './banaBrailleDimensions';
@@ -21,6 +23,11 @@ export interface BuildBrailleStlOptions {
   /** Facet count for each dot cylinder (8–16 typical). */
   cylinderSegments: number;
   printTextLine?: string;
+  /**
+   * Parsed Open Sans (or compatible) font for vector large-print relief.
+   * When omitted with {@link printTextLine}, large print falls back to canvas raster prisms.
+   */
+  printFont?: Font;
   /**
    * Optional RGBA height-map (top-left on the plate). Opaque pixels become raised boxes to {@link BanaBrailleDimensionsMm.dotHeightMm}.
    * Braille and optional large print shift right/down to clear the logo.
@@ -160,6 +167,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     plateBorderMm,
     cylinderSegments,
     printTextLine,
+    printFont,
     logo,
     logoPxToMm: logoPxToMmOpt,
   } = options;
@@ -207,29 +215,39 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let extractW = 0;
   let extractH = 0;
   const pxTextToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
+  let vectorPrintFit: VectorPrintFit | null = null;
 
   if (printTextLine && numLines === 1) {
-    const canvas = new OffscreenCanvas(8192, 256);
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = 'bold 100px sans-serif';
-      ctx.textBaseline = 'top';
-      const textMetrics = ctx.measureText(printTextLine);
-      const textWidthPx = Math.ceil(textMetrics.width);
-      ctx.fillStyle = 'black';
-      ctx.fillText(printTextLine, 0, 0);
+    if (printFont) {
+      const fit = measureVectorPrintText(printFont, printTextLine, pxTextToMm);
+      textPhysicalWidth = fit.textPhysicalWidth;
+      textPhysicalHeight = fit.textPhysicalHeight;
+      vectorPrintFit = fit;
+    } else {
+      const canvas = new OffscreenCanvas(8192, 256);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = 'bold 100px sans-serif';
+        ctx.textBaseline = 'top';
+        const textMetrics = ctx.measureText(printTextLine);
+        const textWidthPx = Math.ceil(textMetrics.width);
+        ctx.fillStyle = 'black';
+        ctx.fillText(printTextLine, 0, 0);
 
-      // Safe bounds to extract
-      extractW = Math.min(8192, textWidthPx + 20);
-      extractH = 150;
-      textImgData = ctx.getImageData(0, 0, extractW, extractH);
+        extractW = Math.min(8192, textWidthPx + 20);
+        extractH = 150;
+        textImgData = ctx.getImageData(0, 0, extractW, extractH);
 
-      textPhysicalWidth = extractW * pxTextToMm;
-      textPhysicalHeight = extractH * pxTextToMm;
+        textPhysicalWidth = extractW * pxTextToMm;
+        textPhysicalHeight = extractH * pxTextToMm;
+      }
     }
   }
 
-  const topBandMm = Math.max(textImgData ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
+  const topBandMm = Math.max(
+    printTextLine && numLines === 1 ? textPhysicalHeight : 0,
+    logoRgba ? logoPhysicalH : 0,
+  );
   if (topBandMm > 0) {
     brailleBaseYOffset = topBandMm + 10;
   }
@@ -257,7 +275,20 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     );
   }
 
-  if (textImgData) {
+  if (vectorPrintFit && printFont && printTextLine) {
+    const textOriginX = margin + reservedLogoX;
+    emitVectorPrintTextExtrusion(
+      tris,
+      printFont,
+      printTextLine,
+      vectorPrintFit,
+      textOriginX,
+      margin,
+      contentMaxY,
+      h,
+      xyBump,
+    );
+  } else if (textImgData) {
     const textOriginX = margin + reservedLogoX;
     addAlphaRasterPrismsMerged(
       tris,

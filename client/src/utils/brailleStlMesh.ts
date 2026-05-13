@@ -22,6 +22,25 @@ function pushTri(
   );
 }
 
+/** One CCW triangle (viewed along +normal) for custom meshes (e.g. extruded text). */
+export function pushStlTriangle(
+  tris: number[],
+  nx: number,
+  ny: number,
+  nz: number,
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+  cx: number,
+  cy: number,
+  cz: number,
+): void {
+  pushTri(tris, [nx, ny, nz], [ax, ay, az], [bx, by, bz], [cx, cy, cz]);
+}
+
 /** Axis-aligned box [x0,x1]×[y0,y1]×[z0,z1] with outward normals. */
 export function addSolidBoxTriangles(
   tris: number[],

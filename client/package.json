@@ -13,18 +13,23 @@
     "setup:liblouis": "node scripts/setup-liblouis.js"
   },
   "dependencies": {
+    "@fontsource/open-sans": "^5.2.7",
     "@monaco-editor/react": "^4.7.0",
+    "earcut": "^3.0.2",
     "katex": "^0.16.28",
     "liblouis-js": "^0.2.0",
     "monaco-editor": "^0.52.2",
+    "opentype.js": "^2.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "speech-rule-engine": "^5.0.0-beta.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/earcut": "^3.0.0",
     "@types/katex": "^0.16.8",
     "@types/node": "^24.10.1",
+    "@types/opentype.js": "^1.3.9",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
