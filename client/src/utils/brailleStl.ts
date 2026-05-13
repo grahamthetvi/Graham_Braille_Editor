@@ -1,9 +1,14 @@
 import { extractDots } from './braille';
 import type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 import { addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl } from './brailleStlMesh';
+import { LOGO_ALPHA_THRESHOLD, type SerializableLogoRaster } from './logoRaster';
 
 export type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 export { defaultBanaBrailleDimensionsMm, BANA_DIMENSION_RANGES_MM } from './banaBrailleDimensions';
+export type { SerializableLogoRaster } from './logoRaster';
+
+/** Horizontal gap between logo relief and braille / large print (mm). */
+const LOGO_SIDE_CLEARANCE_MM = 2;
 
 export interface BuildBrailleStlOptions {
   /** Unicode braille lines (e.g. one formatted page from {@link formatBrfPages}). */
@@ -16,6 +21,13 @@ export interface BuildBrailleStlOptions {
   /** Facet count for each dot cylinder (8–16 typical). */
   cylinderSegments: number;
   printTextLine?: string;
+  /**
+   * Optional RGBA height-map (top-left on the plate). Opaque pixels become raised boxes to {@link BanaBrailleDimensionsMm.dotHeightMm}.
+   * Braille and optional large print shift right/down to clear the logo.
+   */
+  logo?: SerializableLogoRaster;
+  /** Millimeters per logo pixel (default ~0.18 keeps typical photos under ~70 mm wide after downscale). */
+  logoPxToMm?: number;
 }
 
 /**
@@ -47,6 +59,52 @@ function dotOffsetMm(
   }
 }
 
+/** Extrude horizontal runs of opaque pixels into solid prisms (same geometry as large-print text). */
+function addAlphaRasterPrisms(
+  tris: number[],
+  rgba: Uint8ClampedArray,
+  extractW: number,
+  extractH: number,
+  pxToMm: number,
+  originMarginX: number,
+  originMarginY: number,
+  contentMaxY: number,
+  prismHeightMm: number,
+  alphaThreshold: number,
+): void {
+  const data = rgba;
+  for (let y = 0; y < extractH; y++) {
+    let runStartX = -1;
+    for (let x = 0; x < extractW; x++) {
+      const idx = (y * extractW + x) * 4;
+      const alpha = data[idx + 3];
+      if (alpha > alphaThreshold) {
+        if (runStartX === -1) runStartX = x;
+      } else {
+        if (runStartX !== -1) {
+          const x0 = originMarginX + runStartX * pxToMm;
+          const x1 = originMarginX + x * pxToMm;
+          const y0Raw = originMarginY + y * pxToMm;
+          const y1Raw = originMarginY + (y + 1) * pxToMm;
+          const y0 = contentMaxY - y1Raw;
+          const y1 = contentMaxY - y0Raw;
+          addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
+          runStartX = -1;
+        }
+      }
+    }
+    if (runStartX !== -1) {
+      const x0 = originMarginX + runStartX * pxToMm;
+      const x1 = originMarginX + extractW * pxToMm;
+      const y0Raw = originMarginY + y * pxToMm;
+      const y1Raw = originMarginY + (y + 1) * pxToMm;
+      const y0 = contentMaxY - y1Raw;
+      const y1 = contentMaxY - y0Raw;
+      addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
+    }
+  }
+}
+
 /**
  * Builds a binary STL (little-endian) for one or more logical line blocks.
  * Z = 0 is the top of the plate; dots extend to z = dotHeight.
@@ -59,6 +117,8 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     plateBorderMm,
     cylinderSegments,
     printTextLine,
+    logo,
+    logoPxToMm: logoPxToMmOpt,
   } = options;
 
   const tris: number[] = [];
@@ -78,7 +138,21 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
 
   const cellFootprintY = 3 * intra + r;
   const lastCol = Math.max(0, maxCols - 1);
-  const brailleContentMaxX = margin + lastCol * inter + intra + r;
+
+  let logoW = 0;
+  let logoH = 0;
+  let logoRgba: Uint8ClampedArray | null = null;
+  const logoPxToMm = logoPxToMmOpt ?? 0.18;
+  if (logo && logo.width > 0 && logo.height > 0 && logo.data.byteLength >= logo.width * logo.height * 4) {
+    logoW = logo.width;
+    logoH = logo.height;
+    logoRgba = new Uint8ClampedArray(logo.data);
+  }
+  const logoPhysicalW = logoRgba ? logoW * logoPxToMm : 0;
+  const logoPhysicalH = logoRgba ? logoH * logoPxToMm : 0;
+  const reservedLogoX = logoRgba ? logoPhysicalW + LOGO_SIDE_CLEARANCE_MM : 0;
+
+  const brailleContentMaxX = margin + reservedLogoX + lastCol * inter + intra + r;
   const brailleContentMaxY = margin + Math.max(0, numLines - 1) * linePitch + cellFootprintY;
 
   let brailleBaseYOffset = 0;
@@ -87,7 +161,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let textImgData: ImageData | null = null;
   let extractW = 0;
   let extractH = 0;
-  const pxToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
+  const pxTextToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
 
   if (printTextLine && numLines === 1) {
     const canvas = new OffscreenCanvas(8192, 256);
@@ -104,56 +178,42 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       extractW = Math.min(8192, textWidthPx + 20);
       extractH = 150;
       textImgData = ctx.getImageData(0, 0, extractW, extractH);
-      
-      textPhysicalWidth = extractW * pxToMm;
-      textPhysicalHeight = extractH * pxToMm;
 
-      // Add a 10mm gap between the text and the braille dots
-      brailleBaseYOffset = textPhysicalHeight + 10;
+      textPhysicalWidth = extractW * pxTextToMm;
+      textPhysicalHeight = extractH * pxTextToMm;
     }
   }
 
-  const contentMaxX = Math.max(brailleContentMaxX, margin + textPhysicalWidth);
+  const topBandMm = Math.max(textImgData ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
+  if (topBandMm > 0) {
+    brailleBaseYOffset = topBandMm + 10;
+  }
+
+  const contentMaxX = Math.max(
+    brailleContentMaxX,
+    margin + reservedLogoX + textPhysicalWidth,
+    margin + logoPhysicalW,
+  );
   const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
 
+  if (logoRgba) {
+    addAlphaRasterPrisms(tris, logoRgba, logoW, logoH, logoPxToMm, margin, margin, contentMaxY, h, LOGO_ALPHA_THRESHOLD);
+  }
+
   if (textImgData) {
-    const data = textImgData.data;
-    for (let y = 0; y < extractH; y++) {
-      let runStartX = -1;
-      for (let x = 0; x < extractW; x++) {
-        const idx = (y * extractW + x) * 4;
-        const alpha = data[idx + 3];
-        if (alpha > 128) {
-          if (runStartX === -1) runStartX = x;
-        } else {
-          if (runStartX !== -1) {
-            const x0 = margin + runStartX * pxToMm;
-            const x1 = margin + x * pxToMm;
-            const y0_raw = margin + y * pxToMm;
-            const y1_raw = margin + (y + 1) * pxToMm;
-            
-            // Flip Y axis
-            const y0 = contentMaxY - y1_raw;
-            const y1 = contentMaxY - y0_raw;
-
-            addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
-            runStartX = -1;
-          }
-        }
-      }
-      if (runStartX !== -1) {
-        const x0 = margin + runStartX * pxToMm;
-        const x1 = margin + extractW * pxToMm;
-        const y0_raw = margin + y * pxToMm;
-        const y1_raw = margin + (y + 1) * pxToMm;
-        
-        // Flip Y axis
-        const y0 = contentMaxY - y1_raw;
-        const y1 = contentMaxY - y0_raw;
-
-        addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
-      }
-    }
+    const textOriginX = margin + reservedLogoX;
+    addAlphaRasterPrisms(
+      tris,
+      textImgData.data,
+      extractW,
+      extractH,
+      pxTextToMm,
+      textOriginX,
+      margin,
+      contentMaxY,
+      h,
+      LOGO_ALPHA_THRESHOLD,
+    );
   }
 
   for (let row = 0; row < numLines; row++) {
@@ -162,7 +222,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     for (let col = 0; col < chars.length; col++) {
       const ch = chars[col];
       const dots = extractDots(ch);
-      const baseX = margin + col * inter;
+      const baseX = margin + reservedLogoX + col * inter;
       const baseY = margin + row * linePitch + brailleBaseYOffset;
 
       for (let d = 0; d < 8; d++) {
