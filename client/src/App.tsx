@@ -6,6 +6,7 @@ import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
 import { StlExportDialog } from './components/StlExportDialog';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { startBridgeStatusPolling } from './services/bridge-client';
@@ -115,6 +116,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
@@ -743,6 +745,15 @@ export default function App() {
                   User Guide
                 </button>
 
+                <button
+                  className="toolbar-btn guide-btn"
+                  onClick={() => setShowPrivacyPolicy(true)}
+                  aria-label="Open Privacy Policy"
+                  title="Open the Privacy Policy"
+                >
+                  Privacy Policy
+                </button>
+
                 <a
                   href="https://buymeacoffee.com/grahamthetvi"
                   target="_blank"
@@ -1123,6 +1134,7 @@ export default function App() {
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} isFirstVisit={!hasSeenWelcome} />}
+      {showPrivacyPolicy && <PrivacyPolicyModal onClose={() => setShowPrivacyPolicy(false)} />}
 
       {showStlExportDialog && (
         <StlExportDialog
