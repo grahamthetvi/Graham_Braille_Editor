@@ -191,7 +191,7 @@ export function StlExportDialog({
         <div className="stl-export-body">
           <p className="stl-export-hint">
             Uses BANA midpoint dimensions (mm): dot diameter, height, intra-cell, inter-cell, and line spacing.
-            STL coordinates are millimeters (Z up from the plate). Verify scale and orientation in your slicer.
+            STL coordinates are millimeters (Z up from the plate). When exporting exactly one line of text, an ADA-style large print label will be automatically generated above the braille. Verify scale and orientation in your slicer.
           </p>
 
           <fieldset className="stl-export-field">

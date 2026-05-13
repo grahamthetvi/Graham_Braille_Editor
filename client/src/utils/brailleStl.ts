@@ -84,6 +84,10 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let brailleBaseYOffset = 0;
   let textPhysicalWidth = 0;
   let textPhysicalHeight = 0;
+  let textImgData: ImageData | null = null;
+  let extractW = 0;
+  let extractH = 0;
+  const pxToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
 
   if (printTextLine && numLines === 1) {
     const canvas = new OffscreenCanvas(8192, 256);
@@ -97,44 +101,58 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       ctx.fillText(printTextLine, 0, 0);
 
       // Safe bounds to extract
-      const extractW = Math.min(8192, textWidthPx + 20);
-      const extractH = 150;
-      const imgData = ctx.getImageData(0, 0, extractW, extractH);
+      extractW = Math.min(8192, textWidthPx + 20);
+      extractH = 150;
+      textImgData = ctx.getImageData(0, 0, extractW, extractH);
       
-      const pxToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
       textPhysicalWidth = extractW * pxToMm;
       textPhysicalHeight = extractH * pxToMm;
 
-      const data = imgData.data;
-      for (let y = 0; y < extractH; y++) {
-        let runStartX = -1;
-        for (let x = 0; x < extractW; x++) {
-          const idx = (y * extractW + x) * 4;
-          const alpha = data[idx + 3];
-          if (alpha > 128) {
-            if (runStartX === -1) runStartX = x;
-          } else {
-            if (runStartX !== -1) {
-              const x0 = margin + runStartX * pxToMm;
-              const x1 = margin + x * pxToMm;
-              const y0 = margin + y * pxToMm;
-              const y1 = margin + (y + 1) * pxToMm;
-              addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
-              runStartX = -1;
-            }
-          }
-        }
-        if (runStartX !== -1) {
-          const x0 = margin + runStartX * pxToMm;
-          const x1 = margin + extractW * pxToMm;
-          const y0 = margin + y * pxToMm;
-          const y1 = margin + (y + 1) * pxToMm;
-          addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
-        }
-      }
-
       // Add a 10mm gap between the text and the braille dots
       brailleBaseYOffset = textPhysicalHeight + 10;
+    }
+  }
+
+  const contentMaxX = Math.max(brailleContentMaxX, margin + textPhysicalWidth);
+  const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
+
+  if (textImgData) {
+    const data = textImgData.data;
+    for (let y = 0; y < extractH; y++) {
+      let runStartX = -1;
+      for (let x = 0; x < extractW; x++) {
+        const idx = (y * extractW + x) * 4;
+        const alpha = data[idx + 3];
+        if (alpha > 128) {
+          if (runStartX === -1) runStartX = x;
+        } else {
+          if (runStartX !== -1) {
+            const x0 = margin + runStartX * pxToMm;
+            const x1 = margin + x * pxToMm;
+            const y0_raw = margin + y * pxToMm;
+            const y1_raw = margin + (y + 1) * pxToMm;
+            
+            // Flip Y axis
+            const y0 = contentMaxY - y1_raw;
+            const y1 = contentMaxY - y0_raw;
+
+            addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
+            runStartX = -1;
+          }
+        }
+      }
+      if (runStartX !== -1) {
+        const x0 = margin + runStartX * pxToMm;
+        const x1 = margin + extractW * pxToMm;
+        const y0_raw = margin + y * pxToMm;
+        const y1_raw = margin + (y + 1) * pxToMm;
+        
+        // Flip Y axis
+        const y0 = contentMaxY - y1_raw;
+        const y1 = contentMaxY - y0_raw;
+
+        addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
+      }
     }
   }
 
@@ -152,14 +170,14 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
         const off = dotOffsetMm(d, intra);
         if (!off) continue;
         const cx = baseX + off.dx;
-        const cy = baseY + off.dy;
+        
+        // Flip Y axis for the dot center
+        const cy = contentMaxY - (baseY + off.dy);
+        
         addZCylinderTriangles(tris, cx, cy, 0, h, r, cylinderSegments);
       }
     }
   }
-
-  const contentMaxX = Math.max(brailleContentMaxX, margin + textPhysicalWidth);
-  const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
 
   const x0 = -plateBorderMm;
   const y0 = -plateBorderMm;
