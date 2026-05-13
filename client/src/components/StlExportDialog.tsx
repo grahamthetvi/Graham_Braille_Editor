@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { defaultStlFilename, type BuildBrailleStlOptions } from '../utils/brailleStl';
+import { getBackgroundRemover, normalizeReturnedBlob } from '../utils/backgroundRemoval';
+import { imageBlobToSerializableRaster, type SerializableLogoRaster } from '../utils/logoRaster';
+import { pngBlobToSvgDocument } from '../utils/logoSvg';
 import type { StlWorkerRequest, StlWorkerResponse } from '../workers/stl.worker';
 import StlWorkerConstructor from '../workers/stl.worker?worker';
 
@@ -20,6 +23,8 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+const DEFAULT_LOGO_WIDTH_MM = 22;
+
 /**
  * Modal to export the current layout as binary STL (BANA-sized dots + plate).
  */
@@ -35,11 +40,22 @@ export function StlExportDialog({
   const workerRef = useRef<Worker | null>(null);
   const nextIdRef = useRef(1);
   const pendingRef = useRef<Map<number, Pending>>(new Map());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [scope, setScope] = useState<'one' | 'all'>('one');
   const [page1, setPage1] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const [pickedLabel, setPickedLabel] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [removeBackground, setRemoveBackground] = useState(true);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const [logoMessage, setLogoMessage] = useState('');
+  const [logoRaster, setLogoRaster] = useState<SerializableLogoRaster | null>(null);
+  const [logoPngBlob, setLogoPngBlob] = useState<Blob | null>(null);
+  const [logoTargetWidthMm, setLogoTargetWidthMm] = useState(DEFAULT_LOGO_WIDTH_MM);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const w = new StlWorkerConstructor();
@@ -78,16 +94,22 @@ export function StlExportDialog({
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  useEffect(() => {
     if (page1 > pageCount) setPage1(Math.max(1, pageCount));
   }, [page1, pageCount]);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !busy) onClose();
+      if (e.key === 'Escape' && !busy && !logoBusy) onClose();
     }
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [busy, onClose]);
+  }, [busy, logoBusy, onClose]);
 
   const runBuildInWorker = useCallback((payload: BuildBrailleStlOptions): Promise<ArrayBuffer> => {
     const w = workerRef.current;
@@ -118,6 +140,81 @@ export function StlExportDialog({
     URL.revokeObjectURL(url);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setPreviewUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(f);
+    });
+    setPendingFile(f);
+    setPickedLabel(f.name);
+    setLogoRaster(null);
+    setLogoPngBlob(null);
+    setLogoMessage('File selected. Choose Prepare logo to rasterize (and optionally remove the background).');
+  };
+
+  const clearLogo = () => {
+    setPendingFile(null);
+    setPickedLabel(null);
+    setLogoRaster(null);
+    setLogoPngBlob(null);
+    setLogoMessage('');
+    setPreviewUrl(prev => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
+  const prepareLogo = async () => {
+    if (!pendingFile) {
+      setLogoMessage('Choose an image file first.');
+      return;
+    }
+    setLogoBusy(true);
+    setLogoMessage(removeBackground ? 'Removing background (first run may download ML assets)…' : 'Rasterizing image…');
+    try {
+      let workBlob: Blob = pendingFile;
+      if (removeBackground) {
+        const removeBgFn = await getBackgroundRemover();
+        const raw = await removeBgFn(pendingFile);
+        workBlob = await normalizeReturnedBlob(raw);
+      }
+      const { raster, pngBlob } = await imageBlobToSerializableRaster(workBlob);
+      setLogoRaster(raster);
+      setLogoPngBlob(pngBlob);
+      setLogoMessage(
+        `Logo ready (${raster.width}×${raster.height} px). It will appear as raised relief in the STL top-left; braille and large print shift to clear it.`,
+      );
+    } catch (err) {
+      setLogoRaster(null);
+      setLogoPngBlob(null);
+      setLogoMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLogoBusy(false);
+    }
+  };
+
+  const downloadLogoSvg = async () => {
+    if (!logoRaster || !logoPngBlob) {
+      setLogoMessage('Prepare a logo before downloading SVG.');
+      return;
+    }
+    try {
+      const svg = await pngBlobToSvgDocument(logoPngBlob, logoRaster.width, logoRaster.height);
+      const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'logo-from-stl-export.svg';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setLogoMessage(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const handleExport = async () => {
     setError('');
     if (disabled || pageCount < 1 || unicodePages.length === 0) {
@@ -126,11 +223,14 @@ export function StlExportDialog({
     }
     setBusy(true);
     try {
+      const logoPxToMm =
+        logoRaster && logoRaster.width > 0 ? logoTargetWidthMm / logoRaster.width : undefined;
+
       if (scope === 'one') {
         const idx = Math.min(Math.max(1, page1), pageCount) - 1;
         const pageText = unicodePages[idx] ?? '';
         const unicodeLines = pageText.split('\n');
-        
+
         let printTextLine: string | undefined;
         if (unicodeLines.length === 1 && printText) {
           printTextLine = printText.replace(/\s+/g, ' ').trim();
@@ -140,6 +240,7 @@ export function StlExportDialog({
           ...buildBase,
           unicodeLines,
           printTextLine,
+          ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
         });
         triggerDownload(buffer, defaultStlFilename(idx + 1));
       } else {
@@ -153,6 +254,7 @@ export function StlExportDialog({
             ...buildBase,
             unicodeLines,
             printTextLine,
+            ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
           });
           triggerDownload(buffer, defaultStlFilename(i + 1));
           await new Promise(r => setTimeout(r, 150));
@@ -170,7 +272,7 @@ export function StlExportDialog({
     <div
       className="stl-export-overlay"
       onClick={() => {
-        if (!busy) onClose();
+        if (!busy && !logoBusy) onClose();
       }}
       aria-label="Close STL export"
     >
@@ -183,7 +285,7 @@ export function StlExportDialog({
       >
         <header className="stl-export-header">
           <h2 id={titleId}>Export 3D (STL)</h2>
-          <button type="button" className="stl-export-close" onClick={() => !busy && onClose()} aria-label="Close">
+          <button type="button" className="stl-export-close" onClick={() => !busy && !logoBusy && onClose()} aria-label="Close">
             ✕
           </button>
         </header>
@@ -191,8 +293,76 @@ export function StlExportDialog({
         <div className="stl-export-body">
           <p className="stl-export-hint">
             Uses BANA midpoint dimensions (mm): dot diameter, height, intra-cell, inter-cell, and line spacing.
-            STL coordinates are millimeters (Z up from the plate). When exporting exactly one line of text, an ADA-style large print label will be automatically generated above the braille. Verify scale and orientation in your slicer.
+            STL coordinates are millimeters (Z up from the plate). When exporting exactly one line of text, an ADA-style large print label will be automatically generated to the right of any optional logo. Verify scale and orientation in your slicer.
           </p>
+
+          <fieldset className="stl-export-field stl-export-logo-field">
+            <legend>Optional logo (top-left)</legend>
+            <p className="stl-export-logo-intro">
+              Add a tactile logo: choose an image, optionally remove its background in the browser (img.ly via jsDelivr), then prepare. The cut-out is rasterized for STL and can be downloaded as an SVG that embeds the same PNG pixels.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="stl-export-file-input"
+              aria-label="Choose logo image"
+              disabled={logoBusy || busy}
+              onChange={handleFileChange}
+            />
+            <div className="stl-export-logo-actions">
+              <button
+                type="button"
+                className="toolbar-btn"
+                disabled={logoBusy || busy}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose image…
+              </button>
+              <button
+                type="button"
+                className="toolbar-btn toolbar-btn--primary"
+                disabled={!pendingFile || logoBusy || busy}
+                onClick={() => void prepareLogo()}
+              >
+                {logoBusy ? 'Working…' : 'Prepare logo'}
+              </button>
+              <button type="button" className="toolbar-btn" disabled={!logoRaster || busy} onClick={() => void downloadLogoSvg()}>
+                Download SVG
+              </button>
+              <button type="button" className="toolbar-btn" disabled={(!pendingFile && !logoRaster) || logoBusy || busy} onClick={clearLogo}>
+                Clear logo
+              </button>
+            </div>
+            <label className="stl-export-logo-check">
+              <input
+                type="checkbox"
+                checked={removeBackground}
+                onChange={e => setRemoveBackground(e.target.checked)}
+                disabled={logoBusy || busy}
+              />
+              Remove background when preparing (loads @imgly/background-removal from jsDelivr; may download models on first use)
+            </label>
+            {pickedLabel ? <p className="stl-export-logo-file">Selected: {pickedLabel}</p> : null}
+            {previewUrl ? (
+              <div className="stl-export-logo-preview-wrap">
+                <img className="stl-export-logo-preview" src={previewUrl} alt="" />
+              </div>
+            ) : null}
+            <label className="stl-export-field stl-export-logo-width">
+              Logo width on plate (mm)
+              <input
+                type="number"
+                min={4}
+                max={120}
+                step={0.5}
+                value={logoTargetWidthMm}
+                onChange={e => setLogoTargetWidthMm(Math.max(4, Math.min(120, parseFloat(e.target.value) || DEFAULT_LOGO_WIDTH_MM)))}
+                disabled={!logoRaster || busy}
+              />
+            </label>
+            {logoMessage ? <p className="stl-export-logo-status">{logoMessage}</p> : null}
+          </fieldset>
 
           <fieldset className="stl-export-field">
             <legend>Scope</legend>
@@ -239,14 +409,14 @@ export function StlExportDialog({
           ) : null}
 
           <div className="stl-export-actions">
-            <button type="button" className="toolbar-btn" onClick={onClose} disabled={busy}>
+            <button type="button" className="toolbar-btn" onClick={onClose} disabled={busy || logoBusy}>
               Cancel
             </button>
             <button
               type="button"
               className="toolbar-btn toolbar-btn--primary"
               onClick={() => void handleExport()}
-              disabled={busy || disabled || pageCount < 1}
+              disabled={busy || logoBusy || disabled || pageCount < 1}
             >
               {busy ? 'Generating…' : 'Download STL'}
             </button>
