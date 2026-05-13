@@ -1,6 +1,8 @@
 /**
- * Rasterize an image (e.g. PNG after background removal) to RGBA bytes for STL height-map extrusion.
+ * Rasterize an image to RGBA bytes for STL height-map extrusion (optional near-white → transparent).
  */
+
+import { makeNearWhiteTransparent } from './whiteBackground';
 
 export type SerializableLogoRaster = {
   width: number;
@@ -16,7 +18,7 @@ export const LOGO_ALPHA_THRESHOLD = 128;
 
 export async function imageBlobToSerializableRaster(
   blob: Blob,
-  options?: { maxEdgePx?: number },
+  options?: { maxEdgePx?: number; removeNearWhite?: boolean; nearWhiteMinChannel?: number },
 ): Promise<{ raster: SerializableLogoRaster; pngBlob: Blob }> {
   const maxEdge = options?.maxEdgePx ?? DEFAULT_MAX_EDGE_PX;
   const bmp = await createImageBitmap(blob);
@@ -35,6 +37,10 @@ export async function imageBlobToSerializableRaster(
     }
     ctx.drawImage(bmp, 0, 0, width, height);
     const imageData = ctx.getImageData(0, 0, width, height);
+    if (options?.removeNearWhite) {
+      makeNearWhiteTransparent(imageData.data, { minChannel: options.nearWhiteMinChannel });
+      ctx.putImageData(imageData, 0, 0);
+    }
     const copy = new Uint8ClampedArray(imageData.data);
     const raster: SerializableLogoRaster = {
       width,
