@@ -115,6 +115,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -505,204 +506,256 @@ export default function App() {
           <span className="subtitle">Braille Editing &amp; Embossing Suite</span>
         </div>
 
-        <div className="toolbar">
-          {/* Table selector */}
-          <label className="toolbar-label" htmlFor="table-select">
-            Table
-          </label>
-          <select
-            id="table-select"
-            className="table-select"
-            value={selectedTable}
-            onChange={(e) => setSelectedTable(e.target.value)}
-            disabled={isPerkinsMode}
-            title="Select a liblouis braille translation table"
-            aria-label="Select braille translation table"
-          >
-            {TABLE_GROUPS.map((group) => (
-              <optgroup key={group.group} label={group.group}>
-                {group.tables.map((t) => (
-                  <option key={t.file} value={t.file}>
-                    {t.name}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
+        <div className="toolbar-container">
+          <div className="tab-list" role="tablist">
+            <button 
+              className={`tab-btn${activeTab === 'file' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('file')}
+              role="tab"
+              aria-selected={activeTab === 'file'}
+            >
+              File
+            </button>
+            <button 
+              className={`tab-btn${activeTab === 'view' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('view')}
+              role="tab"
+              aria-selected={activeTab === 'view'}
+            >
+              View & Layout
+            </button>
+            <button 
+              className={`tab-btn${activeTab === 'tools' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('tools')}
+              role="tab"
+              aria-selected={activeTab === 'tools'}
+            >
+              Tools
+            </button>
+            <button 
+              className={`tab-btn${activeTab === 'help' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('help')}
+              role="tab"
+              aria-selected={activeTab === 'help'}
+            >
+              Help & Support
+            </button>
+          </div>
 
-          {/* Math & Prompt instructions */}
-          <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
-            UEB Math is standard and $$math$$ is Nemeth.
-          </span>
-          <button
-            className="toolbar-btn"
-            id="ai-prompt-btn"
-            onClick={() => {
-              const promptText = "Extract raw text for the purpose of braille translation. Please reformat my text so that every mathematical expression, equation, and arithmetic operation is wrapped in LaTeX notation: \\(...\\) for inline math and $$...$$ for display equations. Leave all non-math prose unchanged.";
-              if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(promptText);
-              } else {
-                // Fallback for non-secure contexts
-                const textArea = document.createElement("textarea");
-                textArea.value = promptText;
-                document.body.appendChild(textArea);
-                textArea.focus();
-                textArea.select();
-                try {
-                  document.execCommand('copy');
-                } catch (err) {
-                  console.error('Fallback format copy failed', err);
-                }
-                document.body.removeChild(textArea);
-              }
-              const btn = document.getElementById('ai-prompt-btn');
-              if (btn) {
-                const originalText = btn.innerText;
-                btn.innerText = "Copied!";
-                setTimeout(() => { btn.innerText = originalText; }, 2000);
-              }
-            }}
-            title="Copy prompt for AI to format math"
-            aria-label="Copy prompt for AI to format math"
-          >
-            Copy AI Prompt
-          </button>
+          <div className="tab-content" role="tabpanel">
+            {activeTab === 'file' && (
+              <div className="toolbar">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".txt,.text,.md,.rst,.adoc,.brf,text/plain"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  style={{ display: 'none' }}
+                  onChange={handleFileImport}
+                  disabled={isPerkinsMode}
+                />
+                <button
+                  className="toolbar-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPerkinsMode}
+                  title="Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+                  aria-label="Import text or BRF file"
+                >
+                  Import file
+                </button>
 
-          {/* Graphics Editor */}
-          <button
-            className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setShowGraphicsEditor(s => !s)}
-            disabled={isPerkinsMode}
-            title="Open the Tactile Graphics Editor"
-            aria-label="Tactile Graphics Editor"
-          >
-            Graphics
-          </button>
+                <button
+                  className="toolbar-btn"
+                  onClick={handleOpenDrafts}
+                  disabled={isPerkinsMode}
+                  title="View unsaved drafts from the last 30 days"
+                  aria-label="View drafts"
+                >
+                  Drafts {drafts.length > 0 && `(${drafts.length})`}
+                </button>
 
-          {/* File upload — input is screen-reader-hidden; button is the control */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".txt,.text,.md,.rst,.adoc,.brf,text/plain"
-            aria-hidden="true"
-            tabIndex={-1}
-            style={{ display: 'none' }}
-            onChange={handleFileImport}
-            disabled={isPerkinsMode}
-          />
-          <button
-            className="toolbar-btn"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isPerkinsMode}
-            title="Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
-            aria-label="Import text or BRF file"
-          >
-            Import file
-          </button>
+                <button
+                  className="toolbar-btn toolbar-btn--primary"
+                  onClick={handleDownloadBrf}
+                  disabled={!translatedText || isPerkinsMode}
+                  title="Download BRF with Layout settings: cells per row, lines per page, paragraph line starts, optional page numbers, CRLF lines, form feed between pages"
+                  aria-label="Download translated BRF file"
+                >
+                  Download BRF
+                </button>
 
-          {/* Download BRF */}
-          <button
-            className="toolbar-btn toolbar-btn--primary"
-            onClick={handleDownloadBrf}
-            disabled={!translatedText || isPerkinsMode}
-            title="Download BRF with Layout settings: cells per row, lines per page, paragraph line starts, optional page numbers, CRLF lines, form feed between pages"
-            aria-label="Download translated BRF file"
-          >
-            Download BRF
-          </button>
+                <button
+                  className="toolbar-btn"
+                  onClick={handleDownloadPrintLayoutText}
+                  disabled={!inputText.trim() || isPerkinsMode}
+                  title="Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
+                  aria-label="Download print layout text file"
+                >
+                  Download print layout
+                </button>
 
-          <button
-            className="toolbar-btn"
-            onClick={() => setShowStlExportDialog(true)}
-            disabled={!translatedText || isPerkinsMode}
-            title="Export the paginated Braille preview as a 3D STL (BANA midpoint dot spacing, millimeters) for 3D printing."
-            aria-label="Export Braille layout as STL for 3D printing"
-          >
-            Export STL
-          </button>
+                <button
+                  className="toolbar-btn"
+                  onClick={() => setShowStlExportDialog(true)}
+                  disabled={!translatedText || isPerkinsMode}
+                  title="Export the paginated Braille preview as a 3D STL (BANA midpoint dot spacing, millimeters) for 3D printing."
+                  aria-label="Export Braille layout as STL for 3D printing"
+                >
+                  Export STL
+                </button>
 
-          <button
-            className={`toolbar-btn${syncHighlight ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setSyncHighlight(s => !s)}
-            disabled={isPerkinsMode}
-            title="Highlight corresponding braille words when selecting text in the editor."
-            aria-label="Toggle braille highlight sync"
-          >
-            Sync Highlight
-          </button>
+                <button
+                  className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowPrint(s => !s)}
+                  disabled={isPerkinsMode}
+                  aria-expanded={showPrint}
+                  title="Toggle Print to Embosser panel"
+                >
+                  🖨 Print
+                </button>
+              </div>
+            )}
 
-          <button
-            className="toolbar-btn"
-            onClick={handleDownloadPrintLayoutText}
-            disabled={!inputText.trim() || isPerkinsMode}
-            title="Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
-            aria-label="Download print layout text file"
-          >
-            Download print layout
-          </button>
+            {activeTab === 'view' && (
+              <div className="toolbar">
+                <button
+                  className={`toolbar-btn${showPageSettings ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowPageSettings(s => !s)}
+                  aria-expanded={showPageSettings}
+                  aria-controls="page-settings-panel"
+                  title="Configure page layout (cells per row, lines per page)"
+                >
+                  ⚙ Layout Settings
+                </button>
 
-          {/* Print to Embosser toggle */}
-          <button
-            className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setShowPrint(s => !s)}
-            disabled={isPerkinsMode}
-            aria-expanded={showPrint}
-            title="Toggle Print to Embosser panel"
-          >
-            🖨 Print
-          </button>
+                <button
+                  className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setIsPerkinsMode(s => !s)}
+                  aria-expanded={isPerkinsMode}
+                  title="Toggle Perkins Brailler Translator layout"
+                >
+                  🎹 Perkins Viewer
+                </button>
 
-          {/* Perkins Mode toggle */}
-          <button
-            className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
-            onClick={() => setIsPerkinsMode(s => !s)}
-            aria-expanded={isPerkinsMode}
-            title="Toggle Perkins Brailler Translator layout"
-          >
-            🎹 Perkins Viewer
-          </button>
+                <button
+                  className={`toolbar-btn${syncHighlight ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setSyncHighlight(s => !s)}
+                  disabled={isPerkinsMode}
+                  title="Highlight corresponding braille words when selecting text in the editor."
+                  aria-label="Toggle braille highlight sync"
+                >
+                  Sync Highlight
+                </button>
 
-          {/* Theme toggle */}
-          <button
-            className="theme-toggle"
-            onClick={cycleTheme}
-            aria-label={`Switch theme (current: ${theme}). Click to switch to ${themeLabels[theme]} theme.`}
-            title="Cycle theme: dark → light → high contrast"
-          >
-            {themeLabels[theme]}
-          </button>
+                <button
+                  className="theme-toggle"
+                  onClick={cycleTheme}
+                  aria-label={`Switch theme (current: ${theme}). Click to switch to ${themeLabels[theme]} theme.`}
+                  title="Cycle theme: dark → light → high contrast"
+                >
+                  {themeLabels[theme]}
+                </button>
+              </div>
+            )}
 
-          <button
-            className="toolbar-btn"
-            onClick={handleOpenDrafts}
-            disabled={isPerkinsMode}
-            title="View unsaved drafts from the last 30 days"
-            aria-label="View drafts"
-          >
-            Drafts {drafts.length > 0 && `(${drafts.length})`}
-          </button>
+            {activeTab === 'tools' && (
+              <div className="toolbar">
+                <label className="toolbar-label" htmlFor="table-select">
+                  Table
+                </label>
+                <select
+                  id="table-select"
+                  className="table-select"
+                  value={selectedTable}
+                  onChange={(e) => setSelectedTable(e.target.value)}
+                  disabled={isPerkinsMode}
+                  title="Select a liblouis braille translation table"
+                  aria-label="Select braille translation table"
+                >
+                  {TABLE_GROUPS.map((group) => (
+                    <optgroup key={group.group} label={group.group}>
+                      {group.tables.map((t) => (
+                        <option key={t.file} value={t.file}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
 
-          {/* Tip Me / Buy Me a Coffee */}
-          <a
-            href="https://buymeacoffee.com/grahamthetvi"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="toolbar-btn tip-me-btn"
-            title="Support Graham Braille Editor"
-            aria-label="Tip me on Buy Me a Coffee"
-          >
-            ☕ Tip Me
-          </a>
+                <button
+                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowGraphicsEditor(s => !s)}
+                  disabled={isPerkinsMode}
+                  title="Open the Tactile Graphics Editor"
+                  aria-label="Tactile Graphics Editor"
+                >
+                  Graphics
+                </button>
 
-          {/* Help / re-open welcome guide */}
-          <button
-            className="toolbar-btn guide-btn"
-            onClick={() => setShowWelcome(true)}
-            aria-label="Open User Guide"
-            title="Open the User Guide"
-          >
-            User Guide
-          </button>
+                <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
+                  UEB Math is standard and $$math$$ is Nemeth.
+                </span>
+                <button
+                  className="toolbar-btn"
+                  id="ai-prompt-btn"
+                  onClick={() => {
+                    const promptText = "Extract raw text for the purpose of braille translation. Please reformat my text so that every mathematical expression, equation, and arithmetic operation is wrapped in LaTeX notation: \\(...\\) for inline math and $$...$$ for display equations. Leave all non-math prose unchanged.";
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(promptText);
+                    } else {
+                      const textArea = document.createElement("textarea");
+                      textArea.value = promptText;
+                      document.body.appendChild(textArea);
+                      textArea.focus();
+                      textArea.select();
+                      try {
+                        document.execCommand('copy');
+                      } catch (err) {
+                        console.error('Fallback format copy failed', err);
+                      }
+                      document.body.removeChild(textArea);
+                    }
+                    const btn = document.getElementById('ai-prompt-btn');
+                    if (btn) {
+                      const originalText = btn.innerText;
+                      btn.innerText = "Copied!";
+                      setTimeout(() => { btn.innerText = originalText; }, 2000);
+                    }
+                  }}
+                  title="Copy prompt for AI to format math"
+                  aria-label="Copy prompt for AI to format math"
+                >
+                  Copy AI Prompt
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'help' && (
+              <div className="toolbar">
+                <button
+                  className="toolbar-btn guide-btn"
+                  onClick={() => setShowWelcome(true)}
+                  aria-label="Open User Guide"
+                  title="Open the User Guide"
+                >
+                  User Guide
+                </button>
+
+                <a
+                  href="https://buymeacoffee.com/grahamthetvi"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="toolbar-btn tip-me-btn"
+                  title="Support Graham Braille Editor"
+                  aria-label="Tip me on Buy Me a Coffee"
+                >
+                  ☕ Tip Me
+                </a>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Compact print bar — full-width row below the toolbar */}
@@ -761,15 +814,6 @@ export default function App() {
                     <span className="preview-loading"> — translating…</span>
                   )}
                 </div>
-                <button
-                  className="layout-settings-btn"
-                  onClick={() => setShowPageSettings(s => !s)}
-                  aria-expanded={showPageSettings}
-                  aria-controls="page-settings-panel"
-                  title="Configure page layout (cells per row, lines per page)"
-                >
-                  ⚙ Layout
-                </button>
               </div>
 
               {/* Page layout settings panel */}
