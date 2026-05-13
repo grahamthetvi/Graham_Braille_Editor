@@ -114,9 +114,13 @@ export default function App() {
     () => !!localStorage.getItem('graham-braille-welcome-seen')
   );
   const [showWelcome, setShowWelcome] = useState(!hasSeenWelcome);
+
+  const [hasSeenPrivacyPolicy, setHasSeenPrivacyPolicy] = useState(
+    () => !!localStorage.getItem('graham-braille-privacy-seen')
+  );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
@@ -127,8 +131,19 @@ export default function App() {
     if (!hasSeenWelcome) {
       localStorage.setItem('graham-braille-welcome-seen', '1');
       setHasSeenWelcome(true);
+      if (!hasSeenPrivacyPolicy) {
+        setShowPrivacyPolicy(true);
+      }
     }
     setShowWelcome(false);
+  }
+
+  function handlePrivacyPolicyClose() {
+    if (!hasSeenPrivacyPolicy) {
+      localStorage.setItem('graham-braille-privacy-seen', '1');
+      setHasSeenPrivacyPolicy(true);
+    }
+    setShowPrivacyPolicy(false);
   }
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
@@ -1134,7 +1149,7 @@ export default function App() {
 
       {/* ── First-visit welcome / onboarding modal ────────────────────── */}
       {showWelcome && <WelcomeModal onClose={handleWelcomeClose} isFirstVisit={!hasSeenWelcome} />}
-      {showPrivacyPolicy && <PrivacyPolicyModal onClose={() => setShowPrivacyPolicy(false)} />}
+      {showPrivacyPolicy && <PrivacyPolicyModal onClose={handlePrivacyPolicyClose} />}
 
       {showStlExportDialog && (
         <StlExportDialog

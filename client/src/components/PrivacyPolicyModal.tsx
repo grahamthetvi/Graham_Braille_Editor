@@ -69,7 +69,7 @@ export function PrivacyPolicyModal({ onClose }: PrivacyPolicyModalProps) {
               <hr style={{ margin: '2rem 0', borderColor: 'var(--border-color)', opacity: 0.3 }} />
 
               <details style={{ cursor: 'pointer' }}>
-                <summary style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '1rem' }}>Read Comprehensive Privacy Policy</summary>
+                <summary className="toolbar-btn guide-btn" style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '1rem', listStyle: 'none' }}>Read Comprehensive Privacy Policy</summary>
                 <div style={{ padding: '1rem', background: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '0.9rem', lineHeight: '1.5', cursor: 'text' }}>
                   <p><strong>Effective Date:</strong> May 2026</p>
                   <p style={{ marginTop: '1rem' }}>At Graham Braille Editor, we believe that your data is yours alone. Because our software is used to translate sensitive educational, personal, and professional documents, we have built our architecture around the principle of strict local-first processing. This Privacy Policy details exactly how your information is handled when you use our application.</p>
