@@ -1193,10 +1193,19 @@ body {
 }
 
 .stl-export-field {
+  margin: 0 0 1rem;
+}
+
+fieldset.stl-export-field {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.65rem 0.85rem;
-  margin: 0 0 1rem;
+}
+
+label.stl-export-field {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
 .stl-export-field legend {
