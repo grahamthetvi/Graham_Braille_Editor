@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { defaultStlFilename, type BuildBrailleStlOptions } from '../utils/brailleStl';
-import { getBackgroundRemover, normalizeReturnedBlob } from '../utils/backgroundRemoval';
 import { imageBlobToSerializableRaster, type SerializableLogoRaster } from '../utils/logoRaster';
 import { pngBlobToSvgDocument } from '../utils/logoSvg';
 import type { StlWorkerRequest, StlWorkerResponse } from '../workers/stl.worker';
@@ -49,7 +48,8 @@ export function StlExportDialog({
 
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [removeBackground, setRemoveBackground] = useState(true);
+  /** Make light/white pixels transparent before STL/SVG; keeps printed colors and line art. */
+  const [removeNearWhite, setRemoveNearWhite] = useState(true);
   const [logoBusy, setLogoBusy] = useState(false);
   const [logoMessage, setLogoMessage] = useState('');
   const [logoRaster, setLogoRaster] = useState<SerializableLogoRaster | null>(null);
@@ -173,15 +173,11 @@ export function StlExportDialog({
       return;
     }
     setLogoBusy(true);
-    setLogoMessage(removeBackground ? 'Removing background (first run may download ML assets)…' : 'Rasterizing image…');
+    setLogoMessage(removeNearWhite ? 'Rasterizing and clearing near-white pixels…' : 'Rasterizing image…');
     try {
-      let workBlob: Blob = pendingFile;
-      if (removeBackground) {
-        const removeBgFn = await getBackgroundRemover();
-        const raw = await removeBgFn(pendingFile);
-        workBlob = await normalizeReturnedBlob(raw);
-      }
-      const { raster, pngBlob } = await imageBlobToSerializableRaster(workBlob);
+      const { raster, pngBlob } = await imageBlobToSerializableRaster(pendingFile, {
+        removeNearWhite,
+      });
       setLogoRaster(raster);
       setLogoPngBlob(pngBlob);
       setLogoMessage(
@@ -299,7 +295,7 @@ export function StlExportDialog({
           <fieldset className="stl-export-field stl-export-logo-field">
             <legend>Optional logo (top-left)</legend>
             <p className="stl-export-logo-intro">
-              Add a tactile logo: choose an image, optionally remove its background in the browser (img.ly via jsDelivr), then prepare. The cut-out is rasterized for STL and can be downloaded as an SVG that embeds the same PNG pixels.
+              Add a tactile logo: choose an image, optionally clear a white or light paper background (non-white ink and colors stay), then prepare. The result is rasterized for STL; Download SVG wraps the same PNG pixels in a minimal SVG container (vectors are not traced).
             </p>
             <input
               ref={fileInputRef}
@@ -337,11 +333,11 @@ export function StlExportDialog({
             <label className="stl-export-logo-check">
               <input
                 type="checkbox"
-                checked={removeBackground}
-                onChange={e => setRemoveBackground(e.target.checked)}
+                checked={removeNearWhite}
+                onChange={e => setRemoveNearWhite(e.target.checked)}
                 disabled={logoBusy || busy}
               />
-              Remove background when preparing (loads @imgly/background-removal from jsDelivr; may download models on first use)
+              Clear near-white background when preparing (preserves darker colors and edges; no cloud ML)
             </label>
             {pickedLabel ? <p className="stl-export-logo-file">Selected: {pickedLabel}</p> : null}
             {previewUrl ? (

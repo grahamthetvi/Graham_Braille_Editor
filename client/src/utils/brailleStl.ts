@@ -59,8 +59,43 @@ function dotOffsetMm(
   }
 }
 
-/** Extrude horizontal runs of opaque pixels into solid prisms (same geometry as large-print text). */
-function addAlphaRasterPrisms(
+function collectOpaqueRunsOnRow(
+  rgba: Uint8ClampedArray,
+  extractW: number,
+  y: number,
+  alphaThreshold: number,
+): { x0: number; x1: number }[] {
+  const runs: { x0: number; x1: number }[] = [];
+  let runStartX = -1;
+  for (let x = 0; x < extractW; x++) {
+    const idx = (y * extractW + x) * 4;
+    const alpha = rgba[idx + 3]!;
+    if (alpha > alphaThreshold) {
+      if (runStartX === -1) runStartX = x;
+    } else {
+      if (runStartX !== -1) {
+        runs.push({ x0: runStartX, x1: x });
+        runStartX = -1;
+      }
+    }
+  }
+  if (runStartX !== -1) {
+    runs.push({ x0: runStartX, x1: extractW });
+  }
+  return runs;
+}
+
+function runKey(r: { x0: number; x1: number }): string {
+  return `${r.x0},${r.x1}`;
+}
+
+type VerticalStrip = { x0: number; x1: number; y0: number; lastY: number };
+
+/**
+ * Extrude opaque raster regions into solid prisms by merging horizontal runs vertically
+ * when spans match, so filled areas become a few boxes instead of one thin prism per scanline.
+ */
+function addAlphaRasterPrismsMerged(
   tris: number[],
   rgba: Uint8ClampedArray,
   extractW: number,
@@ -71,37 +106,45 @@ function addAlphaRasterPrisms(
   contentMaxY: number,
   prismHeightMm: number,
   alphaThreshold: number,
+  xyBump: number,
 ): void {
-  const data = rgba;
+  const active = new Map<string, VerticalStrip>();
+
+  const emitStrip = (s: VerticalStrip): void => {
+    const x0 = xyBump + originMarginX + s.x0 * pxToMm;
+    const x1 = xyBump + originMarginX + s.x1 * pxToMm;
+    const y0Raw = originMarginY + s.y0 * pxToMm;
+    const y1Raw = originMarginY + (s.lastY + 1) * pxToMm;
+    const y0 = xyBump + (contentMaxY - y1Raw);
+    const y1 = xyBump + (contentMaxY - y0Raw);
+    addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
+  };
+
   for (let y = 0; y < extractH; y++) {
-    let runStartX = -1;
-    for (let x = 0; x < extractW; x++) {
-      const idx = (y * extractW + x) * 4;
-      const alpha = data[idx + 3];
-      if (alpha > alphaThreshold) {
-        if (runStartX === -1) runStartX = x;
-      } else {
-        if (runStartX !== -1) {
-          const x0 = originMarginX + runStartX * pxToMm;
-          const x1 = originMarginX + x * pxToMm;
-          const y0Raw = originMarginY + y * pxToMm;
-          const y1Raw = originMarginY + (y + 1) * pxToMm;
-          const y0 = contentMaxY - y1Raw;
-          const y1 = contentMaxY - y0Raw;
-          addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
-          runStartX = -1;
-        }
+    const runsY = collectOpaqueRunsOnRow(rgba, extractW, y, alphaThreshold);
+    const keysY = new Set(runsY.map(runKey));
+
+    for (const [key, strip] of [...active.entries()]) {
+      const connected = keysY.has(key) && strip.lastY === y - 1;
+      if (!connected) {
+        emitStrip(strip);
+        active.delete(key);
       }
     }
-    if (runStartX !== -1) {
-      const x0 = originMarginX + runStartX * pxToMm;
-      const x1 = originMarginX + extractW * pxToMm;
-      const y0Raw = originMarginY + y * pxToMm;
-      const y1Raw = originMarginY + (y + 1) * pxToMm;
-      const y0 = contentMaxY - y1Raw;
-      const y1 = contentMaxY - y0Raw;
-      addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
+
+    for (const run of runsY) {
+      const key = runKey(run);
+      const existing = active.get(key);
+      if (existing && existing.lastY === y - 1) {
+        existing.lastY = y;
+      } else {
+        active.set(key, { x0: run.x0, x1: run.x1, y0: y, lastY: y });
+      }
     }
+  }
+
+  for (const strip of active.values()) {
+    emitStrip(strip);
   }
 }
 
@@ -122,6 +165,8 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   } = options;
 
   const tris: number[] = [];
+  /** Shift all XY so the plate’s outer corner sits at the origin (flat rectangle from (0,0) in plan). */
+  const xyBump = plateBorderMm;
   const r = dim.dotBaseDiameterMm / 2;
   const h = dim.dotHeightMm;
   const intra = dim.intraCellCenterMm;
@@ -197,12 +242,24 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
 
   if (logoRgba) {
-    addAlphaRasterPrisms(tris, logoRgba, logoW, logoH, logoPxToMm, margin, margin, contentMaxY, h, LOGO_ALPHA_THRESHOLD);
+    addAlphaRasterPrismsMerged(
+      tris,
+      logoRgba,
+      logoW,
+      logoH,
+      logoPxToMm,
+      margin,
+      margin,
+      contentMaxY,
+      h,
+      LOGO_ALPHA_THRESHOLD,
+      xyBump,
+    );
   }
 
   if (textImgData) {
     const textOriginX = margin + reservedLogoX;
-    addAlphaRasterPrisms(
+    addAlphaRasterPrismsMerged(
       tris,
       textImgData.data,
       extractW,
@@ -213,6 +270,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       contentMaxY,
       h,
       LOGO_ALPHA_THRESHOLD,
+      xyBump,
     );
   }
 
@@ -234,15 +292,15 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
         // Flip Y axis for the dot center
         const cy = contentMaxY - (baseY + off.dy);
         
-        addZCylinderTriangles(tris, cx, cy, 0, h, r, cylinderSegments);
+        addZCylinderTriangles(tris, cx + xyBump, cy + xyBump, 0, h, r, cylinderSegments);
       }
     }
   }
 
-  const x0 = -plateBorderMm;
-  const y0 = -plateBorderMm;
-  const x1 = contentMaxX + plateBorderMm;
-  const y1 = contentMaxY + plateBorderMm;
+  const x0 = xyBump - plateBorderMm;
+  const y0 = xyBump - plateBorderMm;
+  const x1 = xyBump + contentMaxX + plateBorderMm;
+  const y1 = xyBump + contentMaxY + plateBorderMm;
   const z0 = -plateThicknessMm;
   const z1 = 0;
 
