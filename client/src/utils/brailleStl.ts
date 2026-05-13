@@ -15,6 +15,7 @@ export interface BuildBrailleStlOptions {
   plateBorderMm: number;
   /** Facet count for each dot cylinder (8–16 typical). */
   cylinderSegments: number;
+  printTextLine?: string;
 }
 
 /**
@@ -57,6 +58,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     plateThicknessMm,
     plateBorderMm,
     cylinderSegments,
+    printTextLine,
   } = options;
 
   const tris: number[] = [];
@@ -74,6 +76,68 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   }
   const numLines = unicodeLines.length;
 
+  const cellFootprintY = 3 * intra + r;
+  const lastCol = Math.max(0, maxCols - 1);
+  const brailleContentMaxX = margin + lastCol * inter + intra + r;
+  const brailleContentMaxY = margin + Math.max(0, numLines - 1) * linePitch + cellFootprintY;
+
+  let brailleBaseYOffset = 0;
+  let textPhysicalWidth = 0;
+  let textPhysicalHeight = 0;
+
+  if (printTextLine && numLines === 1) {
+    const canvas = new OffscreenCanvas(8192, 256);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.font = 'bold 100px sans-serif';
+      ctx.textBaseline = 'top';
+      const textMetrics = ctx.measureText(printTextLine);
+      const textWidthPx = Math.ceil(textMetrics.width);
+      ctx.fillStyle = 'black';
+      ctx.fillText(printTextLine, 0, 0);
+
+      // Safe bounds to extract
+      const extractW = Math.min(8192, textWidthPx + 20);
+      const extractH = 150;
+      const imgData = ctx.getImageData(0, 0, extractW, extractH);
+      
+      const pxToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
+      textPhysicalWidth = extractW * pxToMm;
+      textPhysicalHeight = extractH * pxToMm;
+
+      const data = imgData.data;
+      for (let y = 0; y < extractH; y++) {
+        let runStartX = -1;
+        for (let x = 0; x < extractW; x++) {
+          const idx = (y * extractW + x) * 4;
+          const alpha = data[idx + 3];
+          if (alpha > 128) {
+            if (runStartX === -1) runStartX = x;
+          } else {
+            if (runStartX !== -1) {
+              const x0 = margin + runStartX * pxToMm;
+              const x1 = margin + x * pxToMm;
+              const y0 = margin + y * pxToMm;
+              const y1 = margin + (y + 1) * pxToMm;
+              addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
+              runStartX = -1;
+            }
+          }
+        }
+        if (runStartX !== -1) {
+          const x0 = margin + runStartX * pxToMm;
+          const x1 = margin + extractW * pxToMm;
+          const y0 = margin + y * pxToMm;
+          const y1 = margin + (y + 1) * pxToMm;
+          addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, h);
+        }
+      }
+
+      // Add a 10mm gap between the text and the braille dots
+      brailleBaseYOffset = textPhysicalHeight + 10;
+    }
+  }
+
   for (let row = 0; row < numLines; row++) {
     const line = unicodeLines[row];
     const chars = [...line];
@@ -81,7 +145,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       const ch = chars[col];
       const dots = extractDots(ch);
       const baseX = margin + col * inter;
-      const baseY = margin + row * linePitch;
+      const baseY = margin + row * linePitch + brailleBaseYOffset;
 
       for (let d = 0; d < 8; d++) {
         if (!dots[d]) continue;
@@ -94,10 +158,8 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     }
   }
 
-  const cellFootprintY = 3 * intra + r;
-  const lastCol = Math.max(0, maxCols - 1);
-  const contentMaxX = margin + lastCol * inter + intra + r;
-  const contentMaxY = margin + Math.max(0, numLines - 1) * linePitch + cellFootprintY;
+  const contentMaxX = Math.max(brailleContentMaxX, margin + textPhysicalWidth);
+  const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
 
   const x0 = -plateBorderMm;
   const y0 = -plateBorderMm;

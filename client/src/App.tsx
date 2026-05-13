@@ -1131,6 +1131,7 @@ export default function App() {
           unicodePages={brfPages}
           buildBase={stlBuildBase}
           disabled={!translatedText || isPerkinsMode}
+          printText={inputText}
         />
       )}
 

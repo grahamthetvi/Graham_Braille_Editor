@@ -11,6 +11,7 @@ type StlExportDialogProps = {
   /** Paginated Unicode braille (same source as BRF preview). */
   unicodePages: string[];
   disabled?: boolean;
+  printText?: string;
 };
 
 type Pending = {
@@ -28,6 +29,7 @@ export function StlExportDialog({
   buildBase,
   unicodePages,
   disabled,
+  printText,
 }: StlExportDialogProps) {
   const titleId = useId();
   const workerRef = useRef<Worker | null>(null);
@@ -128,17 +130,29 @@ export function StlExportDialog({
         const idx = Math.min(Math.max(1, page1), pageCount) - 1;
         const pageText = unicodePages[idx] ?? '';
         const unicodeLines = pageText.split('\n');
+        
+        let printTextLine: string | undefined;
+        if (unicodeLines.length === 1 && printText) {
+          printTextLine = printText.replace(/\s+/g, ' ').trim();
+        }
+
         const buffer = await runBuildInWorker({
           ...buildBase,
           unicodeLines,
+          printTextLine,
         });
         triggerDownload(buffer, defaultStlFilename(idx + 1));
       } else {
         for (let i = 0; i < unicodePages.length; i++) {
           const unicodeLines = unicodePages[i].split('\n');
+          let printTextLine: string | undefined;
+          if (unicodeLines.length === 1 && printText) {
+            printTextLine = printText.replace(/\s+/g, ' ').trim();
+          }
           const buffer = await runBuildInWorker({
             ...buildBase,
             unicodeLines,
+            printTextLine,
           });
           triggerDownload(buffer, defaultStlFilename(i + 1));
           await new Promise(r => setTimeout(r, 150));

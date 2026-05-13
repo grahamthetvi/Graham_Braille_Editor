@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+  const canvas = new OffscreenCanvas(200, 50);
+  const ctx = canvas.getContext('2d');
+  ctx.font = '24px Arial';
+  ctx.fillStyle = 'black';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Hello', 0, 0);
+  const data = ctx.getImageData(0, 0, 50, 50).data;
+  console.log('first pixel alpha:', data[3]);
+</script>
+</body>
+</html>
