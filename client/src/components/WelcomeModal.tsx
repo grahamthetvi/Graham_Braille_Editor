@@ -63,7 +63,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             <div>
               <h3>Page Layout — Presets, Cells &amp; Lines</h3>
               <p>
-                Click <strong>⚙ Layout</strong> in the BRF Preview pane to open page
+                Click <strong>⚙ Layout Settings</strong> under the <strong>View &amp; Layout</strong> tab to open page
                 settings. Use quick presets: <strong>8.5×11in</strong> (US Letter,{' '}
                 <strong>32 × 25</strong> cells) or <strong>11×11.5in</strong> (wide
                 tractor paper, <strong>40 × 25</strong>), or choose <strong>Custom</strong>{' '}
@@ -74,7 +74,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                 your next visit.
               </p>
               <p>
-                <strong>ViewPlus embossers:</strong> Under Layout you can tune{' '}
+                <strong>ViewPlus embossers:</strong> Under Layout Settings you can tune{' '}
                 <strong>left padding</strong> (extra blank cells per line) for US Letter.
                 Padding is applied when printing only if your layout is US Letter
                 (8.5×11 preset or 32 × 25). Single-sheet alignment varies by model; if you
@@ -94,7 +94,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
               <p>
                 The app includes <strong>embosser drivers</strong> for Enabling Technologies, Index, ViewPlus, Braillo, and others—pick the model that matches your device when you print.
                 <strong> ChromeOS</strong> users can use WebUSB to send braille directly from the browser.
-                <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>⚙ Layout</strong> (see above).
+                <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>⚙ Layout Settings</strong> (see above).
                 The bridge listens only on <strong>127.0.0.1:8080</strong> and accepts browser traffic from official Graham Braille Editor sites (and local dev), so random websites cannot send print jobs to it.
               </p>
 
@@ -148,10 +148,8 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
               <p>
                 The editor auto-detects <strong>LaTeX math</strong> in your text and
                 translates it to braille math notation. Wrap display (block) equations
-                in <code>{'$$'}…{'$$'}</code> and inline expressions in{' '}
-                <code>{`\\(`}…{`\\)`}</code>. Use the <strong>Math Focus</strong>{' '}
-                selector in the toolbar to choose <strong>Nemeth</strong> (North
-                America) or <strong>UEB Math</strong> (international standard).
+                in <code>{'$$'}…{'$$'}</code> (translated to <strong>Nemeth</strong>) and inline expressions in{' '}
+                <code>{`\\(`}…{`\\)`}</code> (translated to <strong>UEB Math</strong>).
               </p>
               <p className="welcome-tip">
                 <strong>Tip:</strong> For best results, paste your document into an AI
@@ -169,13 +167,16 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             </div>
           </section>
 
-          {/* 4. Downloading */}
+          {/* 4. Downloading & Autosave */}
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">💾</div>
             <div>
-              <h3>Downloading BRF &amp; Print Layout</h3>
+              <h3>Downloading &amp; Autosave</h3>
               <p>
-                When your translation is ready, click <strong>Download BRF</strong> to output standard <code>.brf</code> files formatted directly to your selected page layout settings. If you need a perfectly matched plain text layout to share visually, click <strong>Download print layout</strong>. This guarantees your print document wraps identically to the braille version.
+                When your translation is ready, click <strong>Download BRF</strong> under the <strong>File</strong> tab to output standard <code>.brf</code> files formatted directly to your selected page layout settings. If you need a perfectly matched plain text layout to share visually, click <strong>Download print layout</strong>. This guarantees your print document wraps identically to the braille version.
+              </p>
+              <p>
+                Your work is automatically saved as you type. Click <strong>Drafts</strong> under the <strong>File</strong> tab to view and restore unsaved work from the last 30 days.
               </p>
             </div>
           </section>
@@ -186,18 +187,19 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             <div>
               <h3>Perkins Viewer</h3>
               <p>
-                Switch to the <strong>🎹 Perkins Viewer</strong> to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document.
+                Click <strong>🎹 Perkins Viewer</strong> under the <strong>View &amp; Layout</strong> tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document.
               </p>
             </div>
           </section>
 
-          {/* 6. Graphing */}
+          {/* 6. Tactile Graphics & 3D Printing */}
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">📊</div>
             <div>
-              <h3>Graphing (Coming Soon)</h3>
+              <h3>Tactile Graphics &amp; 3D Printing</h3>
               <p>
-                Click <strong>📊 Create Chart</strong> to experiment with data-driven tactile charts. Note: <em>This feature is currently under active development and doesn't fully work yet.</em> Check back for fully realized accessible data plotting!
+                Click <strong>Graphics</strong> under the <strong>Tools</strong> tab to open the Tactile Graphics Editor, where you can create and export embossed graphics.
+                Additionally, click <strong>Export STL</strong> under the <strong>File</strong> tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing.
               </p>
             </div>
           </section>
