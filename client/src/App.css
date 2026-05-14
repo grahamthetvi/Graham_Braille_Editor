@@ -1214,7 +1214,8 @@ label.stl-export-field {
   color: var(--text-secondary);
 }
 
-.stl-export-field input[type='number'] {
+.stl-export-field input[type='number'],
+.stl-export-field select {
   display: block;
   margin-top: 0.35rem;
   width: 100%;
@@ -1224,6 +1225,10 @@ label.stl-export-field {
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-primary);
+}
+
+.stl-export-field select {
+  max-width: 18rem;
 }
 
 .stl-export-radio {

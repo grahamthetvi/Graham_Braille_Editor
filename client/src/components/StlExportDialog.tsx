@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { defaultStlFilename, type BuildBrailleStlOptions } from '../utils/brailleStl';
+import {
+  defaultStlFilename,
+  maxLogoEdgePxForReliefQuality,
+  reliefSamplesPerMmForQuality,
+  type BuildBrailleStlOptions,
+  type StlReliefQuality,
+} from '../utils/brailleStl';
 import { imageBlobToSerializableRaster, type SerializableLogoRaster } from '../utils/logoRaster';
 import { pngBlobToSvgDocument } from '../utils/logoSvg';
 import type { StlWorkerRequest, StlWorkerResponse } from '../workers/stl.worker';
@@ -23,6 +29,7 @@ type Pending = {
 };
 
 const DEFAULT_LOGO_WIDTH_MM = 22;
+const DEFAULT_PRINT_TEXT_HEIGHT_MM = 15;
 
 /**
  * Modal to export the current layout as binary STL (BANA-sized dots + plate).
@@ -56,6 +63,8 @@ export function StlExportDialog({
   const [logoPngBlob, setLogoPngBlob] = useState<Blob | null>(null);
   const [logoTargetWidthMm, setLogoTargetWidthMm] = useState(DEFAULT_LOGO_WIDTH_MM);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [reliefQuality, setReliefQuality] = useState<StlReliefQuality>('standard');
+  const [printTextHeightMm, setPrintTextHeightMm] = useState(DEFAULT_PRINT_TEXT_HEIGHT_MM);
 
   useEffect(() => {
     const w = new StlWorkerConstructor();
@@ -175,13 +184,17 @@ export function StlExportDialog({
     setLogoBusy(true);
     setLogoMessage(removeNearWhite ? 'Rasterizing and clearing near-white pixels…' : 'Rasterizing image…');
     try {
+      const maxEdgePx = maxLogoEdgePxForReliefQuality(reliefQuality, logoTargetWidthMm);
+      const isSvg = pendingFile.type === 'image/svg+xml' || pendingFile.name.toLowerCase().endsWith('.svg');
       const { raster, pngBlob } = await imageBlobToSerializableRaster(pendingFile, {
+        maxEdgePx,
         removeNearWhite,
+        allowUpscale: isSvg,
       });
       setLogoRaster(raster);
       setLogoPngBlob(pngBlob);
       setLogoMessage(
-        `Logo ready (${raster.width}×${raster.height} px). It will appear as raised relief in the STL top-left; braille and large print shift to clear it.`,
+        `Logo ready (${raster.width}×${raster.height} px, ${reliefQuality} detail). It will appear as raised relief in the STL top-left; braille and large print shift to clear it. Re-prepare after changing logo width or detail quality.`,
       );
     } catch (err) {
       setLogoRaster(null);
@@ -236,6 +249,8 @@ export function StlExportDialog({
           ...buildBase,
           unicodeLines,
           printTextLine,
+          reliefQuality,
+          printTextHeightMm,
           ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
         });
         triggerDownload(buffer, defaultStlFilename(idx + 1));
@@ -250,6 +265,8 @@ export function StlExportDialog({
             ...buildBase,
             unicodeLines,
             printTextLine,
+            reliefQuality,
+            printTextHeightMm,
             ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
           });
           triggerDownload(buffer, defaultStlFilename(i + 1));
@@ -295,12 +312,12 @@ export function StlExportDialog({
           <fieldset className="stl-export-field stl-export-logo-field">
             <legend>Optional logo (top-left)</legend>
             <p className="stl-export-logo-intro">
-              Add a tactile logo: choose an image, optionally clear a white or light paper background (non-white ink and colors stay), then prepare. The result is rasterized for STL; Download SVG wraps the same PNG pixels in a minimal SVG container (vectors are not traced).
+              Add a tactile logo: choose an image or SVG, optionally clear a white or light paper background (non-white ink and colors stay), then prepare. SVGs are sampled at the selected STL detail quality; Download SVG wraps the prepared PNG pixels in a minimal SVG container.
             </p>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.svg,image/svg+xml"
               className="stl-export-file-input"
               aria-label="Choose logo image"
               disabled={logoBusy || busy}
@@ -354,10 +371,41 @@ export function StlExportDialog({
                 step={0.5}
                 value={logoTargetWidthMm}
                 onChange={e => setLogoTargetWidthMm(Math.max(4, Math.min(120, parseFloat(e.target.value) || DEFAULT_LOGO_WIDTH_MM)))}
-                disabled={!logoRaster || busy}
+                disabled={busy || logoBusy}
               />
             </label>
             {logoMessage ? <p className="stl-export-logo-status">{logoMessage}</p> : null}
+          </fieldset>
+
+          <fieldset className="stl-export-field">
+            <legend>Raised detail quality</legend>
+            <label className="stl-export-field">
+              STL detail
+              <select
+                value={reliefQuality}
+                onChange={e => setReliefQuality(e.target.value as StlReliefQuality)}
+                disabled={busy || logoBusy}
+              >
+                <option value="standard">Standard ({reliefSamplesPerMmForQuality('standard')} samples/mm)</option>
+                <option value="high">High ({reliefSamplesPerMmForQuality('high')} samples/mm)</option>
+                <option value="ultra">Ultra ({reliefSamplesPerMmForQuality('ultra')} samples/mm)</option>
+              </select>
+            </label>
+            <label className="stl-export-field stl-export-print-height">
+              Print letter height (mm)
+              <input
+                type="number"
+                min={6}
+                max={40}
+                step={0.5}
+                value={printTextHeightMm}
+                onChange={e => setPrintTextHeightMm(Math.max(6, Math.min(40, parseFloat(e.target.value) || DEFAULT_PRINT_TEXT_HEIGHT_MM)))}
+                disabled={busy || logoBusy}
+              />
+            </label>
+            <p className="stl-export-logo-status">
+              Higher detail improves logos and print letters but produces larger STL files. Braille dot roundness still uses the BANA STL dot setting.
+            </p>
           </fieldset>
 
           <fieldset className="stl-export-field">

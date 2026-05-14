@@ -6,6 +6,7 @@
 export type Vec3 = [number, number, number];
 
 const STL_HEADER_BYTES = 80;
+const FLOATS_PER_TRIANGLE = 12;
 
 function pushTri(
   tris: number[],
@@ -22,23 +23,13 @@ function pushTri(
   );
 }
 
-/** One CCW triangle (viewed along +normal) for custom meshes (e.g. extruded text). */
-export function pushStlTriangle(
-  tris: number[],
-  nx: number,
-  ny: number,
-  nz: number,
-  ax: number,
-  ay: number,
-  az: number,
-  bx: number,
-  by: number,
-  bz: number,
-  cx: number,
-  cy: number,
-  cz: number,
-): void {
-  pushTri(tris, [nx, ny, nz], [ax, ay, az], [bx, by, bz], [cx, cy, cz]);
+function pushQuad(tris: number[], n: Vec3, a: Vec3, b: Vec3, c: Vec3, d: Vec3): void {
+  pushTri(tris, n, a, b, c);
+  pushTri(tris, n, a, c, d);
+}
+
+export function triangleCount(tris: number[]): number {
+  return Math.floor(tris.length / FLOATS_PER_TRIANGLE);
 }
 
 /** Axis-aligned box [x0,x1]×[y0,y1]×[z0,z1] with outward normals. */
@@ -128,10 +119,96 @@ export function addZCylinderTriangles(
   }
 }
 
+export interface AlphaRasterReliefOptions {
+  rgba: Uint8ClampedArray;
+  width: number;
+  height: number;
+  pxToMm: number;
+  originMarginX: number;
+  originMarginY: number;
+  contentMaxY: number;
+  reliefHeightMm: number;
+  alphaThreshold: number;
+  xyBump: number;
+}
+
+/**
+ * Extrudes opaque raster pixels as one relief mesh: merged top strips plus only
+ * boundary side walls. This preserves fine raster detail without creating a
+ * complete box, including hidden faces, for every scanline or pixel.
+ */
+export function addAlphaRasterReliefTriangles(tris: number[], options: AlphaRasterReliefOptions): void {
+  const {
+    rgba,
+    width,
+    height,
+    pxToMm,
+    originMarginX,
+    originMarginY,
+    contentMaxY,
+    reliefHeightMm,
+    alphaThreshold,
+    xyBump,
+  } = options;
+
+  if (width <= 0 || height <= 0 || pxToMm <= 0 || reliefHeightMm <= 0) return;
+
+  const solidAt = (x: number, y: number): boolean => {
+    if (x < 0 || y < 0 || x >= width || y >= height) return false;
+    const idx = (y * width + x) * 4;
+    return (rgba[idx + 3] ?? 0) > alphaThreshold;
+  };
+
+  const xAt = (x: number): number => xyBump + originMarginX + x * pxToMm;
+  const yAtRaw = (y: number): number => xyBump + (contentMaxY - (originMarginY + y * pxToMm));
+  const z0 = 0;
+  const z1 = reliefHeightMm;
+
+  for (let y = 0; y < height; y++) {
+    let runStart = -1;
+    for (let x = 0; x <= width; x++) {
+      const solid = x < width && solidAt(x, y);
+      if (solid && runStart === -1) {
+        runStart = x;
+      } else if (!solid && runStart !== -1) {
+        const x0 = xAt(runStart);
+        const x1 = xAt(x);
+        const y0 = yAtRaw(y + 1);
+        const y1 = yAtRaw(y);
+        pushQuad(tris, [0, 0, 1], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]);
+        runStart = -1;
+      }
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!solidAt(x, y)) continue;
+
+      const x0 = xAt(x);
+      const x1 = xAt(x + 1);
+      const y0 = yAtRaw(y + 1);
+      const y1 = yAtRaw(y);
+
+      if (!solidAt(x - 1, y)) {
+        pushQuad(tris, [-1, 0, 0], [x0, y1, z0], [x0, y0, z0], [x0, y0, z1], [x0, y1, z1]);
+      }
+      if (!solidAt(x + 1, y)) {
+        pushQuad(tris, [1, 0, 0], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]);
+      }
+      if (!solidAt(x, y - 1)) {
+        pushQuad(tris, [0, 1, 0], [x1, y1, z0], [x0, y1, z0], [x0, y1, z1], [x1, y1, z1]);
+      }
+      if (!solidAt(x, y + 1)) {
+        pushQuad(tris, [0, -1, 0], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1]);
+      }
+    }
+  }
+}
+
 /** `tris` stores 12 floats per triangle: nx,ny,nz, v1xyz, v2xyz, v3xyz */
 export function encodeBinaryStl(tris: number[]): ArrayBuffer {
-  const floatsPerTri = 12;
-  const triCount = Math.floor(tris.length / floatsPerTri);
+  const triCount = triangleCount(tris);
   const out = new ArrayBuffer(STL_HEADER_BYTES + 4 + triCount * 50);
   const dv = new DataView(out);
   const header = new Uint8Array(out, 0, STL_HEADER_BYTES);
@@ -141,7 +218,7 @@ export function encodeBinaryStl(tris: number[]): ArrayBuffer {
   dv.setUint32(STL_HEADER_BYTES, triCount, true);
   let off = STL_HEADER_BYTES + 4;
   for (let t = 0; t < triCount; t++) {
-    const base = t * floatsPerTri;
+    const base = t * FLOATS_PER_TRIANGLE;
     for (let k = 0; k < 12; k++) {
       dv.setFloat32(off, tris[base + k], true);
       off += 4;
