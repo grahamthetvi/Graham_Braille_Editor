@@ -149,6 +149,11 @@ export interface AlphaRasterReliefOptions {
   reliefHeightMm: number;
   alphaThreshold: number;
   xyBump: number;
+  /**
+   * When true, mirrors raster rows along the horizontal axis (layout Y) so canvas/print rows
+   * match braille + STL world Y the same way as vector large-print extrusion.
+   */
+  flipLayoutY?: boolean;
 }
 
 /**
@@ -168,6 +173,7 @@ export function addAlphaRasterReliefTriangles(tris: number[], options: AlphaRast
     reliefHeightMm,
     alphaThreshold,
     xyBump,
+    flipLayoutY,
   } = options;
 
   if (width <= 0 || height <= 0 || pxToMm <= 0 || reliefHeightMm <= 0) return;
@@ -179,7 +185,13 @@ export function addAlphaRasterReliefTriangles(tris: number[], options: AlphaRast
   };
 
   const xAt = (x: number): number => xyBump + originMarginX + x * pxToMm;
-  const yAtRaw = (y: number): number => xyBump + (contentMaxY - (originMarginY + y * pxToMm));
+  /** Horizontal line index 0…height (image pixel grid boundaries) → layout Y (mm). */
+  const layoutYmmAtImageBoundary = (boundaryIdx: number): number => {
+    const line = flipLayoutY ? height - boundaryIdx : boundaryIdx;
+    return originMarginY + line * pxToMm;
+  };
+  const yAtRaw = (boundaryIdx: number): number =>
+    xyBump + (contentMaxY - layoutYmmAtImageBoundary(boundaryIdx));
   const z0 = 0;
   const z1 = reliefHeightMm;
 

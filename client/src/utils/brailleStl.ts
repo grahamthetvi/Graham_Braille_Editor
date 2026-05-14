@@ -333,6 +333,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       reliefHeightMm: h,
       alphaThreshold: LOGO_ALPHA_THRESHOLD,
       xyBump,
+      flipLayoutY: true,
     });
     assertTriangleBudget(tris, reliefSettings);
   } else if (vectorPrintFit && printFont && printTextLine) {

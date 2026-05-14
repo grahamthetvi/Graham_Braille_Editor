@@ -291,7 +291,8 @@ function transformRingToLayoutMm(
     const xOt = ring[i]!;
     const yOt = ring[i + 1]!;
     const rawX = textOriginXMM + (xOt - bbox.x1) * scale;
-    const rawY = originMarginYMM + (bbox.y2 - yOt) * scale;
+    // Map OT outline (y up) into layout +Y down to match braille/dot + STL world Y after contentMaxY flip.
+    const rawY = originMarginYMM + (yOt - bbox.y1) * scale;
     out.push(rawX, rawY);
   }
   return out;
