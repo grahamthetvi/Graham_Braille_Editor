@@ -2,6 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { buildBrailleStlBinary, maxLogoEdgePxForReliefQuality, reliefSamplesPerMmForQuality } from './brailleStl';
 import { defaultBanaBrailleDimensionsMm } from './banaBrailleDimensions';
 
+function loadTestPrintFont() {
+  const woffPath = path.join(
+    fileURLToPath(new URL('.', import.meta.url)),
+    '..',
+    '..',
+    '..',
+    'node_modules',
+    '@fontsource',
+    'open-sans',
+    'files',
+    'open-sans-latin-700-normal.woff',
+  );
+  return parse(readFileSync(woffPath).buffer);
+}
+
 describe('buildBrailleStlBinary', () => {
   it('produces a non-empty binary STL with one dot', () => {
     // U+2801 = dot 1 only
@@ -115,5 +130,21 @@ describe('buildBrailleStlBinary', () => {
     expect(reliefSamplesPerMmForQuality('high')).toBeLessThan(reliefSamplesPerMmForQuality('ultra'));
     expect(maxLogoEdgePxForReliefQuality('standard', 22)).toBeLessThan(maxLogoEdgePxForReliefQuality('high', 22));
     expect(maxLogoEdgePxForReliefQuality('high', 22)).toBeLessThan(maxLogoEdgePxForReliefQuality('ultra', 22));
+  });
+
+  it('vector large print keeps triangle count modest for curved letters', () => {
+    const font = loadTestPrintFont();
+    const buf = buildBrailleStlBinary({
+      unicodeLines: ['\u2801'],
+      dimensions: defaultBanaBrailleDimensionsMm(),
+      plateThicknessMm: 1,
+      plateBorderMm: 1,
+      cylinderSegments: 8,
+      printTextLine: 'o',
+      printFont: font,
+    });
+    const triVector = new DataView(buf).getUint32(80, true);
+    expect(triVector).toBeGreaterThan(40);
+    expect(triVector).toBeLessThan(900);
   });
 });

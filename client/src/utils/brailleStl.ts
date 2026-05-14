@@ -2,6 +2,7 @@ import { extractDots } from './braille';
 import type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 import { addAlphaRasterReliefTriangles, addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl, triangleCount } from './brailleStlMesh';
 import { LOGO_ALPHA_THRESHOLD, type SerializableLogoRaster } from './logoRaster';
+import type { Font } from 'opentype.js';
 
 export type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 export { defaultBanaBrailleDimensionsMm, BANA_DIMENSION_RANGES_MM } from './banaBrailleDimensions';
@@ -219,6 +220,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     plateBorderMm,
     cylinderSegments,
     printTextLine,
+    printFont,
     logo,
     logoPxToMm: logoPxToMmOpt,
   } = options;
