@@ -23,6 +23,25 @@ function pushTri(
   );
 }
 
+/** Push one STL triangle using scalar coordinates (matches {@link encodeBinaryStl} layout). */
+export function pushStlTriangle(
+  tris: number[],
+  nx: number,
+  ny: number,
+  nz: number,
+  ax: number,
+  ay: number,
+  az: number,
+  bx: number,
+  by: number,
+  bz: number,
+  cx: number,
+  cy: number,
+  cz: number,
+): void {
+  pushTri(tris, [nx, ny, nz], [ax, ay, az], [bx, by, bz], [cx, cy, cz]);
+}
+
 function pushQuad(tris: number[], n: Vec3, a: Vec3, b: Vec3, c: Vec3, d: Vec3): void {
   pushTri(tris, n, a, b, c);
   pushTri(tris, n, a, c, d);

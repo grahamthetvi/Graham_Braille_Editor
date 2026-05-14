@@ -150,6 +150,7 @@ liblouis.translateString = function(table, inbuf, backtranslate) {
 	return String.fromCharCode.apply(null, outstr_buff);
 };
 
+
 liblouis.translate = function(table, inbuf) {
 
 	if(typeof inbuf !== "string" || inbuf.length === 0) {

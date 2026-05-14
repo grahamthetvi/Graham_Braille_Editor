@@ -3,6 +3,11 @@ import type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 import { addAlphaRasterReliefTriangles, addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl, triangleCount } from './brailleStlMesh';
 import { LOGO_ALPHA_THRESHOLD, type SerializableLogoRaster } from './logoRaster';
 import type { Font } from 'opentype.js';
+import {
+  emitVectorPrintTextExtrusion,
+  measureVectorPrintText,
+  VECTOR_PRINT_TEXT_BAND_PX,
+} from './extrudeVectorPrintText';
 
 export type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
 export { defaultBanaBrailleDimensionsMm, BANA_DIMENSION_RANGES_MM } from './banaBrailleDimensions';
@@ -31,6 +36,11 @@ export interface BuildBrailleStlOptions {
   /** Facet count for each dot cylinder (8–16 typical). */
   cylinderSegments: number;
   printTextLine?: string;
+  /**
+   * When set with {@link printTextLine} on a single-line plate, glyph outlines are extruded as vector
+   * geometry instead of canvas raster relief (lower triangle count on curves).
+   */
+  printFont?: Font;
   /**
    * Optional RGBA height-map (top-left on the plate). Opaque pixels become raised relief to
    * {@link BanaBrailleDimensionsMm.dotHeightMm}. Braille and optional large print shift right/down to clear the logo.
@@ -267,14 +277,22 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let textPhysicalWidth = 0;
   let textPhysicalHeight = 0;
   let textRaster: ReturnType<typeof renderPrintTextRaster> = null;
+  let vectorPrintFit: ReturnType<typeof measureVectorPrintText> | null = null;
 
   if (printTextLine && numLines === 1) {
-    textRaster = renderPrintTextRaster(printTextLine, reliefSettings);
-    textPhysicalWidth = textRaster?.physicalWidthMm ?? 0;
-    textPhysicalHeight = textRaster?.physicalHeightMm ?? 0;
+    if (printFont) {
+      const pxTextToMm = reliefSettings.printTextHeightMm / VECTOR_PRINT_TEXT_BAND_PX;
+      vectorPrintFit = measureVectorPrintText(printFont, printTextLine, pxTextToMm);
+      textPhysicalWidth = vectorPrintFit.textPhysicalWidth;
+      textPhysicalHeight = vectorPrintFit.textPhysicalHeight;
+    } else {
+      textRaster = renderPrintTextRaster(printTextLine, reliefSettings);
+      textPhysicalWidth = textRaster?.physicalWidthMm ?? 0;
+      textPhysicalHeight = textRaster?.physicalHeightMm ?? 0;
+    }
   }
 
-  const topBandMm = Math.max(textRaster ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
+  const topBandMm = Math.max(vectorPrintFit || textRaster ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
   if (topBandMm > 0) {
     brailleBaseYOffset = topBandMm + 10;
   }
@@ -316,6 +334,20 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
       alphaThreshold: LOGO_ALPHA_THRESHOLD,
       xyBump,
     });
+    assertTriangleBudget(tris, reliefSettings);
+  } else if (vectorPrintFit && printFont && printTextLine) {
+    const textOriginX = margin + reservedLogoX;
+    emitVectorPrintTextExtrusion(
+      tris,
+      printFont,
+      printTextLine,
+      vectorPrintFit,
+      textOriginX,
+      margin,
+      contentMaxY,
+      h,
+      xyBump,
+    );
     assertTriangleBudget(tris, reliefSettings);
   }
 
