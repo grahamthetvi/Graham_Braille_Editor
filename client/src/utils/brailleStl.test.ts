@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildBrailleStlBinary } from './brailleStl';
+import { buildBrailleStlBinary, maxLogoEdgePxForReliefQuality, reliefSamplesPerMmForQuality } from './brailleStl';
 import { defaultBanaBrailleDimensionsMm } from './banaBrailleDimensions';
 
 describe('buildBrailleStlBinary', () => {
@@ -49,7 +49,7 @@ describe('buildBrailleStlBinary', () => {
     expect(dvL.getUint32(80, true)).toBeGreaterThan(dv0.getUint32(80, true));
   });
 
-  it('merges solid logo raster into few prisms (not one prism per scanline)', () => {
+  it('builds solid logo raster as boundary relief instead of per-pixel boxes', () => {
     const w = 24;
     const h = 24;
     const rgba = new Uint8ClampedArray(w * h * 4);
@@ -70,7 +70,50 @@ describe('buildBrailleStlBinary', () => {
     });
     const dv = new DataView(buf);
     const triCount = dv.getUint32(80, true);
-    // Per-scanline prisms would add ~24 * 12 = 288 triangles for the logo alone; merged solid is one box (12 tris).
-    expect(triCount).toBeLessThan(120);
+    // Per-pixel boxes would add 24 * 24 * 12 = 6912 triangles for the logo alone.
+    expect(triCount).toBeLessThan(400);
+  });
+
+  it('rejects relief rasters above the configured pixel budget', () => {
+    const w = 12;
+    const h = 12;
+    const rgba = new Uint8ClampedArray(w * h * 4);
+
+    expect(() =>
+      buildBrailleStlBinary({
+        unicodeLines: ['\u2801'],
+        dimensions: defaultBanaBrailleDimensionsMm(),
+        plateThicknessMm: 1,
+        plateBorderMm: 1,
+        cylinderSegments: 8,
+        logo: {
+          width: w,
+          height: h,
+          data: rgba.buffer.slice(rgba.byteOffset, rgba.byteOffset + rgba.byteLength),
+        },
+        logoPxToMm: 0.5,
+        maxReliefRasterPixels: 100,
+      }),
+    ).toThrow(/too detailed/);
+  });
+
+  it('rejects STL output above the configured triangle budget', () => {
+    expect(() =>
+      buildBrailleStlBinary({
+        unicodeLines: ['\u2801'],
+        dimensions: defaultBanaBrailleDimensionsMm(),
+        plateThicknessMm: 1,
+        plateBorderMm: 1,
+        cylinderSegments: 8,
+        maxTriangles: 10,
+      }),
+    ).toThrow(/too detailed/);
+  });
+
+  it('maps relief quality to increasing logo raster caps', () => {
+    expect(reliefSamplesPerMmForQuality('standard')).toBeLessThan(reliefSamplesPerMmForQuality('high'));
+    expect(reliefSamplesPerMmForQuality('high')).toBeLessThan(reliefSamplesPerMmForQuality('ultra'));
+    expect(maxLogoEdgePxForReliefQuality('standard', 22)).toBeLessThan(maxLogoEdgePxForReliefQuality('high', 22));
+    expect(maxLogoEdgePxForReliefQuality('high', 22)).toBeLessThan(maxLogoEdgePxForReliefQuality('ultra', 22));
   });
 });

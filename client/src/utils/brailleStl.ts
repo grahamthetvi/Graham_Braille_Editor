@@ -1,6 +1,6 @@
 import { extractDots } from './braille';
 import type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
-import { addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl } from './brailleStlMesh';
+import { addAlphaRasterReliefTriangles, addSolidBoxTriangles, addZCylinderTriangles, encodeBinaryStl, triangleCount } from './brailleStlMesh';
 import { LOGO_ALPHA_THRESHOLD, type SerializableLogoRaster } from './logoRaster';
 
 export type { BanaBrailleDimensionsMm } from './banaBrailleDimensions';
@@ -9,6 +9,15 @@ export type { SerializableLogoRaster } from './logoRaster';
 
 /** Horizontal gap between logo relief and braille / large print (mm). */
 const LOGO_SIDE_CLEARANCE_MM = 2;
+
+export type StlReliefQuality = 'standard' | 'high' | 'ultra';
+
+type ReliefSettings = {
+  samplesPerMm: number;
+  printTextHeightMm: number;
+  maxRasterPixels: number;
+  maxTriangles: number;
+};
 
 export interface BuildBrailleStlOptions {
   /** Unicode braille lines (e.g. one formatted page from {@link formatBrfPages}). */
@@ -22,12 +31,58 @@ export interface BuildBrailleStlOptions {
   cylinderSegments: number;
   printTextLine?: string;
   /**
-   * Optional RGBA height-map (top-left on the plate). Opaque pixels become raised boxes to {@link BanaBrailleDimensionsMm.dotHeightMm}.
-   * Braille and optional large print shift right/down to clear the logo.
+   * Optional RGBA height-map (top-left on the plate). Opaque pixels become raised relief to
+   * {@link BanaBrailleDimensionsMm.dotHeightMm}. Braille and optional large print shift right/down to clear the logo.
    */
   logo?: SerializableLogoRaster;
   /** Millimeters per logo pixel (default ~0.18 keeps typical photos under ~70 mm wide after downscale). */
   logoPxToMm?: number;
+  /** Controls raster sampling for raised print letters and logo/image relief. */
+  reliefQuality?: StlReliefQuality;
+  /** Optional override for print-letter cap height. Defaults to 15 mm. */
+  printTextHeightMm?: number;
+  /** Optional override for raster samples per millimeter. */
+  reliefSamplesPerMm?: number;
+  /** Safety cap for any raised relief raster. */
+  maxReliefRasterPixels?: number;
+  /** Safety cap for generated STL triangles. */
+  maxTriangles?: number;
+}
+
+export function reliefSamplesPerMmForQuality(quality: StlReliefQuality): number {
+  switch (quality) {
+    case 'ultra':
+      return 24;
+    case 'high':
+      return 16;
+    case 'standard':
+    default:
+      return 8;
+  }
+}
+
+export function maxLogoEdgePxForReliefQuality(quality: StlReliefQuality, targetWidthMm: number): number {
+  const samples = reliefSamplesPerMmForQuality(quality);
+  const edge = Math.ceil(Math.max(4, targetWidthMm) * samples);
+  switch (quality) {
+    case 'ultra':
+      return Math.min(4096, Math.max(768, edge));
+    case 'high':
+      return Math.min(2048, Math.max(512, edge));
+    case 'standard':
+    default:
+      return Math.min(1024, Math.max(384, edge));
+  }
+}
+
+function resolveReliefSettings(options: BuildBrailleStlOptions): ReliefSettings {
+  const quality = options.reliefQuality ?? 'standard';
+  return {
+    samplesPerMm: options.reliefSamplesPerMm ?? reliefSamplesPerMmForQuality(quality),
+    printTextHeightMm: options.printTextHeightMm ?? 15,
+    maxRasterPixels: options.maxReliefRasterPixels ?? 2_500_000,
+    maxTriangles: options.maxTriangles ?? 2_000_000,
+  };
 }
 
 /**
@@ -85,67 +140,71 @@ function collectOpaqueRunsOnRow(
   return runs;
 }
 
-function runKey(r: { x0: number; x1: number }): string {
-  return `${r.x0},${r.x1}`;
+function rasterHasOpaquePixels(rgba: Uint8ClampedArray, width: number, height: number, alphaThreshold: number): boolean {
+  for (let y = 0; y < height; y++) {
+    if (collectOpaqueRunsOnRow(rgba, width, y, alphaThreshold).length > 0) return true;
+  }
+  return false;
 }
 
-type VerticalStrip = { x0: number; x1: number; y0: number; lastY: number };
+function assertRasterWithinBudget(label: string, width: number, height: number, settings: ReliefSettings): void {
+  const pixels = width * height;
+  if (pixels > settings.maxRasterPixels) {
+    throw new Error(
+      `${label} is too detailed for STL export (${width}x${height} px). Choose a lower relief quality or smaller physical size.`,
+    );
+  }
+}
 
-/**
- * Extrude opaque raster regions into solid prisms by merging horizontal runs vertically
- * when spans match, so filled areas become a few boxes instead of one thin prism per scanline.
- */
-function addAlphaRasterPrismsMerged(
-  tris: number[],
-  rgba: Uint8ClampedArray,
-  extractW: number,
-  extractH: number,
-  pxToMm: number,
-  originMarginX: number,
-  originMarginY: number,
-  contentMaxY: number,
-  prismHeightMm: number,
-  alphaThreshold: number,
-  xyBump: number,
-): void {
-  const active = new Map<string, VerticalStrip>();
+function assertTriangleBudget(tris: number[], settings: ReliefSettings): void {
+  const count = triangleCount(tris);
+  if (count > settings.maxTriangles) {
+    throw new Error(
+      `STL is too detailed to generate safely (${count.toLocaleString()} triangles). Choose a lower relief quality or smaller logo.`,
+    );
+  }
+}
 
-  const emitStrip = (s: VerticalStrip): void => {
-    const x0 = xyBump + originMarginX + s.x0 * pxToMm;
-    const x1 = xyBump + originMarginX + s.x1 * pxToMm;
-    const y0Raw = originMarginY + s.y0 * pxToMm;
-    const y1Raw = originMarginY + (s.lastY + 1) * pxToMm;
-    const y0 = xyBump + (contentMaxY - y1Raw);
-    const y1 = xyBump + (contentMaxY - y0Raw);
-    addSolidBoxTriangles(tris, x0, y0, 0, x1, y1, prismHeightMm);
+function renderPrintTextRaster(
+  text: string,
+  settings: ReliefSettings,
+): { data: Uint8ClampedArray; width: number; height: number; pxToMm: number; physicalWidthMm: number; physicalHeightMm: number } | null {
+  if (!text) return null;
+
+  const fontPx = Math.max(16, Math.round(settings.printTextHeightMm * settings.samplesPerMm));
+  const padPx = Math.max(4, Math.ceil(fontPx * 0.12));
+  const probe = new OffscreenCanvas(1, 1);
+  const probeCtx = probe.getContext('2d');
+  if (!probeCtx) return null;
+
+  probeCtx.font = `bold ${fontPx}px sans-serif`;
+  probeCtx.textBaseline = 'top';
+  const metrics = probeCtx.measureText(text);
+  const width = Math.max(1, Math.ceil(metrics.width + padPx * 2));
+  const height = Math.max(1, Math.ceil(fontPx * 1.35 + padPx * 2));
+  assertRasterWithinBudget('Print letters', width, height, settings);
+
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.font = `bold ${fontPx}px sans-serif`;
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = 'black';
+  ctx.fillText(text, padPx, padPx);
+
+  const img = ctx.getImageData(0, 0, width, height);
+  if (!rasterHasOpaquePixels(img.data, width, height, LOGO_ALPHA_THRESHOLD)) return null;
+
+  const pxToMm = settings.printTextHeightMm / fontPx;
+  return {
+    data: img.data,
+    width,
+    height,
+    pxToMm,
+    physicalWidthMm: width * pxToMm,
+    physicalHeightMm: height * pxToMm,
   };
-
-  for (let y = 0; y < extractH; y++) {
-    const runsY = collectOpaqueRunsOnRow(rgba, extractW, y, alphaThreshold);
-    const keysY = new Set(runsY.map(runKey));
-
-    for (const [key, strip] of [...active.entries()]) {
-      const connected = keysY.has(key) && strip.lastY === y - 1;
-      if (!connected) {
-        emitStrip(strip);
-        active.delete(key);
-      }
-    }
-
-    for (const run of runsY) {
-      const key = runKey(run);
-      const existing = active.get(key);
-      if (existing && existing.lastY === y - 1) {
-        existing.lastY = y;
-      } else {
-        active.set(key, { x0: run.x0, x1: run.x1, y0: y, lastY: y });
-      }
-    }
-  }
-
-  for (const strip of active.values()) {
-    emitStrip(strip);
-  }
 }
 
 /**
@@ -172,6 +231,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   const intra = dim.intraCellCenterMm;
   const inter = dim.interCellCenterMm;
   const linePitch = dim.lineCenterMm;
+  const reliefSettings = resolveReliefSettings(options);
 
   const margin = plateBorderMm + r;
 
@@ -189,6 +249,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let logoRgba: Uint8ClampedArray | null = null;
   const logoPxToMm = logoPxToMmOpt ?? 0.18;
   if (logo && logo.width > 0 && logo.height > 0 && logo.data.byteLength >= logo.width * logo.height * 4) {
+    assertRasterWithinBudget('Logo', logo.width, logo.height, reliefSettings);
     logoW = logo.width;
     logoH = logo.height;
     logoRgba = new Uint8ClampedArray(logo.data);
@@ -203,33 +264,15 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   let brailleBaseYOffset = 0;
   let textPhysicalWidth = 0;
   let textPhysicalHeight = 0;
-  let textImgData: ImageData | null = null;
-  let extractW = 0;
-  let extractH = 0;
-  const pxTextToMm = 15.0 / 100.0; // scale 100px font to 15mm tall
+  let textRaster: ReturnType<typeof renderPrintTextRaster> = null;
 
   if (printTextLine && numLines === 1) {
-    const canvas = new OffscreenCanvas(8192, 256);
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = 'bold 100px sans-serif';
-      ctx.textBaseline = 'top';
-      const textMetrics = ctx.measureText(printTextLine);
-      const textWidthPx = Math.ceil(textMetrics.width);
-      ctx.fillStyle = 'black';
-      ctx.fillText(printTextLine, 0, 0);
-
-      // Safe bounds to extract
-      extractW = Math.min(8192, textWidthPx + 20);
-      extractH = 150;
-      textImgData = ctx.getImageData(0, 0, extractW, extractH);
-
-      textPhysicalWidth = extractW * pxTextToMm;
-      textPhysicalHeight = extractH * pxTextToMm;
-    }
+    textRaster = renderPrintTextRaster(printTextLine, reliefSettings);
+    textPhysicalWidth = textRaster?.physicalWidthMm ?? 0;
+    textPhysicalHeight = textRaster?.physicalHeightMm ?? 0;
   }
 
-  const topBandMm = Math.max(textImgData ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
+  const topBandMm = Math.max(textRaster ? textPhysicalHeight : 0, logoRgba ? logoPhysicalH : 0);
   if (topBandMm > 0) {
     brailleBaseYOffset = topBandMm + 10;
   }
@@ -242,36 +285,36 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   const contentMaxY = brailleContentMaxY + brailleBaseYOffset;
 
   if (logoRgba) {
-    addAlphaRasterPrismsMerged(
-      tris,
-      logoRgba,
-      logoW,
-      logoH,
-      logoPxToMm,
-      margin,
-      margin,
+    addAlphaRasterReliefTriangles(tris, {
+      rgba: logoRgba,
+      width: logoW,
+      height: logoH,
+      pxToMm: logoPxToMm,
+      originMarginX: margin,
+      originMarginY: margin,
       contentMaxY,
-      h,
-      LOGO_ALPHA_THRESHOLD,
+      reliefHeightMm: h,
+      alphaThreshold: LOGO_ALPHA_THRESHOLD,
       xyBump,
-    );
+    });
+    assertTriangleBudget(tris, reliefSettings);
   }
 
-  if (textImgData) {
+  if (textRaster) {
     const textOriginX = margin + reservedLogoX;
-    addAlphaRasterPrismsMerged(
-      tris,
-      textImgData.data,
-      extractW,
-      extractH,
-      pxTextToMm,
-      textOriginX,
-      margin,
+    addAlphaRasterReliefTriangles(tris, {
+      rgba: textRaster.data,
+      width: textRaster.width,
+      height: textRaster.height,
+      pxToMm: textRaster.pxToMm,
+      originMarginX: textOriginX,
+      originMarginY: margin,
       contentMaxY,
-      h,
-      LOGO_ALPHA_THRESHOLD,
+      reliefHeightMm: h,
+      alphaThreshold: LOGO_ALPHA_THRESHOLD,
       xyBump,
-    );
+    });
+    assertTriangleBudget(tris, reliefSettings);
   }
 
   for (let row = 0; row < numLines; row++) {
@@ -297,6 +340,8 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     }
   }
 
+  assertTriangleBudget(tris, reliefSettings);
+
   const x0 = xyBump - plateBorderMm;
   const y0 = xyBump - plateBorderMm;
   const x1 = xyBump + contentMaxX + plateBorderMm;
@@ -305,6 +350,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   const z1 = 0;
 
   addSolidBoxTriangles(tris, x0, y0, z0, x1, y1, z1);
+  assertTriangleBudget(tris, reliefSettings);
 
   return encodeBinaryStl(tris);
 }
