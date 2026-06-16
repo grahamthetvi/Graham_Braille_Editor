@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { ChartGenerator } from './ChartGenerator';
 import type { MathCode } from '../hooks/useBraille';
 import {
@@ -7,11 +7,12 @@ import {
   generateNumberLine,
   generateBase10,
   generateManipulatives,
-  generatePolygon,
-  generateSimpleShape,
+  generateCustomShape,
+  generateInventoryShape,
   type GraphicResult,
-  type SimpleShapeKind
+  type InventoryShapeKind
 } from '../utils/graphicBraille';
+import { generateEquationGraph } from '../utils/graphEquation';
 
 interface GraphicGeneratorModalProps {
   mathCode: MathCode;
@@ -26,13 +27,13 @@ type GraphicType =
   | 'numberLine'
   | 'base10'
   | 'manipulatives'
-  | 'simpleShape'
-  | 'polygon'
+  | 'customShape'
+  | 'shapeInventory'
+  | 'graph'
   | 'chart';
 
 export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, onClose }: GraphicGeneratorModalProps) {
   const [graphicType, setGraphicType] = useState<GraphicType>('clock');
-  const [preview, setPreview] = useState<GraphicResult>({ brf: '', summary: '' });
 
   // Clock state
   const [clockRadius, setClockRadius] = useState(20);
@@ -61,54 +62,92 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
   const [manCols, setManCols] = useState(3);
   const [manSpacing, setManSpacing] = useState(5);
 
-  // Preset shapes (circle, heart) — size is radius in braille dots (same unit as polygon)
-  const [presetShape, setPresetShape] = useState<SimpleShapeKind>('circle');
-  const [presetSize, setPresetSize] = useState(15);
-  const [presetFilled, setPresetFilled] = useState(false);
+  // Shape Inventory state — size is radius in braille dots
+  const [inventoryShape, setInventoryShape] = useState<InventoryShapeKind>('circle');
+  const [inventorySize, setInventorySize] = useState(15);
+  const [inventoryFilled, setInventoryFilled] = useState(false);
 
-  // Polygon state
-  const [polyRadius, setPolyRadius] = useState(15);
-  const [polySides, setPolySides] = useState(3);
-  const [polyAngle, setPolyAngle] = useState(0);
-  const [polyFilled, setPolyFilled] = useState(false);
+  // Cross-specific state
+  const [crossLengthHorizontal, setCrossLengthHorizontal] = useState(30);
+  const [crossThicknessVertical, setCrossThicknessVertical] = useState(6);
+  const [crossThicknessHorizontal, setCrossThicknessHorizontal] = useState(6);
+  const [crossHeightRatio, setCrossHeightRatio] = useState(0.35);
 
-  useEffect(() => {
-    if (graphicType === 'chart') return;
-    let result: GraphicResult = { brf: '', summary: '' };
+  // Graph (equation) state
+  const [eqInput, setEqInput] = useState('sin(x)');
+  const [eqXMin, setEqXMin] = useState(-10);
+  const [eqXMax, setEqXMax] = useState(10);
+  const [eqYMinManual, setEqYMinManual] = useState('');
+  const [eqYMaxManual, setEqYMaxManual] = useState('');
+  const [eqCellsW, setEqCellsW] = useState(40);
+  const [eqCellsH, setEqCellsH] = useState(20);
+  const [eqSamples, setEqSamples] = useState(200);
+  const [eqXTick, setEqXTick] = useState(0);
+  const [eqYTick, setEqYTick] = useState(0);
+  const [eqTitle, setEqTitle] = useState('');
+
+  // Custom Shape state
+  const [customSize, setCustomSize] = useState(15);
+  const [customSides, setCustomSides] = useState(3);
+  const [customAngle, setCustomAngle] = useState(0);
+  const [customFilled, setCustomFilled] = useState(false);
+
+  // Graph equation preview (memoised so it only re-evaluates when inputs change)
+  const graphPreview = useMemo(() => {
+    if (graphicType !== 'graph') return null;
+    const yMinParsed = eqYMinManual.trim() ? parseFloat(eqYMinManual) : undefined;
+    const yMaxParsed = eqYMaxManual.trim() ? parseFloat(eqYMaxManual) : undefined;
+    return generateEquationGraph({
+      equation: eqInput,
+      xMin: eqXMin,
+      xMax: eqXMax,
+      cellsWidth: eqCellsW,
+      cellsHeight: eqCellsH,
+      samplePoints: eqSamples,
+      yMin: Number.isFinite(yMinParsed!) ? yMinParsed : undefined,
+      yMax: Number.isFinite(yMaxParsed!) ? yMaxParsed : undefined,
+      xTickDistance: eqXTick,
+      yTickDistance: eqYTick,
+      title: eqTitle || undefined,
+    });
+  }, [graphicType, eqInput, eqXMin, eqXMax, eqYMinManual, eqYMaxManual, eqCellsW, eqCellsH, eqSamples, eqXTick, eqYTick, eqTitle]);
+
+  // Compute preview during render
+  let preview: GraphicResult = { brf: '', summary: '' };
+  if (graphicType === 'graph') {
+    if (graphPreview && !graphPreview.error) {
+      preview = graphPreview;
+    }
+  } else if (graphicType !== 'chart') {
     switch (graphicType) {
       case 'clock':
-        result = generateClock(clockRadius, clockHours, clockMinutes);
+        preview = generateClock(clockRadius, clockHours, clockMinutes);
         break;
       case 'fraction':
-        result = generateFraction(fractionRadius, fractionNum, fractionDen);
+        preview = generateFraction(fractionRadius, fractionNum, fractionDen);
         break;
       case 'numberLine':
-        result = generateNumberLine(nlLength, nlStart, nlEnd, nlStep, nlVertical);
+        preview = generateNumberLine(nlLength, nlStart, nlEnd, nlStep, nlVertical);
         break;
       case 'base10':
-        result = generateBase10(b10Hundreds, b10Tens, b10Ones);
+        preview = generateBase10(b10Hundreds, b10Tens, b10Ones);
         break;
       case 'manipulatives':
-        result = generateManipulatives(manRows, manCols, manSpacing);
+        preview = generateManipulatives(manRows, manCols, manSpacing);
         break;
-      case 'simpleShape':
-        result = generateSimpleShape(presetShape, presetSize, presetFilled);
+      case 'shapeInventory':
+        preview = generateInventoryShape(inventoryShape, inventorySize, inventoryFilled, {
+          lengthHorizontal: crossLengthHorizontal,
+          thicknessVertical: crossThicknessVertical,
+          thicknessHorizontal: crossThicknessHorizontal,
+          heightRatio: crossHeightRatio
+        });
         break;
-      case 'polygon':
-        result = generatePolygon(polyRadius, polySides, polyAngle, polyFilled);
+      case 'customShape':
+        preview = generateCustomShape(customSize, customSides, customAngle, customFilled);
         break;
     }
-    setPreview(result);
-  }, [
-    graphicType,
-    clockRadius, clockHours, clockMinutes,
-    fractionRadius, fractionNum, fractionDen,
-    nlLength, nlStart, nlEnd, nlStep, nlVertical,
-    b10Hundreds, b10Tens, b10Ones,
-    manRows, manCols, manSpacing,
-    presetShape, presetSize, presetFilled,
-    polyRadius, polySides, polyAngle, polyFilled
-  ]);
+  }
 
   const handleInsert = () => {
     const block = `${preview.summary}\n\n:::graphic\n${preview.brf}\n:::\n`;
@@ -139,22 +178,31 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   'numberLine',
                   'base10',
                   'manipulatives',
-                  'simpleShape',
-                  'polygon',
+                  'customShape',
+                  'shapeInventory',
+                  'graph',
                   'chart'
                 ] as GraphicType[]
-              ).map(type => (
-                <button
-                  key={type}
-                  className={`toolbar-btn ${graphicType === type ? 'toolbar-btn--active' : ''}`}
-                  onClick={() => setGraphicType(type)}
-                  style={{ textAlign: 'left', textTransform: 'capitalize' }}
-                >
-                  {type === 'simpleShape'
-                    ? 'Circle / heart'
-                    : type.replace(/([A-Z])/g, ' $1').trim()}
-                </button>
-              ))}
+              ).map(type => {
+                let label = type.replace(/([A-Z])/g, ' $1').trim();
+                if (type === 'customShape') {
+                  label = 'Custom Shapes';
+                } else if (type === 'shapeInventory') {
+                  label = 'Shape Inventory';
+                } else if (type === 'graph') {
+                  label = 'Graphs';
+                }
+                return (
+                  <button
+                    key={type}
+                    className={`toolbar-btn ${graphicType === type ? 'toolbar-btn--active' : ''}`}
+                    onClick={() => setGraphicType(type)}
+                    style={{ textAlign: 'left', textTransform: 'capitalize' }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -168,6 +216,73 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                 onClose={onClose}
                 inline
               />
+            </div>
+          ) : graphicType === 'graph' ? (
+            <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+              {/* Equation Input */}
+              <div>
+                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }} htmlFor="eq-input">
+                  Equation (in terms of x)
+                </label>
+                <input
+                  id="eq-input"
+                  type="text"
+                  value={eqInput}
+                  onChange={e => setEqInput(e.target.value)}
+                  placeholder="e.g. sin(x), x^2, 2x+3, sqrt(x)"
+                  aria-describedby="eq-input-hint"
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    boxSizing: 'border-box',
+                    fontFamily: 'monospace',
+                    fontSize: '1rem',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-color)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '4px',
+                  }}
+                />
+                <p id="eq-input-hint" style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.75 }}>
+                  Supports: sin, cos, tan, sqrt, abs, log, ln, exp, pi, e, ^, and more. Shortcuts like "sinx" and "2x" work.
+                </p>
+              </div>
+
+              {/* Error display */}
+              {graphPreview?.error && (
+                <div role="alert" style={{
+                  padding: '10px',
+                  borderRadius: '4px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: '#e55',
+                  fontSize: '0.9rem',
+                }}>
+                  {graphPreview.error}
+                </div>
+              )}
+
+              {/* Range and grid controls */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <label>X Min: <input type="number" value={eqXMin} onChange={e => setEqXMin(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>X Max: <input type="number" value={eqXMax} onChange={e => setEqXMax(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Y Min (auto if empty): <input type="text" value={eqYMinManual} onChange={e => setEqYMinManual(e.target.value)} placeholder="auto" style={{ width: '80px' }} /></label>
+                <label>Y Max (auto if empty): <input type="text" value={eqYMaxManual} onChange={e => setEqYMaxManual(e.target.value)} placeholder="auto" style={{ width: '80px' }} /></label>
+                <label>X Tick Distance (0 = auto): <input type="number" min={0} step="any" value={eqXTick} onChange={e => setEqXTick(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Y Tick Distance (0 = auto): <input type="number" min={0} step="any" value={eqYTick} onChange={e => setEqYTick(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Grid Width (cells): <input type="number" min={5} max={80} value={eqCellsW} onChange={e => setEqCellsW(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Grid Height (lines): <input type="number" min={5} max={40} value={eqCellsH} onChange={e => setEqCellsH(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Sample Points: <input type="number" min={10} max={2000} value={eqSamples} onChange={e => setEqSamples(Number(e.target.value))} style={{ width: '80px' }} /></label>
+                <label>Title (optional): <input type="text" value={eqTitle} onChange={e => setEqTitle(e.target.value)} placeholder={`y = ${eqInput}`} style={{ width: '160px' }} /></label>
+              </div>
+
+              {/* Preview */}
+              {preview.brf && (
+                <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto', borderRadius: '4px' }}>
+                  <div style={{ fontFamily: 'sans-serif', marginBottom: '0.75rem', fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{preview.summary}</div>
+                  <pre style={{ fontFamily: 'monospace', margin: 0, lineHeight: 1.2, fontSize: '0.85rem' }}>{preview.brf}</pre>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
@@ -212,16 +327,22 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   <label>Spacing: <input type="number" value={manSpacing} onChange={e => setManSpacing(Number(e.target.value))} /></label>
                 </>
               )}
-              {graphicType === 'simpleShape' && (
+              {graphicType === 'shapeInventory' && (
                 <>
                   <label style={{ gridColumn: '1 / -1' }}>
                     Shape:{' '}
                     <select
-                      value={presetShape}
-                      onChange={e => setPresetShape(e.target.value as SimpleShapeKind)}
+                      value={inventoryShape}
+                      onChange={e => setInventoryShape(e.target.value as InventoryShapeKind)}
                     >
                       <option value="circle">Circle</option>
                       <option value="heart">Heart</option>
+                      <option value="cloud">Cloud</option>
+                      <option value="moon">Crescent Moon</option>
+                      <option value="lightning">Lightning Bolt</option>
+                      <option value="star">Star (5-Pointed)</option>
+                      <option value="apple">Apple</option>
+                      <option value="cross">Cross</option>
                     </select>
                   </label>
                   <label>
@@ -229,38 +350,81 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                     <input
                       type="number"
                       min={1}
-                      value={presetSize}
-                      onChange={e => setPresetSize(Number(e.target.value))}
+                      value={inventorySize}
+                      onChange={e => setInventorySize(Number(e.target.value))}
                     />
                   </label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input
                       type="checkbox"
-                      checked={presetFilled}
-                      onChange={e => setPresetFilled(e.target.checked)}
+                      checked={inventoryFilled}
+                      onChange={e => setInventoryFilled(e.target.checked)}
                     />{' '}
                     Filled (solid)
                   </label>
+                  {inventoryShape === 'cross' && (
+                    <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px dashed var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                      <h4 style={{ gridColumn: '1 / -1', margin: '0 0 0.5rem 0' }}>Cross Parameters</h4>
+                      <label>
+                        Horizontal Bar Length (dots):{' '}
+                        <input
+                          type="number"
+                          min={2}
+                          value={crossLengthHorizontal}
+                          onChange={e => setCrossLengthHorizontal(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        Vertical Bar Thickness (dots):{' '}
+                        <input
+                          type="number"
+                          min={1}
+                          value={crossThicknessVertical}
+                          onChange={e => setCrossThicknessVertical(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        Horizontal Bar Thickness (dots):{' '}
+                        <input
+                          type="number"
+                          min={1}
+                          value={crossThicknessHorizontal}
+                          onChange={e => setCrossThicknessHorizontal(Number(e.target.value))}
+                        />
+                      </label>
+                      <label>
+                        Crossbar Height Ratio (0.1 - 0.9):{' '}
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.1}
+                          max={0.9}
+                          value={crossHeightRatio}
+                          onChange={e => setCrossHeightRatio(Number(e.target.value))}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </>
               )}
-              {graphicType === 'polygon' && (
+              {graphicType === 'customShape' && (
                 <>
                   <label>
                     Size (radius in dots):{' '}
                     <input
                       type="number"
                       min={1}
-                      value={polyRadius}
-                      onChange={e => setPolyRadius(Number(e.target.value))}
+                      value={customSize}
+                      onChange={e => setCustomSize(Number(e.target.value))}
                     />
                   </label>
-                  <label>Sides: <input type="number" min={3} value={polySides} onChange={e => setPolySides(Number(e.target.value))} /></label>
-                  <label>Rotation (degrees): <input type="number" value={polyAngle} onChange={e => setPolyAngle(Number(e.target.value))} /></label>
+                  <label>Sides: <input type="number" min={3} value={customSides} onChange={e => setCustomSides(Number(e.target.value))} /></label>
+                  <label>Rotation (degrees): <input type="number" value={customAngle} onChange={e => setCustomAngle(Number(e.target.value))} /></label>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input
                       type="checkbox"
-                      checked={polyFilled}
-                      onChange={e => setPolyFilled(e.target.checked)}
+                      checked={customFilled}
+                      onChange={e => setCustomFilled(e.target.checked)}
                     />{' '}
                     Filled (solid)
                   </label>
@@ -280,7 +444,13 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
         {graphicType !== 'chart' && (
           <footer className="welcome-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
             <button className="welcome-btn-secondary" onClick={onClose}>Cancel</button>
-            <button className="welcome-btn-primary" onClick={handleInsert}>Insert Graphic</button>
+            <button
+              className="welcome-btn-primary"
+              onClick={handleInsert}
+              disabled={graphicType === 'graph' && (!preview.brf || !!graphPreview?.error)}
+            >
+              Insert Graphic
+            </button>
           </footer>
         )}
       </div>

@@ -237,6 +237,212 @@ export class GraphicCanvas extends GridCanvas {
       }
     }
   }
+
+  drawImplicitShape(
+    minX: number, maxX: number, minY: number, maxY: number,
+    isInside: (x: number, y: number) => boolean,
+    filled: boolean
+  ) {
+    const minXClamped = Math.max(0, Math.floor(minX));
+    const maxXClamped = Math.min(this.width - 1, Math.ceil(maxX));
+    const minYClamped = Math.max(0, Math.floor(minY));
+    const maxYClamped = Math.min(this.height - 1, Math.ceil(maxY));
+
+    for (let y = minYClamped; y <= maxYClamped; y++) {
+      for (let x = minXClamped; x <= maxXClamped; x++) {
+        if (isInside(x, y)) {
+          if (filled) {
+            this.setPoint(x, y);
+          } else {
+            // Outline: check if at least one 8-neighbor is outside
+            let isBoundary = false;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = x + dx;
+                const ny = y + dy;
+                if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height || !isInside(nx, ny)) {
+                  isBoundary = true;
+                  break;
+                }
+              }
+              if (isBoundary) break;
+            }
+            if (isBoundary) {
+              this.setPoint(x, y);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  drawCloud(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const isInsideCloud = (x: number, y: number): boolean => {
+      const dx = x - cx;
+      const dy = y - cy;
+      const sx = dx / 1.3;
+      const sy = dy;
+
+      const centers = [
+        { x: 0, y: -radius * 0.2, rad: radius * 0.5 },
+        { x: -radius * 0.55, y: radius * 0.1, rad: radius * 0.38 },
+        { x: radius * 0.55, y: radius * 0.1, rad: radius * 0.38 },
+        { x: -radius * 0.28, y: -radius * 0.1, rad: radius * 0.45 },
+        { x: radius * 0.28, y: -radius * 0.1, rad: radius * 0.45 },
+        { x: 0, y: radius * 0.18, rad: radius * 0.42 }
+      ];
+
+      return centers.some(c => {
+        const d2 = (sx - c.x) ** 2 + (sy - c.y) ** 2;
+        return d2 <= c.rad ** 2;
+      });
+    };
+
+    const minX = cx - radius * 1.35;
+    const maxX = cx + radius * 1.35;
+    const minY = cy - radius * 1.1;
+    const maxY = cy + radius * 1.1;
+
+    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideCloud, filled);
+  }
+
+  drawCrescentMoon(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const isInsideMoon = (x: number, y: number): boolean => {
+      const d1_2 = (x - (cx - radius * 0.1)) ** 2 + (y - cy) ** 2;
+      const d2_2 = (x - (cx + radius * 0.35)) ** 2 + (y - (cy - radius * 0.1)) ** 2;
+      return d1_2 <= radius ** 2 && d2_2 > (radius * 0.95) ** 2;
+    };
+
+    const minX = cx - radius * 1.2;
+    const maxX = cx + radius * 1.2;
+    const minY = cy - radius * 1.2;
+    const maxY = cy + radius * 1.2;
+
+    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideMoon, filled);
+  }
+
+  drawLightningBolt(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const verts = [
+      { x: cx + radius * 0.2, y: cy - radius },
+      { x: cx + radius * 0.4, y: cy - radius * 0.2 },
+      { x: cx + radius * 0.1, y: cy - radius * 0.2 },
+      { x: cx + radius * 0.5, y: cy + radius * 0.3 },
+      { x: cx - radius * 0.3, y: cy + radius },
+      { x: cx - radius * 0.1, y: cy + radius * 0.1 },
+      { x: cx - radius * 0.4, y: cy + radius * 0.1 }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    }
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  drawStar(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const verts: { x: number; y: number }[] = [];
+    const rInner = radius * 0.4;
+    for (let i = 0; i < 10; i++) {
+      const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rad = i % 2 === 0 ? radius : rInner;
+      verts.push({
+        x: cx + rad * Math.cos(angle),
+        y: cy + rad * Math.sin(angle)
+      });
+    }
+
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    }
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  drawApple(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const isInsideAppleBody = (x: number, y: number): boolean => {
+      const dLeft = (x - (cx - radius * 0.22)) ** 2 + (y - (cy + radius * 0.05)) ** 2;
+      const dRight = (x - (cx + radius * 0.22)) ** 2 + (y - (cy + radius * 0.05)) ** 2;
+
+      const inLobes = dLeft <= (radius * 0.75) ** 2 || dRight <= (radius * 0.75) ** 2;
+      if (!inLobes) return false;
+
+      const dTopIndent = (x - cx) ** 2 + (y - (cy - radius * 0.8)) ** 2;
+      if (dTopIndent <= (radius * 0.32) ** 2) return false;
+
+      const dBottomIndent = (x - cx) ** 2 + (y - (cy + radius * 0.85)) ** 2;
+      if (dBottomIndent <= (radius * 0.28) ** 2) return false;
+
+      return true;
+    };
+
+    const minX = cx - radius * 1.1;
+    const maxX = cx + radius * 1.1;
+    const minY = cy - radius * 1.1;
+    const maxY = cy + radius * 1.1;
+
+    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideAppleBody, filled);
+
+    // Stem
+    this.drawLine(cx, cy - radius * 0.48, cx + radius * 0.15, cy - radius * 0.8);
+  }
+
+  drawCross(
+    cx: number,
+    cy: number,
+    radius: number,
+    lengthHorizontal: number,
+    thicknessVertical: number,
+    thicknessHorizontal: number,
+    heightRatio: number,
+    filled = false
+  ) {
+    if (radius <= 0) return;
+    const rVert = radius;
+    const rHoriz = Math.max(1, Math.round(lengthHorizontal / 2));
+    const wVert = Math.max(1, Math.round(thicknessVertical));
+    const wHoriz = Math.max(1, Math.round(thicknessHorizontal));
+
+    const cyCrossbar = cy - rVert + 2 * rVert * heightRatio;
+
+    const halfVertW = wVert / 2;
+    const halfHorizH = wHoriz / 2;
+
+    const verts = [
+      { x: cx - halfVertW, y: cy - rVert },
+      { x: cx + halfVertW, y: cy - rVert },
+      { x: cx + halfVertW, y: cyCrossbar - halfHorizH },
+      { x: cx + rHoriz, y: cyCrossbar - halfHorizH },
+      { x: cx + rHoriz, y: cyCrossbar + halfHorizH },
+      { x: cx + halfVertW, y: cyCrossbar + halfHorizH },
+      { x: cx + halfVertW, y: cy + rVert },
+      { x: cx - halfVertW, y: cy + rVert },
+      { x: cx - halfVertW, y: cyCrossbar + halfHorizH },
+      { x: cx - rHoriz, y: cyCrossbar + halfHorizH },
+      { x: cx - rHoriz, y: cyCrossbar - halfHorizH },
+      { x: cx - halfVertW, y: cyCrossbar - halfHorizH }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    }
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
 }
 
 export interface GraphicResult {
@@ -315,7 +521,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type SimpleShapeKind = 'circle' | 'heart';
+export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -327,28 +533,100 @@ function clampSides(sides: number): number {
   return Number.isFinite(n) && n >= 3 ? n : 3;
 }
 
-export function generateSimpleShape(kind: SimpleShapeKind, radius: number, filled: boolean): GraphicResult {
+export function generateInventoryShape(
+  kind: InventoryShapeKind,
+  radius: number,
+  filled: boolean,
+  crossParams?: {
+    lengthHorizontal: number;
+    thicknessVertical: number;
+    thicknessHorizontal: number;
+    heightRatio: number;
+  }
+): GraphicResult {
   const r = clampRadius(radius);
-  const span = kind === 'heart' ? r * 2.2 : r * 2;
-  const cellsW = Math.ceil(span / 2) + 2;
-  const cellsH = Math.ceil(span / 3) + 2;
+  let spanX = r * 2;
+  let spanY = r * 2;
+
+  if (kind === 'heart') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'cloud') {
+    spanX = r * 2.6;
+    spanY = r * 2.0;
+  } else if (kind === 'moon') {
+    spanX = r * 2.4;
+    spanY = r * 2.2;
+  } else if (kind === 'apple') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'cross') {
+    const lenHoriz = crossParams?.lengthHorizontal ?? 30;
+    const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
+    spanX = rHoriz * 2;
+    spanY = r * 2;
+  }
+
+  const cellsW = Math.ceil(spanX / 2) + 2;
+  const cellsH = Math.ceil(spanY / 3) + 2;
   const canvas = new GraphicCanvas(cellsW, cellsH);
   const cx = cellsW;
   const cy = cellsH * 1.5;
-  if (kind === 'circle') {
-    canvas.drawCircle(cx, cy, r, filled);
-  } else {
-    canvas.drawHeart(cx, cy, r, filled);
+
+  let label = '';
+  switch (kind) {
+    case 'circle':
+      canvas.drawCircle(cx, cy, r, filled);
+      label = 'Circle';
+      break;
+    case 'heart':
+      canvas.drawHeart(cx, cy, r, filled);
+      label = 'Heart';
+      break;
+    case 'cloud':
+      canvas.drawCloud(cx, cy, r, filled);
+      label = 'Cloud';
+      break;
+    case 'moon':
+      canvas.drawCrescentMoon(cx, cy, r, filled);
+      label = 'Crescent Moon';
+      break;
+    case 'lightning':
+      canvas.drawLightningBolt(cx, cy, r, filled);
+      label = 'Lightning Bolt';
+      break;
+    case 'star':
+      canvas.drawStar(cx, cy, r, filled);
+      label = 'Star (5-Pointed)';
+      break;
+    case 'apple':
+      canvas.drawApple(cx, cy, r, filled);
+      label = 'Apple';
+      break;
+    case 'cross': {
+      const lenHoriz = crossParams?.lengthHorizontal ?? 30;
+      const thickVert = crossParams?.thicknessVertical ?? 6;
+      const thickHoriz = crossParams?.thicknessHorizontal ?? 6;
+      const hRatio = crossParams?.heightRatio ?? 0.35;
+      canvas.drawCross(cx, cy, r, lenHoriz, thickVert, thickHoriz, hRatio, filled);
+      label = 'Cross';
+      break;
+    }
   }
-  const label = kind === 'circle' ? 'Circle' : 'Heart';
+
   const fillNote = filled ? ', filled' : ', outline';
+  let summary = `${label} (size ${r}${fillNote})`;
+  if (kind === 'cross' && crossParams) {
+    summary = `Cross (height ${r * 2}, width ${crossParams.lengthHorizontal}, vertical thickness ${crossParams.thicknessVertical}, horizontal thickness ${crossParams.thicknessHorizontal}${fillNote})`;
+  }
+
   return {
     brf: canvas.renderToBRF(),
-    summary: `${label} (size ${r}${fillNote})`,
+    summary,
   };
 }
 
-export function generatePolygon(radius: number, sides: number, angle: number, filled: boolean): GraphicResult {
+export function generateCustomShape(radius: number, sides: number, angle: number, filled: boolean): GraphicResult {
   const r = clampRadius(radius);
   const n = clampSides(sides);
   const cellsW = Math.ceil((r * 2) / 2) + 2;

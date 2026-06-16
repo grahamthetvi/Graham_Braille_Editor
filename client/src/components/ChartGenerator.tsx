@@ -649,14 +649,15 @@ export function ChartGenerator({
                     }}
                 >
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                            type="button"
-                            className="welcome-btn-secondary"
-                            onClick={goBack}
-                            disabled={step === 0}
-                        >
-                            Back
-                        </button>
+                        {step > 0 && (
+                            <button
+                                type="button"
+                                className="welcome-btn-secondary"
+                                onClick={goBack}
+                            >
+                                Back
+                            </button>
+                        )}
                         {step < STEPS.length - 1 && (
                             <button
                                 type="button"

@@ -581,7 +581,7 @@ body {
 
 .brf-pages-container {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   background: var(--bg-surface);
   padding: 0;
   display: flex;
@@ -589,14 +589,35 @@ body {
   align-items: stretch;
   gap: 0;
   min-height: 0;
+
+  /* Custom scrollbar styling in harmony with the theme */
+  --scrollbar-thumb: var(--border);
+  --scrollbar-track: var(--bg-surface);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Legacy fallback for WebKit/Blink scrollbars */
+@supports not (scrollbar-color: auto) {
+  .brf-pages-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .brf-pages-container::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 5px;
+  }
+  .brf-pages-container::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
 }
 
 .brf-page {
   background: transparent;
   box-shadow: none;
   padding: 0 1rem 0 3.5rem;
-  width: 100%;
-  max-width: 100%;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   box-sizing: border-box;
   position: relative;
 }
@@ -632,7 +653,9 @@ body {
   font-size: 16px;
   line-height: 24px;
   white-space: pre;
-  overflow-x: hidden;
+  overflow-x: visible;
+  width: max-content;
+  min-width: 100%;
   color: var(--braille-color);
 }
 
@@ -1353,7 +1376,9 @@ label.stl-export-field {
 .brf-page-content {
   margin: 0;
   white-space: normal;
-  overflow-x: hidden;
+  overflow-x: visible;
+  width: max-content;
+  min-width: 100%;
 }
 
 .brf-page-line {
