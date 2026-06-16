@@ -224,11 +224,16 @@ export default function App() {
   const [showPageSettings, setShowPageSettings] = useState(false);
   const [brailleSize, setBrailleSize] = useState<number>(() => {
     const saved = localStorage.getItem('graham-braille-display-size');
-    return saved ? parseInt(saved, 10) : 22;
+    return saved ? parseInt(saved, 10) : 20;
   });
   const [showEmptyDots, setShowEmptyDots] = useState<boolean>(() => {
     const saved = localStorage.getItem('graham-braille-show-empty-dots');
     return saved ? saved === 'true' : true;
+  });
+  const [inactiveDotSize, setInactiveDotSize] = useState<number>(() => {
+    const saved = localStorage.getItem('graham-braille-inactive-dot-size');
+    const parsed = saved ? parseFloat(saved) : 4.0;
+    return Math.max(2.0, Math.min(5.0, parsed));
   });
 
   useEffect(() => {
@@ -238,6 +243,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('graham-braille-show-empty-dots', String(showEmptyDots));
   }, [showEmptyDots]);
+
+  useEffect(() => {
+    localStorage.setItem('graham-braille-inactive-dot-size', String(inactiveDotSize));
+  }, [inactiveDotSize]);
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
@@ -1091,6 +1100,21 @@ export default function App() {
                       />
                       <span>Show empty dots</span>
                     </label>
+                    {showEmptyDots && (
+                      <label className="settings-field">
+                        <span>Empty dot size</span>
+                        <input
+                          type="range"
+                          min={2.0}
+                          max={5.0}
+                          step={0.1}
+                          value={inactiveDotSize}
+                          onChange={(e) => setInactiveDotSize(parseFloat(e.target.value))}
+                          aria-label="Braille display empty dot size slider"
+                        />
+                        <span className="settings-value-label">{inactiveDotSize.toFixed(1)}px</span>
+                      </label>
+                    )}
                   </div>
                 </div>
               )}
@@ -1128,7 +1152,7 @@ export default function App() {
                     '--braille-cell-width': `${brailleSize * 0.64}px`,
                     '--braille-cell-gap': `${brailleSize * 0.4}px`,
                     '--braille-dot-size-active': `${brailleSize * 0.22}px`,
-                    '--braille-dot-size-inactive': `${brailleSize * 0.08}px`,
+                    '--braille-dot-size-inactive': `${inactiveDotSize}px`,
                     '--braille-cell-height-8dot': `${brailleSize * 1.33}px`,
                     '--braille-line-gap': `${brailleSize * 0.5}px`,
                   } as React.CSSProperties}

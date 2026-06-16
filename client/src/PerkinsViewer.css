@@ -24,13 +24,13 @@
   width: 100%;
   max-width: 600px;
   height: 120px;
-  background: linear-gradient(to bottom, #111, #222); /* Dark slot */
+  background: linear-gradient(to bottom, var(--bg), var(--bg-surface)); /* Themed slot */
   border-radius: 8px 8px 0 0;
   position: relative;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  box-shadow: inset 0 -4px 10px rgba(0,0,0,0.8);
+  box-shadow: inset 0 -4px 10px rgba(0,0,0,0.4);
   margin-bottom: -10px; /* Overlapped by machine body */
   z-index: 1;
 }
@@ -38,22 +38,22 @@
 .perkins-paper {
   width: 80%;
   height: 90px;
-  background: #fdfdfd; /* Bright white paper */
+  background: var(--page-bg); /* Themed paper background */
   border-radius: 4px 4px 0 0;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.5), inset 0 0 10px rgba(0,0,0,0.05);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.2), inset 0 0 10px rgba(0,0,0,0.02);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--border);
 }
 
 .perkins-paper-label {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #888;
+  color: var(--text-secondary);
   position: absolute;
   top: 8px;
 }
@@ -62,8 +62,8 @@
   font-family: monospace;
   font-size: 3rem;
   font-weight: bold;
-  color: #222; /* Dark ink/emboss color */
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  color: var(--text-primary); /* Themed text color */
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
   margin-top: 10px;
 }
 
@@ -71,19 +71,25 @@
 .perkins-machine {
   width: 100%;
   max-width: 700px;
-  background: linear-gradient(135deg, #444 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, var(--bg-overlay) 0%, var(--bg-surface) 100%);
   border-radius: 20px;
   box-shadow: 
-    0 20px 40px rgba(0, 0, 0, 0.6),
-    inset 0 2px 1px rgba(255, 255, 255, 0.1),
-    inset 0 -5px 15px rgba(0, 0, 0, 0.8);
-  border: 1px solid #555;
+    0 20px 40px rgba(0, 0, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05),
+    inset 0 -5px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
   padding: 2rem 1.5rem 3rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
   z-index: 2;
+}
+
+[data-theme="high-contrast"] .perkins-machine {
+  background: #000000;
+  border: 3px solid #ffffff;
+  box-shadow: none;
 }
 
 .perkins-machine-branding {
@@ -94,15 +100,15 @@
 }
 
 .perkins-badge {
-  background: linear-gradient(to bottom, #d4af37, #997a00); /* Gold brass badge */
-  color: #1a1a1a;
+  background: linear-gradient(to bottom, var(--accent), var(--accent-hover)); /* Themed badge background */
+  color: var(--accent-text);
   padding: 0.3rem 1.5rem;
   border-radius: 4px;
   font-family: serif;
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: 0.05em;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.4);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
   text-transform: uppercase;
 }
 
@@ -126,14 +132,14 @@
 /* The mechanical key levers */
 .perkins-key {
   width: 50px;
-  background: linear-gradient(to bottom, #dcdcdc, #a0a0a0);
+  background: linear-gradient(to bottom, var(--bg-overlay), var(--border));
   border: none;
   border-radius: 25px 25px 10px 10px; /* Rounded top pads */
   box-shadow: 
-    0 12px 0 #666, /* 3D thickness */
-    0 18px 15px rgba(0, 0, 0, 0.6), /* Drop shadow */
-    inset 0 2px 5px rgba(255, 255, 255, 0.8), /* Highlight */
-    inset 0 -2px 5px rgba(0, 0, 0, 0.2);
+    0 12px 0 var(--border), /* 3D thickness */
+    0 18px 15px rgba(0, 0, 0, 0.4), /* Drop shadow */
+    inset 0 2px 5px rgba(255, 255, 255, 0.05), /* Highlight */
+    inset 0 -2px 5px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -151,31 +157,30 @@
 .perkins-key span {
   font-size: 1rem;
   font-weight: 700;
-  color: #444;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  color: var(--text-primary);
 }
 
 /* Pressed State */
 .perkins-key.active {
   transform: translateY(10px);
-  background: linear-gradient(to bottom, #b0b0b0, #7a7a7a); /* Darker when pressed */
+  background: linear-gradient(to bottom, var(--border), var(--bg-surface)); /* Darker when pressed */
   box-shadow: 
-    0 2px 0 #555, /* Reduced thickness */
-    0 5px 8px rgba(0, 0, 0, 0.7), /* Tighter shadow */
-    inset 0 4px 8px rgba(0, 0, 0, 0.4), /* Inner indent shadow */
-    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+    0 2px 0 var(--border), /* Reduced thickness */
+    0 5px 8px rgba(0, 0, 0, 0.5), /* Tighter shadow */
+    inset 0 4px 8px rgba(0, 0, 0, 0.3), /* Inner indent shadow */
+    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .perkins-spacebar {
   width: 160px;
   height: 70px;
-  background: linear-gradient(to bottom, #444, #222); /* Dark resin/plastic spacebar */
+  background: linear-gradient(to bottom, var(--bg-overlay), var(--bg-surface)); /* Themed spacebar */
   border: none;
   border-radius: 8px 8px 15px 15px;
   box-shadow: 
-    0 10px 0 #111,
-    0 15px 15px rgba(0, 0, 0, 0.7),
-    inset 0 2px 5px rgba(255, 255, 255, 0.1);
+    0 10px 0 var(--border),
+    0 15px 15px rgba(0, 0, 0, 0.5),
+    inset 0 2px 5px rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,18 +192,18 @@
 .spacebar-ridge {
   width: 80%;
   height: 4px;
-  background: #111;
+  background: var(--border);
   border-radius: 2px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .perkins-spacebar.active {
   transform: translateY(8px);
-  background: linear-gradient(to bottom, #333, #111);
+  background: linear-gradient(to bottom, var(--bg-surface), var(--bg-overlay));
   box-shadow: 
-    0 2px 0 #000,
-    0 5px 8px rgba(0, 0, 0, 0.8),
-    inset 0 4px 8px rgba(0, 0, 0, 0.6);
+    0 2px 0 var(--border),
+    0 5px 8px rgba(0, 0, 0, 0.6),
+    inset 0 4px 8px rgba(0, 0, 0, 0.4);
 }
 
 /* Voice hints: dot numbers vs finger names */
@@ -232,7 +237,7 @@
   padding: 0.5rem 1.2rem;
   border-radius: 20px;
   border: 1px solid var(--border);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   min-width: 140px;
   text-align: center;
 }
@@ -253,25 +258,25 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(0,0,0,0.05);
+  background: var(--bg);
   padding: 8px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
 }
 
 .visual-dot {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
-  border: 2px solid #333;
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  color: #222;
+  color: var(--text-secondary);
   font-weight: 900;
-  box-shadow: 0 0 4px rgba(0,0,0,0.15);
+  box-shadow: 0 0 4px rgba(0,0,0,0.05);
   transition: all 0.2s;
 }
 
@@ -282,10 +287,10 @@
 }
 
 .visual-dot.active {
-  background: #000;
-  border-color: #000;
-  color: #fff;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.45);
+  background: var(--braille-color);
+  border-color: var(--braille-color);
+  color: var(--accent-text);
+  box-shadow: 0 0 8px var(--braille-color);
   transform: scale(1.1);
 }
 
@@ -307,19 +312,23 @@
   transition: all 0.2s;
 }
 
+[data-theme="light"] .key-cap-indicator {
+  background: rgba(0,0,0,0.05);
+}
+
 .perkins-key span {
   font-size: 0.75rem; /* Smaller font for "Dot 1" */
   letter-spacing: -0.5px;
 }
 
 .perkins-key.active span {
-  color: var(--primary);
-  text-shadow: 0 0 5px rgba(255,255,255,0.8);
+  color: var(--accent-text);
+  text-shadow: 0 0 5px var(--accent);
 }
 
 .perkins-key.active .key-cap-indicator {
-  background: var(--primary);
-  box-shadow: 0 0 8px var(--primary), inset 0 1px 2px rgba(255,255,255,0.5);
+  background: var(--braille-color);
+  box-shadow: 0 0 8px var(--braille-color), inset 0 1px 2px rgba(255,255,255,0.4);
 }
 
 .spacebar-label {
@@ -327,13 +336,113 @@
   bottom: 8px;
   font-size: 0.75rem;
   font-weight: bold;
-  color: #888;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
 .perkins-spacebar.active .spacebar-label {
-  color: var(--primary);
-  text-shadow: 0 0 5px rgba(255,255,255,0.8);
+  color: var(--accent-text);
+  text-shadow: 0 0 5px var(--accent);
+}
+
+/* ==========================================================================
+   Theme-Specific Overrides for Perkins Viewer Keyboard
+   ========================================================================== */
+
+/* ── Light Theme Contrast Enhancements ────────────────────────────────── */
+
+[data-theme="light"] .perkins-key.active {
+  background: linear-gradient(to bottom, #8c959f, #484f58); /* Dark pressed key */
+  box-shadow: 
+    0 2px 0 #30363d, 
+    0 5px 8px rgba(0, 0, 0, 0.25),
+    inset 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .perkins-key.active span {
+  color: #ffffff; /* White text for contrast */
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .perkins-spacebar.active {
+  background: linear-gradient(to bottom, #484f58, #21262d); /* Dark pressed spacebar */
+  box-shadow: 
+    0 2px 0 #161b22,
+    0 5px 8px rgba(0, 0, 0, 0.3),
+    inset 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .perkins-spacebar.active .spacebar-label {
+  color: #ffffff; /* White label text */
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* ── High Contrast Theme stark black-and-white inversion ──────────────── */
+
+[data-theme="high-contrast"] .perkins-key {
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 0 12px 0 #ffffff, 0 18px 15px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="high-contrast"] .perkins-key span {
+  color: #000000;
+  text-shadow: none;
+}
+
+[data-theme="high-contrast"] .perkins-key .key-cap-indicator {
+  background: #000000;
+  box-shadow: none;
+}
+
+/* Pressed/Active state inversion */
+[data-theme="high-contrast"] .perkins-key.active {
+  background: #000000;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 0 #ffffff, 0 5px 8px rgba(0, 0, 0, 0.5);
+  transform: translateY(10px);
+}
+
+[data-theme="high-contrast"] .perkins-key.active span {
+  color: #ffffff;
+  text-shadow: 0 0 5px #ffffff;
+}
+
+[data-theme="high-contrast"] .perkins-key.active .key-cap-indicator {
+  background: var(--braille-color); /* Bright yellow indicator */
+  box-shadow: 0 0 8px var(--braille-color);
+}
+
+/* High Contrast Spacebar */
+[data-theme="high-contrast"] .perkins-spacebar {
+  background: #ffffff;
+  border: 2px solid #000000;
+  box-shadow: 0 10px 0 #ffffff, 0 15px 15px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="high-contrast"] .perkins-spacebar .spacebar-ridge {
+  background: #000000;
+}
+
+[data-theme="high-contrast"] .perkins-spacebar .spacebar-label {
+  color: #000000;
+}
+
+/* Active Spacebar inversion */
+[data-theme="high-contrast"] .perkins-spacebar.active {
+  background: #000000;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 0 #ffffff, 0 5px 8px rgba(0, 0, 0, 0.6);
+  transform: translateY(8px);
+}
+
+[data-theme="high-contrast"] .perkins-spacebar.active .spacebar-ridge {
+  background: #ffffff;
+}
+
+[data-theme="high-contrast"] .perkins-spacebar.active .spacebar-label {
+  color: #ffffff;
+  text-shadow: 0 0 5px #ffffff;
 }
 
