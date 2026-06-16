@@ -24,6 +24,7 @@
   --focus-ring-width: 3px;
   --braille-color: #58a6ff;
   --page-bg: #1c2128;          /* Dark "paper" — slightly lighter than bg */
+  --braille-highlight-bg: rgba(254, 240, 138, 0.25);
 
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -57,6 +58,7 @@
   --focus-ring-width: 3px;
   --braille-color: #0969da;
   --page-bg: #ffffff;          /* White paper for light theme */
+  --braille-highlight-bg: rgba(254, 240, 138, 0.45);
 
   color-scheme: light;
 }
@@ -82,6 +84,7 @@
   --focus-ring-width: 4px;
   --braille-color: #ffff00;
   --page-bg: #000000;          /* Black paper for high-contrast */
+  --braille-highlight-bg: rgba(255, 255, 255, 0.35);
 
   color-scheme: dark;
 }

@@ -9,6 +9,7 @@ import { StlExportDialog } from './components/StlExportDialog';
 import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
+import { BrailleCell } from './components/BrailleCell';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
@@ -221,6 +222,22 @@ export default function App() {
   }, [pageSettings]);
 
   const [showPageSettings, setShowPageSettings] = useState(false);
+  const [brailleSize, setBrailleSize] = useState<number>(() => {
+    const saved = localStorage.getItem('graham-braille-display-size');
+    return saved ? parseInt(saved, 10) : 22;
+  });
+  const [showEmptyDots, setShowEmptyDots] = useState<boolean>(() => {
+    const saved = localStorage.getItem('graham-braille-show-empty-dots');
+    return saved ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('graham-braille-display-size', String(brailleSize));
+  }, [brailleSize]);
+
+  useEffect(() => {
+    localStorage.setItem('graham-braille-show-empty-dots', String(showEmptyDots));
+  }, [showEmptyDots]);
   const [showPrint, setShowPrint] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
@@ -1050,6 +1067,31 @@ export default function App() {
                       </select>
                     </label>
                   </div>
+
+                  <div className="display-settings-block" role="group" aria-label="Braille display settings">
+                    <div className="display-settings-heading">Braille Display Settings</div>
+                    <label className="settings-field">
+                      <span>Display size</span>
+                      <input
+                        type="range"
+                        min={14}
+                        max={36}
+                        value={brailleSize}
+                        onChange={(e) => setBrailleSize(parseInt(e.target.value, 10))}
+                        aria-label="Braille display cell size slider"
+                      />
+                      <span className="settings-value-label">{brailleSize}px</span>
+                    </label>
+                    <label className="settings-field">
+                      <input
+                        type="checkbox"
+                        checked={showEmptyDots}
+                        onChange={(e) => setShowEmptyDots(e.target.checked)}
+                        aria-label="Show empty dots in braille cells"
+                      />
+                      <span>Show empty dots</span>
+                    </label>
+                  </div>
                 </div>
               )}
 
@@ -1081,33 +1123,73 @@ export default function App() {
                   aria-label="Braille pages"
                   ref={brfContainerRef}
                   onScroll={handleBrfScroll}
+                  style={{
+                    '--braille-cell-height': `${brailleSize}px`,
+                    '--braille-cell-width': `${brailleSize * 0.64}px`,
+                    '--braille-cell-gap': `${brailleSize * 0.4}px`,
+                    '--braille-dot-size-active': `${brailleSize * 0.22}px`,
+                    '--braille-dot-size-inactive': `${brailleSize * 0.08}px`,
+                    '--braille-cell-height-8dot': `${brailleSize * 1.33}px`,
+                    '--braille-line-gap': `${brailleSize * 0.5}px`,
+                  } as React.CSSProperties}
                 >
-                  {brfPages.map((pageContent, i) => (
-                    <div
-                      key={i}
-                      className="brf-page"
-                      aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
-                    >
-                      <div className="brf-page-number" aria-hidden="true">
-                        p. {i + 1}
+                  {brfPages.map((pageContent, i) => {
+                    const lines = pageContent.split('\n');
+                    return (
+                      <div
+                        key={i}
+                        className="brf-page"
+                        aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
+                      >
+                        <div className="brf-page-number" aria-hidden="true">
+                          p. {i + 1}
+                        </div>
+                        <div className="brf-page-content">
+                          {lines.map((line, lineIdx) => {
+                            const tokens = line.split(/([\s\u2800]+)/);
+                            return (
+                              <div key={lineIdx} className="brf-page-line">
+                                {tokens.map((token, tokenIdx) => {
+                                  if (!token) return null;
+                                  
+                                  if (/^[\s\u2800]+$/.test(token)) {
+                                    return token.split('').map((char, charIdx) => (
+                                      <BrailleCell
+                                        key={`${tokenIdx}-${charIdx}`}
+                                        char={char}
+                                        showEmptyDots={showEmptyDots}
+                                      />
+                                    ));
+                                  }
+                                  
+                                  const currentWordIndex = globalWordIndex++;
+                                  const isActive = activeBrfWordRange != null &&
+                                    currentWordIndex >= activeBrfWordRange[0] &&
+                                    currentWordIndex <= activeBrfWordRange[1];
+                                    
+                                  const wordCells = token.split('').map((char, charIdx) => (
+                                    <BrailleCell
+                                      key={charIdx}
+                                      char={char}
+                                      showEmptyDots={showEmptyDots}
+                                    />
+                                  ));
+                                  
+                                  return isActive ? (
+                                    <span key={`w${tokenIdx}`} className="braille-highlight">
+                                      {wordCells}
+                                    </span>
+                                  ) : (
+                                    <Fragment key={`w${tokenIdx}`}>{wordCells}</Fragment>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <pre className="brf-page-content">
-                        {pageContent.split(/([\s\u2800]+)/).map((token, idx) => {
-                          if (!token) return null;
-                          if (/^[\s\u2800]+$/.test(token)) {
-                            return <Fragment key={idx}>{token}</Fragment>;
-                          }
-                          const currentWordIndex = globalWordIndex++;
-                          const isActive = activeBrfWordRange != null && currentWordIndex >= activeBrfWordRange[0] && currentWordIndex <= activeBrfWordRange[1];
-                          return isActive ? (
-                            <span key={`w${idx}`} className="braille-highlight">{token}</span>
-                          ) : (
-                            <Fragment key={`w${idx}`}>{token}</Fragment>
-                          );
-                        })}
-                      </pre>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="brf-placeholder" aria-live="polite">
