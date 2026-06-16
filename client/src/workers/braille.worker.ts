@@ -518,6 +518,24 @@ function buildWordMap(sourceText: string, brfText: string, outputPos: number[]):
  * Back-translates ASCII BRF line-by-line so newlines match the source file.
  * Grade 2 / contractions are not guaranteed to round-trip to the original prose.
  */
+/**
+ * Cleans up LibLouisUTDML semantic prefixes (like ^#, ^+, ^.K) from Nemeth back-translation.
+ */
+function cleanNemethBackTranslation(text: string): string {
+  if (!text) return '';
+  // 1. Convert Nemeth equals sign: ^.K or ^.k -> =
+  let result = text.replace(/\^\.[kK]/g, '=');
+  // 2. Remove Nemeth numeric indicator: ^#
+  result = result.replace(/\^#/g, '');
+  // 3. Clean up other standard prefixed operators/symbols (e.g. ^+ -> +, ^- -> -)
+  result = result.replace(/\^([+\-*/()<>,'";:!_~`&\?{}|=])/g, '$1');
+  return result;
+}
+
+/**
+ * Back-translates ASCII BRF line-by-line so newlines match the source file.
+ * Grade 2 / contractions are not guaranteed to round-trip to the original prose.
+ */
 function backTranslateTextPreservingNewlines(brf: string, table: string): string {
   if (!brf) return '';
   const lines = brf.split('\n');
@@ -526,7 +544,10 @@ function backTranslateTextPreservingNewlines(brf: string, table: string): string
     const hasCR = line.endsWith('\r');
     const cleanLine = hasCR ? line.slice(0, -1) : line;
     if (!cleanLine) return hasCR ? '\r' : '';
-    const plain = liblouis!.backTranslateString(table, cleanLine) || '';
+    let plain = liblouis!.backTranslateString(table, cleanLine) || '';
+    if (table === NEMETH_BACK_TRANSLATE_TABLE) {
+      plain = cleanNemethBackTranslation(plain);
+    }
     return hasCR ? plain + '\r' : plain;
   }).join('\n');
 }
