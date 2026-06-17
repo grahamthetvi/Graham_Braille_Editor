@@ -1389,6 +1389,18 @@ label.stl-export-field {
   min-height: var(--braille-cell-height, 22px);
 }
 
+/* Large-print ("jumbo") line: literal text rendered as big print instead of braille dots. */
+.brf-jumbo-line {
+  font-family: 'Open Sans', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.15;
+  margin-bottom: var(--braille-line-gap, 11px);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
 .braille-cell {
   position: relative;
   display: inline-grid;
