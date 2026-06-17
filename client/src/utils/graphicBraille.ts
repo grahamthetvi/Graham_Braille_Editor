@@ -445,78 +445,82 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   /**
-   * Six-petal flower with layered petals, textured center, curved stem, and opposing leaves.
+   * Daisy-style flower: a round center ringed by distinct rounded petals,
+   * sitting on a straight stem with two opposing leaves.
+   * The flower head is centred above `cy`; the stem and leaves hang below.
    */
   drawFlower(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
+    const headCy = cy - radius * 0.42;
     const petalCount = 6;
-    const isInsideFlowerHead = (x: number, y: number): boolean => {
-      const dx = x - cx;
-      const dy = y - cy;
+    const petalDist = radius * 0.6;
+    const petalR = radius * 0.34;
+    const centerR = radius * 0.3;
 
-      const checkPetalLayer = (offsetAngle: number, distMul: number, aMul: number, bMul: number) => {
-        for (let i = 0; i < petalCount; i++) {
-          const angle = -Math.PI / 2 + offsetAngle + (i * 2 * Math.PI) / petalCount;
-          const cosA = Math.cos(angle);
-          const sinA = Math.sin(angle);
-          const lx = dx * cosA + dy * sinA;
-          const ly = -dx * sinA + dy * cosA;
-          const px = lx - radius * distMul;
-          const a = radius * aMul;
-          const b = radius * bMul;
-          if ((px / a) ** 2 + (ly / b) ** 2 <= 1) return true;
-        }
-        return false;
-      };
+    const petalCenters: { x: number; y: number }[] = [];
+    for (let i = 0; i < petalCount; i++) {
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / petalCount;
+      petalCenters.push({
+        x: Math.round(cx + Math.cos(angle) * petalDist),
+        y: Math.round(headCy + Math.sin(angle) * petalDist),
+      });
+    }
 
-      if (checkPetalLayer(0, 0.36, 0.44, 0.26)) return true;
-      if (checkPetalLayer(Math.PI / petalCount, 0.22, 0.28, 0.18)) return true;
+    if (filled) {
+      // Solid bloom: every petal disc plus the central disc.
+      for (const p of petalCenters) {
+        this.fillDisc(p.x, p.y, petalR);
+      }
+      this.fillDisc(cx, headCy, centerR);
+    } else {
+      // Outline bloom: each petal as its own circle, then a ringed centre.
+      for (const p of petalCenters) {
+        this.drawCircle(p.x, p.y, Math.round(petalR), false);
+      }
+      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), false);
+    }
 
-      const centerR = radius * 0.17;
-      if (dx * dx + dy * dy <= centerR * centerR) return true;
+    // Stem: a gently curved line dropping from the bloom.
+    const stemTop = headCy + radius * 0.92;
+    const stemBottom = cy + radius * 1.4;
+    const stemSteps = Math.max(8, Math.ceil(radius));
+    let prevX = cx;
+    let prevY = stemTop;
+    for (let i = 1; i <= stemSteps; i++) {
+      const t = i / stemSteps;
+      const sx = cx + Math.sin(t * Math.PI) * radius * 0.12;
+      const sy = stemTop + (stemBottom - stemTop) * t;
+      this.drawLine(prevX, prevY, sx, sy);
+      prevX = sx;
+      prevY = sy;
+    }
 
-      const ringR = radius * 0.24;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist >= centerR * 0.85 && dist <= ringR) return true;
-
-      return false;
-    };
-
-    const headPad = radius * 1.05;
-    this.drawImplicitShape(
-      cx - headPad, cx + headPad, cy - headPad, cy + headPad * 0.55,
-      isInsideFlowerHead, filled
-    );
-
-    const stemTop = cy + radius * 0.42;
-    const stemBottom = cy + radius * 1.05;
-    const stemMidX = cx + radius * 0.04;
-    this.drawLine(cx, stemTop, stemMidX, stemBottom);
-
-    const leaf = (leafCx: number, leafCy: number, angle: number) => {
+    // Two opposing leaves growing outward from the stem.
+    const leaf = (attachX: number, attachY: number, dirX: number) => {
+      const angle = Math.atan2(0.5, dirX); // tilt the leaf upward as it reaches out
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
+      const a = radius * 0.3;
+      const b = radius * 0.12;
+      const leafCx = attachX + dirX * a * 0.9;
+      const leafCy = attachY - a * 0.45;
       const isInsideLeaf = (x: number, y: number): boolean => {
         const dx = x - leafCx;
         const dy = y - leafCy;
         const lx = dx * cosA + dy * sinA;
         const ly = -dx * sinA + dy * cosA;
-        const a = radius * 0.22;
-        const b = radius * 0.1;
         return (lx / a) ** 2 + (ly / b) ** 2 <= 1;
       };
-      const pad = radius * 0.28;
+      const pad = a + 1;
       this.drawImplicitShape(
         leafCx - pad, leafCx + pad, leafCy - pad, leafCy + pad,
         isInsideLeaf, filled
       );
-      this.drawLine(leafCx, leafCy, leafCx + cosA * radius * 0.18, leafCy + sinA * radius * 0.18);
     };
 
-    const stemAttachY = stemTop + radius * 0.28;
-    leaf(cx - radius * 0.12, stemAttachY, Math.PI * 0.72);
-    leaf(cx + radius * 0.12, stemAttachY + radius * 0.12, -Math.PI * 0.28);
+    leaf(cx, stemTop + (stemBottom - stemTop) * 0.4, -1);
+    leaf(cx, stemTop + (stemBottom - stemTop) * 0.62, 1);
   }
 
   private drawSingleIceSkate(
@@ -615,49 +619,38 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   /**
-   * Vampire fangs with curved lip, gum band, and sharp canine teeth.
+   * Vampire mouth: a curved upper gum line carrying a row of small teeth,
+   * two prominent pointed fangs, and a blood drip falling from one fang.
    */
   drawVampireFangs(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
-    const lipPoints: { x: number; y: number }[] = [];
-    const lipSteps = Math.max(32, Math.ceil(radius * 2.5));
-    for (let i = 0; i <= lipSteps; i++) {
-      const t = i / lipSteps;
-      const angle = Math.PI + t * Math.PI;
-      const lipR = radius * 0.72;
-      const cupidDip = radius * 0.06 * Math.pow(Math.sin(t * Math.PI), 2);
-      lipPoints.push({
-        x: Math.round(cx + lipR * Math.cos(angle)),
-        y: Math.round(cy - radius * 0.15 + lipR * 0.22 * Math.sin(angle) + cupidDip),
-      });
-    }
-    for (let i = 0; i < lipPoints.length - 1; i++) {
-      this.drawLine(lipPoints[i].x, lipPoints[i].y, lipPoints[i + 1].x, lipPoints[i + 1].y);
-    }
+    const halfW = radius * 0.85;
+    const gumTopY = cy - radius * 0.6;
+    const gumBaseY = cy - radius * 0.28;
 
-    const gumVerts = [
-      { x: cx - radius * 0.55, y: cy - radius * 0.08 },
-      { x: cx + radius * 0.55, y: cy - radius * 0.08 },
-      { x: cx + radius * 0.48, y: cy + radius * 0.06 },
-      { x: cx - radius * 0.48, y: cy + radius * 0.06 },
-    ];
-    if (filled) {
-      this.fillPolygonInterior(gumVerts);
-    }
-    for (let i = 0; i < gumVerts.length; i++) {
-      const a = gumVerts[i];
-      const b = gumVerts[(i + 1) % gumVerts.length];
-      this.drawLine(a.x, a.y, b.x, b.y);
-    }
+    // Upper gum: a shallow lip band whose lower edge dips in the middle (an open smile).
+    const gumLowerY = (x: number): number => {
+      const t = (x - cx) / halfW; // -1 .. 1
+      return gumBaseY + radius * 0.16 * (1 - t * t);
+    };
+    const isInsideGum = (x: number, y: number): boolean => {
+      if (x < cx - halfW || x > cx + halfW) return false;
+      return y >= gumTopY && y <= gumLowerY(x);
+    };
+    this.drawImplicitShape(
+      cx - halfW - 1, cx + halfW + 1, gumTopY - 1, gumBaseY + radius * 0.4,
+      isInsideGum, filled
+    );
 
-    const drawFang = (fangCx: number, outerX: number, innerX: number, tipX: number) => {
+    // A tapered tooth (or fang) hanging from the gum at the given centre.
+    const drawTooth = (toothCx: number, topWidth: number, depth: number) => {
+      const topY = gumLowerY(toothCx) - radius * 0.02;
+      const tipY = topY + depth;
       const verts = [
-        { x: outerX, y: cy + radius * 0.04 },
-        { x: innerX, y: cy + radius * 0.04 },
-        { x: tipX, y: cy + radius * 0.92 },
-        { x: fangCx + (outerX - fangCx) * 0.35, y: cy + radius * 0.55 },
-        { x: fangCx, y: cy + radius * 0.72 },
+        { x: toothCx - topWidth, y: topY },
+        { x: toothCx + topWidth, y: topY },
+        { x: toothCx, y: tipY },
       ];
       if (filled) {
         this.fillPolygonInterior(verts);
@@ -667,28 +660,96 @@ export class GraphicCanvas extends GridCanvas {
         const b = verts[(i + 1) % verts.length];
         this.drawLine(a.x, a.y, b.x, b.y);
       }
-      this.drawLine(fangCx, Math.round(cy + radius * 0.92), tipX, Math.round(cy + radius * 0.92));
+      return tipY;
     };
 
-    drawFang(
-      cx - radius * 0.28,
-      cx - radius * 0.42,
-      cx - radius * 0.17,
-      cx - radius * 0.25
-    );
-    drawFang(
-      cx + radius * 0.28,
-      cx + radius * 0.42,
-      cx + radius * 0.17,
-      cx + radius * 0.25
+    // Two small incisors tucked between the fangs.
+    drawTooth(cx - radius * 0.15, radius * 0.08, radius * 0.3);
+    drawTooth(cx + radius * 0.15, radius * 0.08, radius * 0.3);
+
+    // The two long, sharp canine fangs.
+    const fangTipY = drawTooth(cx - radius * 0.5, radius * 0.17, radius * 1.05);
+    drawTooth(cx + radius * 0.5, radius * 0.17, radius * 1.05);
+
+    // Blood drip falling from the left fang tip.
+    const dripX = Math.round(cx - radius * 0.5);
+    const dripTop = Math.round(fangTipY + radius * 0.06);
+    const dripBottom = Math.round(fangTipY + radius * 0.34);
+    this.drawLine(dripX, dripTop, dripX, dripBottom);
+    this.setPoint(dripX - 1, dripBottom - 1);
+    this.setPoint(dripX + 1, dripBottom - 1);
+    this.setPoint(dripX, dripBottom + 1);
+  }
+
+  /**
+   * Vertical paintbrush: a rounded wooden handle, a metal ferrule band,
+   * and tapered bristles ending in a soft tip with a dab of paint.
+   */
+  drawPaintbrush(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const handleTopY = cy - radius * 1.3;
+    const ferruleTopY = cy - radius * 0.05;
+    const ferruleBotY = cy + radius * 0.28;
+    const bristleTipY = cy + radius * 1.25;
+
+    const capR = radius * 0.14;
+    const handleTopHalf = radius * 0.14;
+    const handleBotHalf = radius * 0.2;
+    const ferruleHalf = radius * 0.32;
+    const bristleTopHalf = radius * 0.3;
+
+    // Half-width of the brush silhouette at a given y.
+    const halfWidthAt = (y: number): number => {
+      if (y < ferruleTopY) {
+        const t = (y - handleTopY) / (ferruleTopY - handleTopY);
+        const taper = handleTopHalf + (handleBotHalf - handleTopHalf) * t;
+        if (y < handleTopY + capR) {
+          const cap = Math.sqrt(Math.max(0, capR * capR - (y - (handleTopY + capR)) ** 2));
+          return Math.min(taper, cap);
+        }
+        return taper;
+      }
+      if (y <= ferruleBotY) {
+        return ferruleHalf;
+      }
+      const t = (y - ferruleBotY) / (bristleTipY - ferruleBotY);
+      // Flares slightly below the ferrule, then tapers to a soft tip.
+      return Math.max(0, bristleTopHalf * (1 - t) + radius * 0.12 * Math.sin(t * Math.PI) - radius * 0.02);
+    };
+
+    const isInsideBrush = (x: number, y: number): boolean => {
+      if (y < handleTopY || y > bristleTipY) return false;
+      return Math.abs(x - cx) <= halfWidthAt(y);
+    };
+
+    this.drawImplicitShape(
+      cx - ferruleHalf - 1, cx + ferruleHalf + 1, handleTopY - 1, bristleTipY + 1,
+      isInsideBrush, filled
     );
 
-    const dripX = cx - radius * 0.25;
-    const dripTop = Math.round(cy + radius * 0.94);
-    this.drawLine(dripX, dripTop, dripX, Math.round(cy + radius * 1.02));
-    this.setPoint(dripX, Math.round(cy + radius * 1.04));
-    this.setPoint(dripX - 1, Math.round(cy + radius * 1.02));
-    this.setPoint(dripX + 1, Math.round(cy + radius * 1.02));
+    // Ferrule band: top and bottom edges set the metal collar apart.
+    this.drawLine(cx - ferruleHalf, ferruleTopY, cx + ferruleHalf, ferruleTopY);
+    this.drawLine(cx - ferruleHalf, ferruleBotY, cx + ferruleHalf, ferruleBotY);
+
+    // Bristle strands fanning toward the tip (outline mode only — filled is solid).
+    if (!filled) {
+      const strands = [-0.18, -0.06, 0.06, 0.18];
+      for (const s of strands) {
+        const startX = cx + radius * s;
+        const startY = ferruleBotY + radius * 0.05;
+        const endX = cx + radius * s * 0.25;
+        const endY = bristleTipY - radius * 0.12;
+        this.drawLine(startX, startY, endX, endY);
+      }
+    }
+
+    // A dab of paint at the very tip of the bristles.
+    const tipY = Math.round(bristleTipY);
+    this.setPoint(Math.round(cx), tipY + 1);
+    this.setPoint(Math.round(cx) - 1, tipY + 2);
+    this.setPoint(Math.round(cx) + 1, tipY + 2);
+    this.setPoint(Math.round(cx), tipY + 3);
   }
 }
 
@@ -768,7 +829,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs';
+export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs' | 'paintbrush';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -821,6 +882,9 @@ export function generateInventoryShape(
   } else if (kind === 'vampireFangs') {
     spanX = r * 2.2;
     spanY = r * 2.8;
+  } else if (kind === 'paintbrush') {
+    spanX = r * 1.8;
+    spanY = r * 3.0;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -879,6 +943,10 @@ export function generateInventoryShape(
     case 'vampireFangs':
       canvas.drawVampireFangs(cx, cy, r, filled);
       label = 'Vampire Fangs';
+      break;
+    case 'paintbrush':
+      canvas.drawPaintbrush(cx, cy, r, filled);
+      label = 'Paintbrush';
       break;
   }
 
