@@ -47,6 +47,14 @@ export function unicodeBrailleToAscii(s: string): string {
     return out;
 }
 
+/**
+ * Marks a line of literal large-print ("jumbo") text in the BRF stream. Such lines are
+ * NOT braille — they carry plain text that the preview renders as big print. The marker
+ * is a control char (0x02) outside the BRF range so it survives ASCII↔Unicode conversion.
+ * Format of a jumbo line: `\u0002<sizePx>\u0002<text>`.
+ */
+export const JUMBO_LINE_MARKER = '\u0002';
+
 /** UEB Nemeth passage markers (must match braille.worker wrap). */
 export const UEB_NEMETH_OPEN = '\u2838\u2829';
 export const UEB_NEMETH_CLOSE = '\u2838\u2831';
@@ -58,7 +66,28 @@ export const UEB_NEMETH_CLOSE_ASCII = unicodeBrailleToAscii(UEB_NEMETH_CLOSE);
 
 export function asciiToUnicodeBraille(asciiString: string): string {
     let unicodeStr = "";
+    let atLineStart = true;
+    let literalLine = false;
     for (let i = 0; i < asciiString.length; i++) {
+        const ch = asciiString.charAt(i);
+
+        if (ch === '\n') {
+            unicodeStr += ch;
+            atLineStart = true;
+            literalLine = false;
+            continue;
+        }
+
+        // Jumbo / large-print lines hold literal text, not braille — pass them through unchanged.
+        if (atLineStart && ch === JUMBO_LINE_MARKER) {
+            literalLine = true;
+        }
+        atLineStart = false;
+        if (literalLine) {
+            unicodeStr += ch;
+            continue;
+        }
+
         let charCode = asciiString.charCodeAt(i);
 
         // Map lowercase / extended ASCII (0x60 - 0x7F) down to standard BRF (0x40 - 0x5F)
@@ -73,7 +102,7 @@ export function asciiToUnicodeBraille(asciiString: string): string {
             unicodeStr += String.fromCharCode(0x2800 + BRF_TO_UNICODE_OFFSETS[index]);
         } else {
             // If character is not in the BRF set (e.g., newlines), leave it as is
-            unicodeStr += asciiString.charAt(i);
+            unicodeStr += ch;
         }
     }
     return unicodeStr;
