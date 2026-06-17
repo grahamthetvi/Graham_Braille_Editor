@@ -69,4 +69,14 @@ describe('2D Raised Print Tactile Text Feature', () => {
     expect(result.brf.length).toBeGreaterThan(0);
     expect(result.summary).toContain('Raised print text ""');
   });
+
+  it('generates thin centerline letters when requested', () => {
+    const font = getLoadedFont();
+    const text = 'HELLO';
+    const result = generateRaisedPrintTextGraphic(font, text, 24, false, 'thin');
+
+    expect(result.brf.length).toBeGreaterThan(0);
+    expect(result.summary).toContain('thin letters');
+    expect(result.summary).toContain('Raised print text "HELLO"');
+  });
 });

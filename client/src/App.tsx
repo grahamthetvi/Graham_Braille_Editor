@@ -2,7 +2,6 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import type { WordMapData } from './workers/braille.worker';
 import { Editor, type EditorHandle } from './components/Editor';
 import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
-import { JumboTextModal } from './components/JumboTextModal';
 import { PrintPanel } from './components/PrintPanel';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -121,7 +120,6 @@ export default function App() {
     () => !!localStorage.getItem('graham-braille-privacy-seen')
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
-  const [showJumboText, setShowJumboText] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'tools' | 'help'>('file');
@@ -739,16 +737,6 @@ export default function App() {
                   Graphics
                 </button>
 
-                <button
-                  className={`toolbar-btn${showJumboText ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowJumboText(s => !s)}
-                  disabled={isPerkinsMode}
-                  title="Insert large-print (jumbo) text shown as big print on the right"
-                  aria-label="Insert Large-Print Text"
-                >
-                  Large Print
-                </button>
-
                 <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
                   UEB Math is standard and $$math$$ is Nemeth.
                 </span>
@@ -1301,17 +1289,6 @@ export default function App() {
             setShowGraphicsEditor(false);
           }}
           onClose={() => setShowGraphicsEditor(false)}
-        />
-      )}
-
-      {/* ── Large-Print (Jumbo) Text Modal ───────────────────────────────── */}
-      {showJumboText && (
-        <JumboTextModal
-          onInsert={(block) => {
-            editorRef.current?.insertTextAtCursor(block);
-            setShowJumboText(false);
-          }}
-          onClose={() => setShowJumboText(false)}
         />
       )}
 

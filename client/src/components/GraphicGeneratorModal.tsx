@@ -102,6 +102,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
   const [printText, setPrintText] = useState('ABC');
   const [printFontSize, setPrintFontSize] = useState(24);
   const [printTextFilled, setPrintTextFilled] = useState(false);
+  const [printLetterType, setPrintLetterType] = useState<'bubble' | 'thin'>('bubble');
   const [printFont, setPrintFont] = useState<import('opentype.js').Font | null>(null);
   const [fontLoading, setFontLoading] = useState(false);
   const [fontError, setFontError] = useState<string | null>(null);
@@ -182,7 +183,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
         break;
       case 'raisedPrintText':
         if (printFont) {
-          preview = generateRaisedPrintTextGraphic(printFont, printText, printFontSize, printTextFilled);
+          preview = generateRaisedPrintTextGraphic(printFont, printText, printFontSize, printTextFilled, printLetterType);
         } else {
           preview = { brf: '', summary: fontError ? `Error: ${fontError}` : (fontLoading ? 'Loading font...' : 'Font not loaded.') };
         }
@@ -534,10 +535,37 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                           }}
                         />
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        Letter Style:
+                        <select
+                          value={printLetterType}
+                          onChange={e => setPrintLetterType(e.target.value as 'bubble' | 'thin')}
+                          style={{
+                            padding: '8px 10px',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-color)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          <option value="bubble">Thick Bubble Letters</option>
+                          <option value="thin">Thin Letters (Single Stroke)</option>
+                        </select>
+                      </label>
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          marginTop: '1.5rem',
+                          opacity: printLetterType === 'thin' ? 0.5 : 1,
+                          cursor: printLetterType === 'thin' ? 'not-allowed' : 'pointer'
+                        }}
+                      >
                         <input
                           type="checkbox"
                           checked={printTextFilled}
+                          disabled={printLetterType === 'thin'}
                           onChange={e => setPrintTextFilled(e.target.checked)}
                         />
                         Filled (Solid block letters)

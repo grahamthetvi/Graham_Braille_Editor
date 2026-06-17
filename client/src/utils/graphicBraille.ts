@@ -1,5 +1,6 @@
 import { GridCanvas } from './chartBraille';
 import type { Font } from 'opentype.js';
+import { getCenterlineStrokes } from './centerlineFont';
 
 /** Standard even-odd test: horizontal ray from (x,y) toward +∞ crosses polygon boundary. */
 function pointInPolygonEvenOdd(x: number, y: number, verts: { x: number; y: number }[]): boolean {
@@ -1186,9 +1187,30 @@ export function generateRaisedPrintTextGraphic(
   font: Font,
   text: string,
   fontSize: number,
-  filled: boolean
+  filled: boolean,
+  letterType: 'bubble' | 'thin' = 'bubble'
 ): GraphicResult {
   const fSize = Math.max(4, Number(fontSize) || 12);
+
+  if (letterType === 'thin') {
+    const centerline = getCenterlineStrokes(text, fSize);
+    const startX = 4;
+    const startY = 4;
+
+    const cellsW = Math.max(2, Math.ceil((centerline.width + startX * 2) / 2));
+    const cellsH = Math.max(2, Math.ceil((centerline.height + startY * 2) / 3));
+
+    const canvas = new GraphicCanvas(cellsW, cellsH);
+    for (const s of centerline.strokes) {
+      canvas.drawLine(s.x1 + startX, s.y1 + startY, s.x2 + startX, s.y2 + startY);
+    }
+
+    return {
+      brf: canvas.renderToBRF(),
+      summary: `Raised print text "${text}" (font size ${fSize}, thin letters)`,
+    };
+  }
+
   const path = font.getPath(text, 0, 0, fSize);
   const bbox = path.getBoundingBox();
 
