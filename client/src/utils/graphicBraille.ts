@@ -643,9 +643,13 @@ export class GraphicCanvas extends GridCanvas {
       isInsideGum, filled
     );
 
-    // A tapered tooth (or fang) hanging from the gum at the given centre.
+    // All teeth hang from a common flat baseline so fangs and incisors are
+    // properly lined up regardless of the curved gum contour.
+    const teethTopY = gumBaseY + radius * 0.14;
+
+    // A tapered tooth (or fang) hanging from the flat baseline.
     const drawTooth = (toothCx: number, topWidth: number, depth: number) => {
-      const topY = gumLowerY(toothCx) - radius * 0.02;
+      const topY = teethTopY;
       const tipY = topY + depth;
       const verts = [
         { x: toothCx - topWidth, y: topY },
@@ -714,8 +718,9 @@ export class GraphicCanvas extends GridCanvas {
         return ferruleHalf;
       }
       const t = (y - ferruleBotY) / (bristleTipY - ferruleBotY);
-      // Flares slightly below the ferrule, then tapers to a soft tip.
-      return Math.max(0, bristleTopHalf * (1 - t) + radius * 0.12 * Math.sin(t * Math.PI) - radius * 0.02);
+      // Wider swell that curves more aggressively to a rounded tip.
+      const swell = bristleTopHalf * (1 - t * t) + radius * 0.14 * Math.sin(t * Math.PI * 0.8);
+      return Math.max(0, swell);
     };
 
     const isInsideBrush = (x: number, y: number): boolean => {
@@ -732,24 +737,42 @@ export class GraphicCanvas extends GridCanvas {
     this.drawLine(cx - ferruleHalf, ferruleTopY, cx + ferruleHalf, ferruleTopY);
     this.drawLine(cx - ferruleHalf, ferruleBotY, cx + ferruleHalf, ferruleBotY);
 
-    // Bristle strands fanning toward the tip (outline mode only — filled is solid).
+    // Bristle strands fanning toward the tip with a slight curve (outline mode only).
     if (!filled) {
       const strands = [-0.18, -0.06, 0.06, 0.18];
+      const strandSteps = Math.max(6, Math.ceil(radius * 0.4));
       for (const s of strands) {
         const startX = cx + radius * s;
         const startY = ferruleBotY + radius * 0.05;
-        const endX = cx + radius * s * 0.25;
-        const endY = bristleTipY - radius * 0.12;
-        this.drawLine(startX, startY, endX, endY);
+        const endX = cx + radius * s * 0.15;
+        const endY = bristleTipY - radius * 0.06;
+        let prevX = startX;
+        let prevY = startY;
+        for (let i = 1; i <= strandSteps; i++) {
+          const t = i / strandSteps;
+          const sx = startX + (endX - startX) * t + Math.sin(t * Math.PI) * radius * s * 0.3;
+          const sy = startY + (endY - startY) * t;
+          this.drawLine(prevX, prevY, sx, sy);
+          prevX = sx;
+          prevY = sy;
+        }
       }
     }
 
-    // A dab of paint at the very tip of the bristles.
-    const tipY = Math.round(bristleTipY);
-    this.setPoint(Math.round(cx), tipY + 1);
-    this.setPoint(Math.round(cx) - 1, tipY + 2);
-    this.setPoint(Math.round(cx) + 1, tipY + 2);
-    this.setPoint(Math.round(cx), tipY + 3);
+    // A gently curving "already painted" line trailing below the bristle tip.
+    const lineStartY = Math.round(bristleTipY + radius * 0.08);
+    const lineEndY = Math.round(bristleTipY + radius * 0.65);
+    const lineSteps = Math.max(8, Math.ceil(radius * 0.6));
+    let prevPaintX = Math.round(cx);
+    let prevPaintY = lineStartY;
+    for (let i = 1; i <= lineSteps; i++) {
+      const t = i / lineSteps;
+      const px = Math.round(cx + Math.sin(t * Math.PI * 1.5) * radius * 0.18);
+      const py = Math.round(lineStartY + (lineEndY - lineStartY) * t);
+      this.drawLine(prevPaintX, prevPaintY, px, py);
+      prevPaintX = px;
+      prevPaintY = py;
+    }
   }
 }
 
@@ -884,7 +907,7 @@ export function generateInventoryShape(
     spanY = r * 2.8;
   } else if (kind === 'paintbrush') {
     spanX = r * 1.8;
-    spanY = r * 3.0;
+    spanY = r * 3.6;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;

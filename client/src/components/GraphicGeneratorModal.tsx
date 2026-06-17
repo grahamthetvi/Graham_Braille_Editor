@@ -13,6 +13,8 @@ import {
   type InventoryShapeKind
 } from '../utils/graphicBraille';
 import { generateEquationGraph } from '../utils/graphEquation';
+import { asciiToUnicodeBraille } from '../utils/braille';
+import { BrailleCell } from './BrailleCell';
 
 interface GraphicGeneratorModalProps {
   mathCode: MathCode;
@@ -280,7 +282,27 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
               {preview.brf && (
                 <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto', borderRadius: '4px' }}>
                   <div style={{ fontFamily: 'sans-serif', marginBottom: '0.75rem', fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{preview.summary}</div>
-                  <pre style={{ fontFamily: 'monospace', margin: 0, lineHeight: 1.2, fontSize: '0.85rem' }}>{preview.brf}</pre>
+                  <div
+                    className="brf-pages-container"
+                    style={{
+                      '--braille-cell-height': '16px',
+                      '--braille-cell-width': '10px',
+                      '--braille-cell-gap': '4px',
+                      '--braille-dot-size-active': '3.5px',
+                      '--braille-dot-size-inactive': '0px',
+                      '--braille-line-gap': '6px',
+                      overflow: 'visible',
+                      maxHeight: 'none',
+                    } as React.CSSProperties}
+                  >
+                    {asciiToUnicodeBraille(preview.brf).split('\n').map((line, lineIdx) => (
+                      <div key={lineIdx} className="brf-page-line" style={{ whiteSpace: 'nowrap' }}>
+                        {[...line].map((ch, chIdx) => (
+                          <BrailleCell key={chIdx} char={ch} showEmptyDots={false} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -439,7 +461,27 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
             {/* Preview */}
             <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto' }}>
               <div style={{ fontFamily: 'sans-serif', marginBottom: '1rem', fontWeight: 'bold' }}>{preview.summary}</div>
-              <pre style={{ fontFamily: 'monospace', margin: 0, lineHeight: 1.2 }}>{preview.brf}</pre>
+              <div
+                className="brf-pages-container"
+                style={{
+                  '--braille-cell-height': '16px',
+                  '--braille-cell-width': '10px',
+                  '--braille-cell-gap': '4px',
+                  '--braille-dot-size-active': '3.5px',
+                  '--braille-dot-size-inactive': '0px',
+                  '--braille-line-gap': '6px',
+                  overflow: 'visible',
+                  maxHeight: 'none',
+                } as React.CSSProperties}
+              >
+                {asciiToUnicodeBraille(preview.brf).split('\n').map((line, lineIdx) => (
+                  <div key={lineIdx} className="brf-page-line" style={{ whiteSpace: 'nowrap' }}>
+                    {[...line].map((ch, chIdx) => (
+                      <BrailleCell key={chIdx} char={ch} showEmptyDots={false} />
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           )}
