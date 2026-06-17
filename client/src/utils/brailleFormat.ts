@@ -290,6 +290,11 @@ function physicalLinesMetaForUnicodeLine(
   paragraphStarts: ParagraphLineStarts | undefined,
   brailleSpace: string,
 ): PhysicalBrailleLineMeta[] {
+  // Jumbo / large-print lines hold literal text, not braille words — one physical line, no spans.
+  if (unicodeLine.startsWith('\u0002')) {
+    return [{ spans: [] }];
+  }
+
   const isPreformatted = unicodeLine.startsWith('\u0001');
   if (isPreformatted) {
     unicodeLine = unicodeLine.slice(1);
@@ -340,6 +345,11 @@ function syncPlainLineToBrailleWrap(
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
 ): string {
+  // Jumbo / large-print lines are literal text; leave the source row untouched.
+  if (unicodeBrailleLine.startsWith('\u0002')) {
+    return sourceLine;
+  }
+
   const isPreformatted = unicodeBrailleLine.startsWith('\u0001');
   if (isPreformatted) {
     unicodeBrailleLine = unicodeBrailleLine.slice(1);
@@ -575,6 +585,13 @@ function formatBrfPagesSegment(
   const wrappedLines: string[] = [];
 
   for (let line of rawLines) {
+    // Jumbo / large-print lines carry literal text (marker + size header) — never wrap them
+    // as braille; keep the marker so the renderer knows to show big print.
+    if (line.startsWith('\u0002')) {
+      wrappedLines.push(line);
+      continue;
+    }
+
     const isPreformatted = line.startsWith('\u0001');
     if (isPreformatted) {
       wrappedLines.push(line.slice(1));
@@ -722,6 +739,15 @@ function formatBrfForOutputSegment(
   const wrapped: string[] = [];
 
   for (let line of rawLines) {
+    // Jumbo / large-print lines are plain text, not braille. For exported output we drop the
+    // marker + size header and emit the readable text rather than braille dots.
+    if (line.startsWith('\u0002')) {
+      const rest = line.slice(1);
+      const sep = rest.indexOf('\u0002');
+      wrapped.push(sep >= 0 ? rest.slice(sep + 1) : rest);
+      continue;
+    }
+
     const isPreformatted = line.startsWith('\u0001');
     if (isPreformatted) {
       wrapped.push(line.slice(1));
