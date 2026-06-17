@@ -17,9 +17,9 @@ function countInteriorDiscDots(
   return count;
 }
 
-const NEW_SHAPES: InventoryShapeKind[] = ['flower', 'iceSkates', 'vampireFangs', 'paintbrush'];
+const NEW_SHAPES: InventoryShapeKind[] = ['flower', 'iceSkates', 'vampireFangs', 'paintbrush', 'hiking', 'axe', 'candle'];
 
-describe('inventory shapes — flower, ice skates, vampire fangs, paintbrush', () => {
+describe('inventory shapes — flower, ice skates, vampire fangs, paintbrush, hiking, axe, candle', () => {
   it('flower outline mode fills the centre disc but leaves petals as rings', () => {
     const r = 15;
     const cellsW = Math.ceil((r * 2.2) / 2) + 2;

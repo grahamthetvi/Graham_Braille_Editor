@@ -266,6 +266,9 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   drawCircle(cx: number, cy: number, radius: number, filled = false) {
+    cx = Math.round(cx);
+    cy = Math.round(cy);
+    radius = Math.round(radius);
     if (filled) {
       this.fillDisc(cx, cy, radius);
     }
@@ -957,6 +960,208 @@ export class GraphicCanvas extends GridCanvas {
       prevPaintY = py;
     }
   }
+
+  drawHiking(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    // Slope line going up from left to right (x increases, y decreases)
+    const xLeft = cx - radius * 1.1;
+    const yLeft = cy + radius * 0.8;
+    const xRight = cx + radius * 1.1;
+    const yRight = cy - radius * 0.3;
+    this.drawLine(xLeft, yLeft, xRight, yRight);
+
+    const getSlopeY = (x: number): number => {
+      return yLeft - 0.5 * (x - xLeft);
+    };
+
+    // Draw little rock outlines or tufts on the ground
+    const rock1X = cx - radius * 0.8;
+    const rock1Y = getSlopeY(rock1X);
+    this.drawLine(rock1X, rock1Y, rock1X - 1, rock1Y - 2);
+    this.drawLine(rock1X - 1, rock1Y - 2, rock1X - 2, rock1Y);
+
+    const rock2X = cx + radius * 0.8;
+    const rock2Y = getSlopeY(rock2X);
+    this.drawLine(rock2X, rock2Y, rock2X + 1, rock2Y - 2);
+    this.drawLine(rock2X + 1, rock2Y - 2, rock2X + 2, rock2Y);
+
+    // Draw two hikers at different positions on the slope
+    const drawSingleHiker = (hc: number) => {
+      const attachY = getSlopeY(hc);
+
+      // Head
+      const headCx = hc + radius * 0.08;
+      const headCy = attachY - radius * 0.65;
+      const headR = Math.max(1, Math.round(radius * 0.1));
+      this.drawCircle(Math.round(headCx), Math.round(headCy), headR, filled);
+
+      // Torso/Body line
+      const shX = hc + radius * 0.05;
+      const shY = attachY - radius * 0.55;
+      const hipX = hc - radius * 0.05;
+      const hipY = attachY - radius * 0.28;
+      this.drawLine(shX, shY, hipX, hipY);
+
+      // Front leg (bent/stepping forward)
+      const kneeFrontX = hc + radius * 0.1;
+      const kneeFrontY = attachY - radius * 0.18;
+      const footFrontX = hc + radius * 0.15;
+      const footFrontY = attachY;
+      this.drawLine(hipX, hipY, kneeFrontX, kneeFrontY);
+      this.drawLine(kneeFrontX, kneeFrontY, footFrontX, footFrontY);
+
+      // Back leg (stretching behind)
+      const kneeBackX = hc - radius * 0.15;
+      const kneeBackY = attachY - radius * 0.15;
+      const footBackX = hc - radius * 0.18;
+      const footBackY = attachY - radius * 0.02;
+      this.drawLine(hipX, hipY, kneeBackX, kneeBackY);
+      this.drawLine(kneeBackX, kneeBackY, footBackX, footBackY);
+
+      // Arm holding walking stick
+      const handX = hc + radius * 0.15;
+      const handY = attachY - radius * 0.35;
+      this.drawLine(shX, shY, handX, handY);
+
+      // Walking stick
+      const stickTopX = hc + radius * 0.22;
+      const stickTopY = attachY - radius * 0.5;
+      const stickBotX = hc + radius * 0.12;
+      const stickBotY = attachY - radius * 0.02;
+      this.drawLine(stickTopX, stickTopY, stickBotX, stickBotY);
+
+      // Backpack
+      const backpackVerts = [
+        { x: hc - radius * 0.15, y: attachY - radius * 0.5 },
+        { x: hc - radius * 0.02, y: attachY - radius * 0.48 },
+        { x: hc - radius * 0.08, y: attachY - radius * 0.32 },
+        { x: hc - radius * 0.20, y: attachY - radius * 0.34 }
+      ];
+      if (filled) {
+        this.fillPolygonInterior(backpackVerts);
+      }
+      for (let i = 0; i < backpackVerts.length; i++) {
+        const a = backpackVerts[i];
+        const b = backpackVerts[(i + 1) % backpackVerts.length];
+        this.drawLine(a.x, a.y, b.x, b.y);
+      }
+    };
+
+    drawSingleHiker(cx - radius * 0.35); // Lower hiker
+    drawSingleHiker(cx + radius * 0.35); // Upper hiker
+  }
+
+  drawAxe(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    // Handle coordinates (bottom-left to top-right)
+    const xGrip = cx - radius * 0.4;
+    const yGrip = cy + radius * 0.8;
+    const xTop = cx + radius * 0.2;
+    const yTop = cy - radius * 0.5;
+
+    // Draw double lines for handle thickness
+    this.drawLine(xGrip, yGrip, xTop, yTop);
+    this.drawLine(xGrip + 1, yGrip, xTop + 1, yTop);
+
+    // Knob at the end of the grip
+    this.drawLine(xGrip - 2, yGrip + 1, xGrip + 2, yGrip - 1);
+
+    // Head connection point near top of handle
+    const headCx = cx + radius * 0.15;
+    const headCy = cy - radius * 0.45;
+
+    // Define the axe head vertices
+    const headVerts = [
+      { x: headCx - radius * 0.2, y: headCy - radius * 0.2 }, // top butt corner
+      { x: headCx + radius * 0.2, y: headCy - radius * 0.3 }, // top blade transition
+      { x: headCx + radius * 0.5, y: headCy - radius * 0.2 }, // upper blade tip
+      { x: headCx + radius * 0.55, y: headCy + radius * 0.2 }, // lower blade tip (curved edge)
+      { x: headCx + radius * 0.25, y: headCy + radius * 0.1 }, // bottom blade transition
+      { x: headCx - radius * 0.15, y: headCy + radius * 0.15 }, // bottom butt corner
+      { x: headCx - radius * 0.25, y: headCy + radius * 0.05 }  // back butt side
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(headVerts);
+    }
+    for (let i = 0; i < headVerts.length; i++) {
+      const a = headVerts[i];
+      const b = headVerts[(i + 1) % headVerts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  drawCandle(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    // Body dimensions
+    const yTop = cy - radius * 0.1;
+    const yBottom = cy + radius * 0.9;
+    const xLeft = cx - radius * 0.35;
+    const xRight = cx + radius * 0.35;
+
+    // Candle body
+    const bodyVerts = [
+      { x: xLeft, y: yTop },
+      { x: xRight, y: yTop },
+      { x: xRight, y: yBottom },
+      { x: xLeft, y: yBottom }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(bodyVerts);
+    }
+    // Draw body outline
+    this.drawLine(xLeft, yTop, xRight, yTop);
+    this.drawLine(xRight, yTop, xRight, yBottom);
+    this.drawLine(xRight, yBottom, xLeft, yBottom);
+    this.drawLine(xLeft, yBottom, xLeft, yTop);
+
+    // Wick
+    const wickTopY = yTop - radius * 0.2;
+    this.drawLine(cx, yTop, cx, wickTopY);
+
+    // Flame (teardrop shape above wick)
+    const flameCenterY = yTop - radius * 0.45;
+    const flameVerts = [
+      { x: cx, y: yTop - radius * 0.75 },                      // tip
+      { x: cx - radius * 0.2, y: flameCenterY },               // left swell
+      { x: cx - radius * 0.1, y: yTop - radius * 0.25 },       // bottom left
+      { x: cx, y: yTop - radius * 0.2 },                       // bottom center indent
+      { x: cx + radius * 0.1, y: yTop - radius * 0.25 },       // bottom right
+      { x: cx + radius * 0.2, y: flameCenterY }                // right swell
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(flameVerts);
+    }
+    for (let i = 0; i < flameVerts.length; i++) {
+      const a = flameVerts[i];
+      const b = flameVerts[(i + 1) % flameVerts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+
+    // Wax drips down the candle body
+    this.drawLine(xLeft + 2, yTop, xLeft + 2, yTop + radius * 0.3);
+    this.drawLine(cx - radius * 0.1, yTop, cx - radius * 0.1, yTop + radius * 0.45);
+    this.drawLine(xRight - 2, yTop, xRight - 2, yTop + radius * 0.2);
+
+    // Plate/Base
+    const plateY = yBottom;
+    const plateLeftX = cx - radius * 1.0;
+    const plateRightX = cx + radius * 1.0;
+    this.drawLine(plateLeftX, plateY, plateRightX, plateY);
+    this.drawLine(plateLeftX, plateY, plateLeftX, plateY - radius * 0.1);
+    this.drawLine(plateRightX, plateY, plateRightX, plateY - radius * 0.1);
+
+    // Handle finger loop on the right side of the plate
+    const handleCx = cx + radius * 1.15;
+    const handleCy = plateY - radius * 0.1;
+    const handleR = Math.max(1, Math.round(radius * 0.18));
+    this.drawCircle(Math.round(handleCx), Math.round(handleCy), handleR, false);
+  }
 }
 
 export interface GraphicResult {
@@ -1035,7 +1240,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs' | 'paintbrush';
+export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs' | 'paintbrush' | 'hiking' | 'axe' | 'candle';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1091,6 +1296,15 @@ export function generateInventoryShape(
   } else if (kind === 'paintbrush') {
     spanX = r * 1.8;
     spanY = r * 3.6;
+  } else if (kind === 'hiking') {
+    spanX = r * 2.4;
+    spanY = r * 2.4;
+  } else if (kind === 'axe') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'candle') {
+    spanX = r * 2.4;
+    spanY = r * 2.6;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -1153,6 +1367,18 @@ export function generateInventoryShape(
     case 'paintbrush':
       canvas.drawPaintbrush(cx, cy, r, filled);
       label = 'Paintbrush';
+      break;
+    case 'hiking':
+      canvas.drawHiking(cx, cy, r, filled);
+      label = 'Hiking';
+      break;
+    case 'axe':
+      canvas.drawAxe(cx, cy, r, filled);
+      label = 'Axe';
+      break;
+    case 'candle':
+      canvas.drawCandle(cx, cy, r, filled);
+      label = 'Candle';
       break;
   }
 
