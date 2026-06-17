@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { generateInventoryShape, type InventoryShapeKind } from './graphicBraille';
 
-const NEW_SHAPES: InventoryShapeKind[] = ['flower', 'iceSkates', 'vampireFangs'];
+const NEW_SHAPES: InventoryShapeKind[] = ['flower', 'iceSkates', 'vampireFangs', 'paintbrush'];
 
-describe('inventory shapes — flower, ice skates, vampire fangs', () => {
+describe('inventory shapes — flower, ice skates, vampire fangs, paintbrush', () => {
   for (const kind of NEW_SHAPES) {
     it(`generates non-empty BRF for ${kind} (outline)`, () => {
       const result = generateInventoryShape(kind, 15, false);

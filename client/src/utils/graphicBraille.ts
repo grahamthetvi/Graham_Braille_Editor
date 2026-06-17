@@ -660,28 +660,96 @@ export class GraphicCanvas extends GridCanvas {
         const b = verts[(i + 1) % verts.length];
         this.drawLine(a.x, a.y, b.x, b.y);
       }
-      this.drawLine(fangCx, Math.round(cy + radius * 0.92), tipX, Math.round(cy + radius * 0.92));
+      return tipY;
     };
 
-    drawFang(
-      cx - radius * 0.28,
-      cx - radius * 0.42,
-      cx - radius * 0.17,
-      cx - radius * 0.25
-    );
-    drawFang(
-      cx + radius * 0.28,
-      cx + radius * 0.42,
-      cx + radius * 0.17,
-      cx + radius * 0.25
+    // Two small incisors tucked between the fangs.
+    drawTooth(cx - radius * 0.15, radius * 0.08, radius * 0.3);
+    drawTooth(cx + radius * 0.15, radius * 0.08, radius * 0.3);
+
+    // The two long, sharp canine fangs.
+    const fangTipY = drawTooth(cx - radius * 0.5, radius * 0.17, radius * 1.05);
+    drawTooth(cx + radius * 0.5, radius * 0.17, radius * 1.05);
+
+    // Blood drip falling from the left fang tip.
+    const dripX = Math.round(cx - radius * 0.5);
+    const dripTop = Math.round(fangTipY + radius * 0.06);
+    const dripBottom = Math.round(fangTipY + radius * 0.34);
+    this.drawLine(dripX, dripTop, dripX, dripBottom);
+    this.setPoint(dripX - 1, dripBottom - 1);
+    this.setPoint(dripX + 1, dripBottom - 1);
+    this.setPoint(dripX, dripBottom + 1);
+  }
+
+  /**
+   * Vertical paintbrush: a rounded wooden handle, a metal ferrule band,
+   * and tapered bristles ending in a soft tip with a dab of paint.
+   */
+  drawPaintbrush(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const handleTopY = cy - radius * 1.3;
+    const ferruleTopY = cy - radius * 0.05;
+    const ferruleBotY = cy + radius * 0.28;
+    const bristleTipY = cy + radius * 1.25;
+
+    const capR = radius * 0.14;
+    const handleTopHalf = radius * 0.14;
+    const handleBotHalf = radius * 0.2;
+    const ferruleHalf = radius * 0.32;
+    const bristleTopHalf = radius * 0.3;
+
+    // Half-width of the brush silhouette at a given y.
+    const halfWidthAt = (y: number): number => {
+      if (y < ferruleTopY) {
+        const t = (y - handleTopY) / (ferruleTopY - handleTopY);
+        const taper = handleTopHalf + (handleBotHalf - handleTopHalf) * t;
+        if (y < handleTopY + capR) {
+          const cap = Math.sqrt(Math.max(0, capR * capR - (y - (handleTopY + capR)) ** 2));
+          return Math.min(taper, cap);
+        }
+        return taper;
+      }
+      if (y <= ferruleBotY) {
+        return ferruleHalf;
+      }
+      const t = (y - ferruleBotY) / (bristleTipY - ferruleBotY);
+      // Flares slightly below the ferrule, then tapers to a soft tip.
+      return Math.max(0, bristleTopHalf * (1 - t) + radius * 0.12 * Math.sin(t * Math.PI) - radius * 0.02);
+    };
+
+    const isInsideBrush = (x: number, y: number): boolean => {
+      if (y < handleTopY || y > bristleTipY) return false;
+      return Math.abs(x - cx) <= halfWidthAt(y);
+    };
+
+    this.drawImplicitShape(
+      cx - ferruleHalf - 1, cx + ferruleHalf + 1, handleTopY - 1, bristleTipY + 1,
+      isInsideBrush, filled
     );
 
-    const dripX = cx - radius * 0.25;
-    const dripTop = Math.round(cy + radius * 0.94);
-    this.drawLine(dripX, dripTop, dripX, Math.round(cy + radius * 1.02));
-    this.setPoint(dripX, Math.round(cy + radius * 1.04));
-    this.setPoint(dripX - 1, Math.round(cy + radius * 1.02));
-    this.setPoint(dripX + 1, Math.round(cy + radius * 1.02));
+    // Ferrule band: top and bottom edges set the metal collar apart.
+    this.drawLine(cx - ferruleHalf, ferruleTopY, cx + ferruleHalf, ferruleTopY);
+    this.drawLine(cx - ferruleHalf, ferruleBotY, cx + ferruleHalf, ferruleBotY);
+
+    // Bristle strands fanning toward the tip (outline mode only — filled is solid).
+    if (!filled) {
+      const strands = [-0.18, -0.06, 0.06, 0.18];
+      for (const s of strands) {
+        const startX = cx + radius * s;
+        const startY = ferruleBotY + radius * 0.05;
+        const endX = cx + radius * s * 0.25;
+        const endY = bristleTipY - radius * 0.12;
+        this.drawLine(startX, startY, endX, endY);
+      }
+    }
+
+    // A dab of paint at the very tip of the bristles.
+    const tipY = Math.round(bristleTipY);
+    this.setPoint(Math.round(cx), tipY + 1);
+    this.setPoint(Math.round(cx) - 1, tipY + 2);
+    this.setPoint(Math.round(cx) + 1, tipY + 2);
+    this.setPoint(Math.round(cx), tipY + 3);
   }
 }
 
@@ -761,7 +829,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs';
+export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs' | 'paintbrush';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -814,6 +882,9 @@ export function generateInventoryShape(
   } else if (kind === 'vampireFangs') {
     spanX = r * 2.2;
     spanY = r * 2.8;
+  } else if (kind === 'paintbrush') {
+    spanX = r * 1.8;
+    spanY = r * 3.0;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -872,6 +943,10 @@ export function generateInventoryShape(
     case 'vampireFangs':
       canvas.drawVampireFangs(cx, cy, r, filled);
       label = 'Vampire Fangs';
+      break;
+    case 'paintbrush':
+      canvas.drawPaintbrush(cx, cy, r, filled);
+      label = 'Paintbrush';
       break;
   }
 
