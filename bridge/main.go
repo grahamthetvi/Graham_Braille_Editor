@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -33,6 +34,16 @@ const listenAddr = "127.0.0.1:8080"
 
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Prevent DNS Rebinding attacks by validating the Host header
+		host, _, err := net.SplitHostPort(r.Host)
+		if err != nil {
+			host = r.Host // Fallback if no port is present
+		}
+		if host != "127.0.0.1" && host != "localhost" && host != "[::1]" && host != "::1" {
+			http.Error(w, "Forbidden: invalid Host header", http.StatusForbidden)
+			return
+		}
+
 		origin := r.Header.Get("Origin")
 
 		// Only allow specific trusted origins to prevent Cross-Site Request Forgery (CSRF). 
@@ -121,6 +132,16 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Printer == "" {
 		http.Error(w, "printer name is required", http.StatusBadRequest)
 		return
+	}
+	if len(req.Printer) > 255 {
+		http.Error(w, "printer name is too long", http.StatusBadRequest)
+		return
+	}
+	for _, char := range req.Printer {
+		if char < 32 || char == 127 { // Reject control characters and DEL
+			http.Error(w, "invalid characters in printer name", http.StatusBadRequest)
+			return
+		}
 	}
 	if req.Data == "" {
 		http.Error(w, "data is required", http.StatusBadRequest)

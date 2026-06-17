@@ -4,8 +4,6 @@ package main
 
 import (
 	"fmt"
-	"os/exec"
-	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -34,6 +32,7 @@ var (
 	procEndPage     = winspool.NewProc("EndPagePrinter")
 	procEndDoc      = winspool.NewProc("EndDocPrinter")
 	procClose       = winspool.NewProc("ClosePrinter")
+	procEnumPrinters = winspool.NewProc("EnumPrintersW")
 )
 
 // DOC_INFO_1 corresponds to the Win32 DOC_INFO_1W struct.
@@ -105,20 +104,77 @@ func sendToPrinter(printerName string, data []byte) error {
 	return nil
 }
 
+// Struct definition matching Win32 PRINTER_INFO_4W
+type printerInfo4 struct {
+	pPrinterName *uint16
+	pServerName  *uint16
+	attributes   uint32
+}
+
+func utf16PtrToString(p *uint16) string {
+	if p == nil {
+		return ""
+	}
+	length := 0
+	for curr := p; *curr != 0; curr = (*uint16)(unsafe.Pointer(uintptr(unsafe.Pointer(curr)) + 2)) {
+		length++
+	}
+	if length == 0 {
+		return ""
+	}
+	return syscall.UTF16ToString(unsafe.Slice(p, length))
+}
+
 // listPrinters returns the names of all printers installed on Windows.
 func listPrinters() []string {
-	out, err := exec.Command(
-		"powershell", "-NoProfile", "-NonInteractive", "-Command",
-		"Get-Printer | Select-Object -ExpandProperty Name",
-	).Output()
-	if err != nil {
+	const (
+		PRINTER_ENUM_LOCAL       = 0x00000002
+		PRINTER_ENUM_CONNECTIONS = 0x00000004
+	)
+	flags := uint32(PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS)
+
+	var needed, returned uint32
+	// Step 1: Call to get the buffer size
+	_, _, _ = procEnumPrinters.Call(
+		uintptr(flags),
+		0,
+		4, // Info Level 4
+		0,
+		0,
+		uintptr(unsafe.Pointer(&needed)),
+		uintptr(unsafe.Pointer(&returned)),
+	)
+	if needed == 0 {
 		return nil
 	}
+
+	// Step 2: Allocate buffer and retrieve printer list
+	buf := make([]byte, needed)
+	ret, _, _ := procEnumPrinters.Call(
+		uintptr(flags),
+		0,
+		4,
+		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(needed),
+		uintptr(unsafe.Pointer(&needed)),
+		uintptr(unsafe.Pointer(&returned)),
+	)
+	if ret == 0 || returned == 0 {
+		return nil
+	}
+
 	var result []string
-	for _, line := range strings.Split(string(out), "\n") {
-		name := strings.TrimSpace(line)
-		if name != "" {
-			result = append(result, name)
+	structSize := unsafe.Sizeof(printerInfo4{})
+	for i := uint32(0); i < returned; i++ {
+		offset := uintptr(i) * structSize
+		if offset+structSize > uintptr(len(buf)) {
+			break
+		}
+		info := (*printerInfo4)(unsafe.Pointer(&buf[offset]))
+		if info.pPrinterName != nil {
+			if name := utf16PtrToString(info.pPrinterName); name != "" {
+				result = append(result, name)
+			}
 		}
 	}
 	return result
