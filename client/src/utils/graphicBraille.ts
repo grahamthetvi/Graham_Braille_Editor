@@ -1,4 +1,5 @@
 import { GridCanvas } from './chartBraille';
+import type { Font } from 'opentype.js';
 
 /** Standard even-odd test: horizontal ray from (x,y) toward +∞ crosses polygon boundary. */
 function pointInPolygonEvenOdd(x: number, y: number, verts: { x: number; y: number }[]): boolean {
@@ -17,9 +18,190 @@ function pointInPolygonEvenOdd(x: number, y: number, verts: { x: number; y: numb
   return inside;
 }
 
+type OtPathCmd = {
+  type: string;
+  x?: number;
+  y?: number;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+};
+
+const BEZIER_SEGMENTS = 6;
+
+function cubicPoint(
+  t: number,
+  ax: number,
+  ay: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  bx: number,
+  by: number,
+): { x: number; y: number } {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * mt * ax + 3 * mt * mt * t * x1 + 3 * mt * t * t * x2 + t * t * t * bx,
+    y: mt * mt * mt * ay + 3 * mt * mt * t * y1 + 3 * mt * t * t * y2 + t * t * t * by,
+  };
+}
+
+function quadPoint(
+  t: number,
+  ax: number,
+  ay: number,
+  x1: number,
+  y1: number,
+  bx: number,
+  by: number,
+): { x: number; y: number } {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * ax + 2 * mt * t * x1 + t * t * bx,
+    y: mt * mt * ay + 2 * mt * t * y1 + t * t * by,
+  };
+}
+
+function flattenCubic(
+  ax: number,
+  ay: number,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  bx: number,
+  by: number,
+): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i <= BEZIER_SEGMENTS; i++) {
+    out.push(cubicPoint(i / BEZIER_SEGMENTS, ax, ay, x1, y1, x2, y2, bx, by));
+  }
+  return out;
+}
+
+function flattenQuad(ax: number, ay: number, x1: number, y1: number, bx: number, by: number): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  for (let i = 0; i <= BEZIER_SEGMENTS; i++) {
+    out.push(quadPoint(i / BEZIER_SEGMENTS, ax, ay, x1, y1, bx, by));
+  }
+  return out;
+}
+
 export class GraphicCanvas extends GridCanvas {
   constructor(cellColumns: number, cellLines: number) {
     super(cellColumns, cellLines);
+  }
+
+  fillGlyphInterior(rings: { x: number; y: number }[][]) {
+    if (rings.length === 0) return;
+    const allVerts = rings.flat();
+    const xs = allVerts.map(p => p.x);
+    const ys = allVerts.map(p => p.y);
+    let minX = Math.floor(Math.min(...xs));
+    let maxX = Math.ceil(Math.max(...xs));
+    let minY = Math.floor(Math.min(...ys));
+    let maxY = Math.ceil(Math.max(...ys));
+    minX = Math.max(0, minX);
+    maxX = Math.min(this.width - 1, maxX);
+    minY = Math.max(0, minY);
+    maxY = Math.min(this.height - 1, maxY);
+
+    for (let y = minY; y <= maxY; y++) {
+      const py = y + 0.5;
+      for (let x = minX; x <= maxX; x++) {
+        const px = x + 0.5;
+        let inside = false;
+        for (const ring of rings) {
+          if (pointInPolygonEvenOdd(px, py, ring)) {
+            inside = !inside;
+          }
+        }
+        if (inside) {
+          this.setPoint(x, y);
+        }
+      }
+    }
+  }
+
+  drawVectorPrintTextToDots(
+    font: Font,
+    text: string,
+    startX: number,
+    startY: number,
+    fontSize: number,
+    filled: boolean,
+  ): void {
+    if (!text) return;
+    const path = font.getPath(text, 0, 0, fontSize);
+    const bbox = path.getBoundingBox();
+    const dx = (bbox.x1 !== undefined && !isNaN(bbox.x1)) ? startX - bbox.x1 : startX;
+    const dy = (bbox.y1 !== undefined && !isNaN(bbox.y1)) ? startY - bbox.y1 : startY;
+
+    const rings: { x: number; y: number }[][] = [];
+    let ring: { x: number; y: number }[] = [];
+    let cx = 0;
+    let cy = 0;
+
+    const pushPt = (x: number, y: number): void => {
+      const tx = x + dx;
+      const ty = y + dy;
+      if (ring.length >= 1 && ring[ring.length - 1].x === tx && ring[ring.length - 1].y === ty) return;
+      ring.push({ x: tx, y: ty });
+    };
+
+    const commands = path.commands as OtPathCmd[];
+    for (const cmd of commands) {
+      const t = String(cmd.type).toUpperCase();
+      if (t === 'M') {
+        if (ring.length >= 3) rings.push(ring);
+        ring = [];
+        cx = cmd.x ?? 0;
+        cy = cmd.y ?? 0;
+        pushPt(cx, cy);
+      } else if (t === 'L') {
+        cx = cmd.x ?? 0;
+        cy = cmd.y ?? 0;
+        pushPt(cx, cy);
+      } else if (t === 'C') {
+        const pts = flattenCubic(cx, cy, cmd.x1 ?? 0, cmd.y1 ?? 0, cmd.x2 ?? 0, cmd.y2 ?? 0, cmd.x ?? 0, cmd.y ?? 0);
+        for (let i = 1; i < pts.length; i++) {
+          pushPt(pts[i]!.x, pts[i]!.y);
+        }
+        cx = cmd.x ?? 0;
+        cy = cmd.y ?? 0;
+      } else if (t === 'Q') {
+        const pts = flattenQuad(cx, cy, cmd.x1 ?? 0, cmd.y1 ?? 0, cmd.x ?? 0, cmd.y ?? 0);
+        for (let i = 1; i < pts.length; i++) {
+          pushPt(pts[i]!.x, pts[i]!.y);
+        }
+        cx = cmd.x ?? 0;
+        cy = cmd.y ?? 0;
+      } else if (t === 'Z') {
+        if (ring.length >= 3) {
+          const n = ring.length;
+          if (ring[0].x === ring[n - 1].x && ring[0].y === ring[n - 1].y) {
+            ring.pop();
+          }
+          rings.push(ring);
+        }
+        ring = [];
+      }
+    }
+    if (ring.length >= 3) rings.push(ring);
+
+    if (filled) {
+      this.fillGlyphInterior(rings);
+    }
+    for (const r of rings) {
+      if (r.length < 2) continue;
+      for (let i = 0; i < r.length; i++) {
+        const p1 = r[i];
+        const p2 = r[(i + 1) % r.length];
+        this.drawLine(p1.x, p1.y, p2.x, p2.y);
+      }
+    }
   }
 
   fillDisc(cx: number, cy: number, radius: number) {
@@ -997,5 +1179,34 @@ export function generateCustomShape(radius: number, sides: number, angle: number
   return {
     brf: canvas.renderToBRF(),
     summary: `Polygon with ${n} sides (size ${r}${fillNote})`,
+  };
+}
+
+export function generateRaisedPrintTextGraphic(
+  font: Font,
+  text: string,
+  fontSize: number,
+  filled: boolean
+): GraphicResult {
+  const fSize = Math.max(4, Number(fontSize) || 12);
+  const path = font.getPath(text, 0, 0, fSize);
+  const bbox = path.getBoundingBox();
+
+  const textW = (bbox.x2 !== undefined && !isNaN(bbox.x2) && bbox.x1 !== undefined && !isNaN(bbox.x1)) ? (bbox.x2 - bbox.x1) : 0;
+  const textH = (bbox.y2 !== undefined && !isNaN(bbox.y2) && bbox.y1 !== undefined && !isNaN(bbox.y1)) ? (bbox.y2 - bbox.y1) : 0;
+
+  const startX = 4;
+  const startY = 4;
+
+  const cellsW = Math.max(2, Math.ceil((textW + startX * 2) / 2));
+  const cellsH = Math.max(2, Math.ceil((textH + startY * 2) / 3));
+
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  canvas.drawVectorPrintTextToDots(font, text, startX, startY, fSize, filled);
+
+  const fillNote = filled ? ', filled' : ', outline';
+  return {
+    brf: canvas.renderToBRF(),
+    summary: `Raised print text "${text}" (font size ${fSize}${fillNote})`,
   };
 }

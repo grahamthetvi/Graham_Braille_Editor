@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChartGenerator } from './ChartGenerator';
 import type { MathCode } from '../hooks/useBraille';
 import {
@@ -9,12 +9,15 @@ import {
   generateManipulatives,
   generateCustomShape,
   generateInventoryShape,
+  generateRaisedPrintTextGraphic,
   type GraphicResult,
   type InventoryShapeKind
 } from '../utils/graphicBraille';
 import { generateEquationGraph } from '../utils/graphEquation';
 import { asciiToUnicodeBraille } from '../utils/braille';
 import { BrailleCell } from './BrailleCell';
+import { parse } from 'opentype.js';
+import fontUrl from '@fontsource/open-sans/files/open-sans-latin-700-normal.woff?url';
 
 interface GraphicGeneratorModalProps {
   mathCode: MathCode;
@@ -31,6 +34,7 @@ type GraphicType =
   | 'manipulatives'
   | 'customShape'
   | 'shapeInventory'
+  | 'raisedPrintText'
   | 'graph'
   | 'chart';
 
@@ -94,6 +98,34 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
   const [customAngle, setCustomAngle] = useState(0);
   const [customFilled, setCustomFilled] = useState(false);
 
+  // Raised Print Text state
+  const [printText, setPrintText] = useState('ABC');
+  const [printFontSize, setPrintFontSize] = useState(24);
+  const [printTextFilled, setPrintTextFilled] = useState(false);
+  const [printFont, setPrintFont] = useState<import('opentype.js').Font | null>(null);
+  const [fontLoading, setFontLoading] = useState(false);
+  const [fontError, setFontError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (graphicType === 'raisedPrintText' && !printFont && !fontLoading) {
+      setFontLoading(true);
+      fetch(fontUrl)
+        .then(r => {
+          if (!r.ok) throw new Error(String(r.status));
+          return r.arrayBuffer();
+        })
+        .then(ab => {
+          setPrintFont(parse(ab));
+          setFontLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to load print font', err);
+          setFontError('Failed to load font file.');
+          setFontLoading(false);
+        });
+    }
+  }, [graphicType, printFont, fontLoading]);
+
   // Graph equation preview (memoised so it only re-evaluates when inputs change)
   const graphPreview = useMemo(() => {
     if (graphicType !== 'graph') return null;
@@ -148,6 +180,13 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
       case 'customShape':
         preview = generateCustomShape(customSize, customSides, customAngle, customFilled);
         break;
+      case 'raisedPrintText':
+        if (printFont) {
+          preview = generateRaisedPrintTextGraphic(printFont, printText, printFontSize, printTextFilled);
+        } else {
+          preview = { brf: '', summary: fontError ? `Error: ${fontError}` : (fontLoading ? 'Loading font...' : 'Font not loaded.') };
+        }
+        break;
     }
   }
 
@@ -182,6 +221,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   'manipulatives',
                   'customShape',
                   'shapeInventory',
+                  'raisedPrintText',
                   'graph',
                   'chart'
                 ] as GraphicType[]
@@ -456,6 +496,56 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   </label>
                 </>
               )}
+              {graphicType === 'raisedPrintText' && (
+                <>
+                  {fontLoading && <div style={{ gridColumn: '1 / -1', color: 'var(--text-muted)' }}>Loading print font...</div>}
+                  {fontError && <div style={{ gridColumn: '1 / -1', color: '#e55' }}>Error: {fontError}</div>}
+                  {!fontLoading && !fontError && (
+                    <>
+                      <label style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        Print Text:
+                        <input
+                          type="text"
+                          value={printText}
+                          onChange={e => setPrintText(e.target.value)}
+                          style={{
+                            padding: '8px 10px',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-color)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        Font Size (dots height):
+                        <input
+                          type="number"
+                          min={6}
+                          max={100}
+                          value={printFontSize}
+                          onChange={e => setPrintFontSize(Number(e.target.value))}
+                          style={{
+                            padding: '8px 10px',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-color)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                          }}
+                        />
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={printTextFilled}
+                          onChange={e => setPrintTextFilled(e.target.checked)}
+                        />
+                        Filled (Solid block letters)
+                      </label>
+                    </>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Preview */}
@@ -493,7 +583,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
             <button
               className="welcome-btn-primary"
               onClick={handleInsert}
-              disabled={graphicType === 'graph' && (!preview.brf || !!graphPreview?.error)}
+              disabled={!preview.brf || (graphicType === 'graph' && !!graphPreview?.error)}
             >
               Insert Graphic
             </button>
