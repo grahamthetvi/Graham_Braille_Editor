@@ -92,7 +92,27 @@ The Graham Braille Editor natively supports generating hardware-specific command
 
 *(Note regarding ViewPlus embossers: ViewPlus relies heavily on proprietary graphical drivers.*
 *- If using ChromeOS or Linux, ViewPlus generic text support is **experimental** and may not work.*
-*- If using Windows/macOS with the Bridge, ensure you have the official ViewPlus Tiger Printer Driver installed for your specific embosser.)*
+## 🎨 Editor Features & Tools
+
+Beyond standard text translation, the Graham Braille Editor provides advanced layout and multi-sensory learning utilities:
+
+### 1. Large-Print (Jumbo) Braille
+For combined print/braille production or low-vision readers, you can insert large-print sections in your document. 
+- Use the **Large Print** tool under the **Tools** tab to insert blocks like `:::jumbo size=48\nText\n:::`.
+- The on-screen **BRF Preview** renders these jumbo blocks in BRF format (as physical Braille cells) scaled to your target font size, ensuring absolute consistency with standard Braille cells.
+
+### 2. Tactile Graphics Editor
+Access the full-featured canvas editor by clicking **Graphics** under the **Tools** tab. It allows teachers and transcribers to design tactile diagrams that can be printed alongside Braille text:
+- **Shape Inventory**:
+  - **Simple Shapes**: Lines, rectangles, and adjustable polygons.
+  - **Complex Shapes**: Custom pre-built shapes including Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross.
+- **Adjustable Parameters**: Select shapes like the Cross and configure custom horizontal/vertical bar sizes directly.
+- **Positioning Tool**: Switch to the selection tool in the Canvas Tools tab to move text elements and shapes around the canvas without resizing or mutating them.
+- **Custom Designs & Drawing**:
+  - **Paintbrush**: Create brush stroke details featuring handle, ferrule, and bristle components.
+  - **Daisies & Flowers**: Draw flowers with filled centers to preserve high tactile contrast even in outline modes.
+  - **Vampire Fangs**: Emboss fangs featuring detailed gum lines and blood drips.
+  - **Real-Time Braille Preview**: The graphics editor modal uses actual `<BrailleCell>` components for rendering, giving you an exact real-time look of the physical embossed output.
 
 ## ⚖️ Legal Disclaimer
 

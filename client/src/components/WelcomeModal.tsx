@@ -192,13 +192,36 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             </div>
           </section>
 
-          {/* 6. Tactile Graphics & 3D Printing */}
+          {/* 6. Large-Print (Jumbo) Braille */}
+          <section className="welcome-section">
+            <div className="welcome-section-icon" aria-hidden="true">🔎</div>
+            <div>
+              <h3>Large-Print (Jumbo) Braille</h3>
+              <p>
+                For dual-media print/braille books or low-vision readers, you can insert large-print sections. Click <strong>Large Print</strong> under the <strong>Tools</strong> tab to configure size and insert blocks. In the right-hand preview panel, these blocks are translated and rendered as large-print Braille cells in BRF format, preserving tactile readability and alignment.
+              </p>
+            </div>
+          </section>
+
+          {/* 7. Tactile Graphics & 3D Printing */}
           <section className="welcome-section">
             <div className="welcome-section-icon" aria-hidden="true">📊</div>
             <div>
               <h3>Tactile Graphics &amp; 3D Printing</h3>
               <p>
-                Click <strong>Graphics</strong> under the <strong>Tools</strong> tab to open the Tactile Graphics Editor, where you can create and export embossed graphics.
+                Click <strong>Graphics</strong> under the <strong>Tools</strong> tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille.
+              </p>
+              <p style={{ marginTop: '0.5rem', marginBottom: '0.2rem', fontWeight: 'bold' }}>
+                Shape Inventory &amp; Custom Shapes:
+              </p>
+              <ul style={{ paddingLeft: '1.2rem', margin: '0.4rem 0', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                <li><strong>Simple Shapes:</strong> Lines, rectangles, and adjustable polygons.</li>
+                <li><strong>Complex Shapes:</strong> Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross. Shapes like the Cross support adjusting the width/height of the bars directly.</li>
+                <li><strong>Positioning Tool:</strong> In the Canvas Tools panel, select the pointer tool to reposition text or shapes on your canvas without resizing them.</li>
+                <li><strong>Custom Elements:</strong> Includes details like a Paintbrush, Flower/Daisy blooms (always rendered with filled centers for contrast), and Vampire Fangs.</li>
+                <li><strong>Dot Pattern Preview:</strong> The editor displays canvas shapes as physical Braille dot grids in real-time.</li>
+              </ul>
+              <p style={{ marginTop: '0.5rem' }}>
                 Additionally, click <strong>Export STL</strong> under the <strong>File</strong> tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing.
               </p>
             </div>
