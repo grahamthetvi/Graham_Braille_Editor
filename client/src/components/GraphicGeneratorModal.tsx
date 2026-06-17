@@ -343,6 +343,9 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       <option value="star">Star (5-Pointed)</option>
                       <option value="apple">Apple</option>
                       <option value="cross">Cross</option>
+                      <option value="flower">Flower</option>
+                      <option value="iceSkates">Ice Skating Skates</option>
+                      <option value="vampireFangs">Vampire Fangs</option>
                     </select>
                   </label>
                   <label>

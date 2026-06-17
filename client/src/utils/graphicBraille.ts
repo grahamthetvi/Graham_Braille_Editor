@@ -443,6 +443,253 @@ export class GraphicCanvas extends GridCanvas {
       this.drawLine(a.x, a.y, b.x, b.y);
     }
   }
+
+  /**
+   * Six-petal flower with layered petals, textured center, curved stem, and opposing leaves.
+   */
+  drawFlower(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const petalCount = 6;
+    const isInsideFlowerHead = (x: number, y: number): boolean => {
+      const dx = x - cx;
+      const dy = y - cy;
+
+      const checkPetalLayer = (offsetAngle: number, distMul: number, aMul: number, bMul: number) => {
+        for (let i = 0; i < petalCount; i++) {
+          const angle = -Math.PI / 2 + offsetAngle + (i * 2 * Math.PI) / petalCount;
+          const cosA = Math.cos(angle);
+          const sinA = Math.sin(angle);
+          const lx = dx * cosA + dy * sinA;
+          const ly = -dx * sinA + dy * cosA;
+          const px = lx - radius * distMul;
+          const a = radius * aMul;
+          const b = radius * bMul;
+          if ((px / a) ** 2 + (ly / b) ** 2 <= 1) return true;
+        }
+        return false;
+      };
+
+      if (checkPetalLayer(0, 0.36, 0.44, 0.26)) return true;
+      if (checkPetalLayer(Math.PI / petalCount, 0.22, 0.28, 0.18)) return true;
+
+      const centerR = radius * 0.17;
+      if (dx * dx + dy * dy <= centerR * centerR) return true;
+
+      const ringR = radius * 0.24;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist >= centerR * 0.85 && dist <= ringR) return true;
+
+      return false;
+    };
+
+    const headPad = radius * 1.05;
+    this.drawImplicitShape(
+      cx - headPad, cx + headPad, cy - headPad, cy + headPad * 0.55,
+      isInsideFlowerHead, filled
+    );
+
+    const stemTop = cy + radius * 0.42;
+    const stemBottom = cy + radius * 1.05;
+    const stemMidX = cx + radius * 0.04;
+    this.drawLine(cx, stemTop, stemMidX, stemBottom);
+
+    const leaf = (leafCx: number, leafCy: number, angle: number) => {
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+      const isInsideLeaf = (x: number, y: number): boolean => {
+        const dx = x - leafCx;
+        const dy = y - leafCy;
+        const lx = dx * cosA + dy * sinA;
+        const ly = -dx * sinA + dy * cosA;
+        const a = radius * 0.22;
+        const b = radius * 0.1;
+        return (lx / a) ** 2 + (ly / b) ** 2 <= 1;
+      };
+      const pad = radius * 0.28;
+      this.drawImplicitShape(
+        leafCx - pad, leafCx + pad, leafCy - pad, leafCy + pad,
+        isInsideLeaf, filled
+      );
+      this.drawLine(leafCx, leafCy, leafCx + cosA * radius * 0.18, leafCy + sinA * radius * 0.18);
+    };
+
+    const stemAttachY = stemTop + radius * 0.28;
+    leaf(cx - radius * 0.12, stemAttachY, Math.PI * 0.72);
+    leaf(cx + radius * 0.12, stemAttachY + radius * 0.12, -Math.PI * 0.28);
+  }
+
+  private drawSingleIceSkate(
+    skateCx: number,
+    skateCy: number,
+    skateR: number,
+    facingRight: boolean,
+    filled: boolean
+  ) {
+    if (skateR <= 0) return;
+    const s = facingRight ? 1 : -1;
+
+    const bootVerts = [
+      { x: skateCx + s * skateR * 0.12, y: skateCy - skateR * 0.92 },
+      { x: skateCx + s * skateR * 0.38, y: skateCy - skateR * 0.88 },
+      { x: skateCx + s * skateR * 0.46, y: skateCy - skateR * 0.42 },
+      { x: skateCx + s * skateR * 0.5, y: skateCy - skateR * 0.05 },
+      { x: skateCx + s * skateR * 0.48, y: skateCy + skateR * 0.12 },
+      { x: skateCx + s * skateR * 0.1, y: skateCy + skateR * 0.14 },
+      { x: skateCx - s * skateR * 0.34, y: skateCy + skateR * 0.12 },
+      { x: skateCx - s * skateR * 0.38, y: skateCy - skateR * 0.18 },
+      { x: skateCx - s * skateR * 0.3, y: skateCy - skateR * 0.72 },
+      { x: skateCx - s * skateR * 0.18, y: skateCy - skateR * 0.9 },
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(bootVerts);
+    }
+    for (let i = 0; i < bootVerts.length; i++) {
+      const a = bootVerts[i];
+      const b = bootVerts[(i + 1) % bootVerts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+
+    const cuffY0 = skateCy - skateR * 0.9;
+    const cuffY1 = skateCy - skateR * 0.62;
+    this.drawLine(skateCx - s * skateR * 0.22, cuffY0, skateCx - s * skateR * 0.22, cuffY1);
+    this.drawLine(skateCx + s * skateR * 0.08, cuffY0, skateCx + s * skateR * 0.08, cuffY1);
+
+    const laceX0 = skateCx - s * skateR * 0.14;
+    const laceX1 = skateCx + s * skateR * 0.28;
+    for (let i = 0; i < 4; i++) {
+      const ly = skateCy - skateR * (0.78 - i * 0.12);
+      this.drawLine(laceX0, ly, laceX1, ly);
+    }
+
+    const bladeY = skateCy + skateR * 0.22;
+    const bladeBack = skateCx - s * skateR * 0.3;
+    const bladeFront = skateCx + s * skateR * 0.52;
+    const bladeSteps = Math.max(8, Math.ceil(skateR * 0.5));
+    for (let i = 0; i < bladeSteps; i++) {
+      const t0 = i / bladeSteps;
+      const t1 = (i + 1) / bladeSteps;
+      const x0 = bladeBack + (bladeFront - bladeBack) * t0;
+      const x1 = bladeBack + (bladeFront - bladeBack) * t1;
+      const y0 = bladeY - skateR * 0.05 * Math.sin(t0 * Math.PI);
+      const y1 = bladeY - skateR * 0.05 * Math.sin(t1 * Math.PI);
+      this.drawLine(x0, y0, x1, y1);
+    }
+
+    const pickBase = skateCx + s * skateR * 0.48;
+    const pickMid = skateCx + s * skateR * 0.54;
+    const pickTip = skateCx + s * skateR * 0.58;
+    this.drawLine(pickBase, bladeY, pickMid, bladeY - skateR * 0.08);
+    this.drawLine(pickMid, bladeY - skateR * 0.08, pickTip, bladeY - skateR * 0.12);
+    this.drawLine(pickTip, bladeY - skateR * 0.12, pickMid, bladeY - skateR * 0.05);
+    this.drawLine(pickMid, bladeY - skateR * 0.05, pickBase, bladeY - skateR * 0.04);
+    this.drawLine(pickBase, bladeY, pickBase, bladeY - skateR * 0.04);
+
+    this.drawLine(skateCx - s * skateR * 0.32, skateCy + skateR * 0.14, skateCx - s * skateR * 0.32, bladeY);
+
+    const runnerVerts = [
+      { x: bladeBack, y: bladeY },
+      { x: bladeFront, y: bladeY },
+      { x: bladeFront, y: bladeY + skateR * 0.04 },
+      { x: bladeBack, y: bladeY + skateR * 0.04 },
+    ];
+    if (filled) {
+      this.fillPolygonInterior(runnerVerts);
+    }
+    for (let i = 0; i < runnerVerts.length; i++) {
+      const a = runnerVerts[i];
+      const b = runnerVerts[(i + 1) % runnerVerts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  /**
+   * Pair of figure ice skates in side view, boots with lacing and blades with toe picks.
+   */
+  drawIceSkates(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const skateR = radius * 0.46;
+    this.drawSingleIceSkate(cx - radius * 0.52, cy, skateR, true, filled);
+    this.drawSingleIceSkate(cx + radius * 0.52, cy, skateR, false, filled);
+  }
+
+  /**
+   * Vampire fangs with curved lip, gum band, and sharp canine teeth.
+   */
+  drawVampireFangs(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const lipPoints: { x: number; y: number }[] = [];
+    const lipSteps = Math.max(32, Math.ceil(radius * 2.5));
+    for (let i = 0; i <= lipSteps; i++) {
+      const t = i / lipSteps;
+      const angle = Math.PI + t * Math.PI;
+      const lipR = radius * 0.72;
+      const cupidDip = radius * 0.06 * Math.pow(Math.sin(t * Math.PI), 2);
+      lipPoints.push({
+        x: Math.round(cx + lipR * Math.cos(angle)),
+        y: Math.round(cy - radius * 0.15 + lipR * 0.22 * Math.sin(angle) + cupidDip),
+      });
+    }
+    for (let i = 0; i < lipPoints.length - 1; i++) {
+      this.drawLine(lipPoints[i].x, lipPoints[i].y, lipPoints[i + 1].x, lipPoints[i + 1].y);
+    }
+
+    const gumVerts = [
+      { x: cx - radius * 0.55, y: cy - radius * 0.08 },
+      { x: cx + radius * 0.55, y: cy - radius * 0.08 },
+      { x: cx + radius * 0.48, y: cy + radius * 0.06 },
+      { x: cx - radius * 0.48, y: cy + radius * 0.06 },
+    ];
+    if (filled) {
+      this.fillPolygonInterior(gumVerts);
+    }
+    for (let i = 0; i < gumVerts.length; i++) {
+      const a = gumVerts[i];
+      const b = gumVerts[(i + 1) % gumVerts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+
+    const drawFang = (fangCx: number, outerX: number, innerX: number, tipX: number) => {
+      const verts = [
+        { x: outerX, y: cy + radius * 0.04 },
+        { x: innerX, y: cy + radius * 0.04 },
+        { x: tipX, y: cy + radius * 0.92 },
+        { x: fangCx + (outerX - fangCx) * 0.35, y: cy + radius * 0.55 },
+        { x: fangCx, y: cy + radius * 0.72 },
+      ];
+      if (filled) {
+        this.fillPolygonInterior(verts);
+      }
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        this.drawLine(a.x, a.y, b.x, b.y);
+      }
+      this.drawLine(fangCx, Math.round(cy + radius * 0.92), tipX, Math.round(cy + radius * 0.92));
+    };
+
+    drawFang(
+      cx - radius * 0.28,
+      cx - radius * 0.42,
+      cx - radius * 0.17,
+      cx - radius * 0.25
+    );
+    drawFang(
+      cx + radius * 0.28,
+      cx + radius * 0.42,
+      cx + radius * 0.17,
+      cx + radius * 0.25
+    );
+
+    const dripX = cx - radius * 0.25;
+    const dripTop = Math.round(cy + radius * 0.94);
+    this.drawLine(dripX, dripTop, dripX, Math.round(cy + radius * 1.02));
+    this.setPoint(dripX, Math.round(cy + radius * 1.04));
+    this.setPoint(dripX - 1, Math.round(cy + radius * 1.02));
+    this.setPoint(dripX + 1, Math.round(cy + radius * 1.02));
+  }
 }
 
 export interface GraphicResult {
@@ -521,7 +768,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross';
+export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -565,6 +812,15 @@ export function generateInventoryShape(
     const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
     spanX = rHoriz * 2;
     spanY = r * 2;
+  } else if (kind === 'flower') {
+    spanX = r * 2.2;
+    spanY = r * 2.6;
+  } else if (kind === 'iceSkates') {
+    spanX = r * 2.8;
+    spanY = r * 2.6;
+  } else if (kind === 'vampireFangs') {
+    spanX = r * 2.2;
+    spanY = r * 2.8;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -612,6 +868,18 @@ export function generateInventoryShape(
       label = 'Cross';
       break;
     }
+    case 'flower':
+      canvas.drawFlower(cx, cy, r, filled);
+      label = 'Flower';
+      break;
+    case 'iceSkates':
+      canvas.drawIceSkates(cx, cy, r, filled);
+      label = 'Ice Skating Skates';
+      break;
+    case 'vampireFangs':
+      canvas.drawVampireFangs(cx, cy, r, filled);
+      label = 'Vampire Fangs';
+      break;
   }
 
   const fillNote = filled ? ', filled' : ', outline';
