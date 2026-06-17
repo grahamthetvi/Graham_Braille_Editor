@@ -1100,57 +1100,58 @@ export class GraphicCanvas extends GridCanvas {
     this.drawLine(rock2X, rock2Y, rock2X + 1, rock2Y - 2);
     this.drawLine(rock2X + 1, rock2Y - 2, rock2X + 2, rock2Y);
 
-    // Draw two hikers at different positions on the slope
+    // Draw one hiker centered
     const drawSingleHiker = (hc: number) => {
       const attachY = getSlopeY(hc);
+      const hikerScale = 1.45;
 
       // Head
-      const headCx = hc + radius * 0.08;
-      const headCy = attachY - radius * 0.65;
-      const headR = Math.max(1, Math.round(radius * 0.1));
+      const headCx = hc + radius * 0.08 * hikerScale;
+      const headCy = attachY - radius * 0.65 * hikerScale;
+      const headR = Math.max(1, Math.round(radius * 0.1 * hikerScale));
       this.drawCircle(Math.round(headCx), Math.round(headCy), headR, filled);
 
       // Torso/Body line
-      const shX = hc + radius * 0.05;
-      const shY = attachY - radius * 0.55;
-      const hipX = hc - radius * 0.05;
-      const hipY = attachY - radius * 0.28;
+      const shX = hc + radius * 0.05 * hikerScale;
+      const shY = attachY - radius * 0.55 * hikerScale;
+      const hipX = hc - radius * 0.05 * hikerScale;
+      const hipY = attachY - radius * 0.28 * hikerScale;
       this.drawLine(shX, shY, hipX, hipY);
 
       // Front leg (bent/stepping forward)
-      const kneeFrontX = hc + radius * 0.1;
-      const kneeFrontY = attachY - radius * 0.18;
-      const footFrontX = hc + radius * 0.15;
-      const footFrontY = attachY;
+      const kneeFrontX = hc + radius * 0.1 * hikerScale;
+      const kneeFrontY = attachY - radius * 0.18 * hikerScale;
+      const footFrontX = hc + radius * 0.15 * hikerScale;
+      const footFrontY = getSlopeY(footFrontX);
       this.drawLine(hipX, hipY, kneeFrontX, kneeFrontY);
       this.drawLine(kneeFrontX, kneeFrontY, footFrontX, footFrontY);
 
       // Back leg (stretching behind)
-      const kneeBackX = hc - radius * 0.15;
-      const kneeBackY = attachY - radius * 0.15;
-      const footBackX = hc - radius * 0.18;
-      const footBackY = attachY - radius * 0.02;
+      const kneeBackX = hc - radius * 0.15 * hikerScale;
+      const kneeBackY = attachY - radius * 0.15 * hikerScale;
+      const footBackX = hc - radius * 0.18 * hikerScale;
+      const footBackY = getSlopeY(footBackX);
       this.drawLine(hipX, hipY, kneeBackX, kneeBackY);
       this.drawLine(kneeBackX, kneeBackY, footBackX, footBackY);
 
       // Arm holding walking stick
-      const handX = hc + radius * 0.15;
-      const handY = attachY - radius * 0.35;
+      const handX = hc + radius * 0.15 * hikerScale;
+      const handY = attachY - radius * 0.35 * hikerScale;
       this.drawLine(shX, shY, handX, handY);
 
       // Walking stick
-      const stickTopX = hc + radius * 0.22;
-      const stickTopY = attachY - radius * 0.5;
-      const stickBotX = hc + radius * 0.12;
-      const stickBotY = attachY - radius * 0.02;
+      const stickTopX = hc + radius * 0.22 * hikerScale;
+      const stickTopY = attachY - radius * 0.5 * hikerScale;
+      const stickBotX = hc + radius * 0.12 * hikerScale;
+      const stickBotY = getSlopeY(stickBotX);
       this.drawLine(stickTopX, stickTopY, stickBotX, stickBotY);
 
       // Backpack
       const backpackVerts = [
-        { x: hc - radius * 0.15, y: attachY - radius * 0.5 },
-        { x: hc - radius * 0.02, y: attachY - radius * 0.48 },
-        { x: hc - radius * 0.08, y: attachY - radius * 0.32 },
-        { x: hc - radius * 0.20, y: attachY - radius * 0.34 }
+        { x: hc - radius * 0.15 * hikerScale, y: attachY - radius * 0.5 * hikerScale },
+        { x: hc - radius * 0.02 * hikerScale, y: attachY - radius * 0.48 * hikerScale },
+        { x: hc - radius * 0.08 * hikerScale, y: attachY - radius * 0.32 * hikerScale },
+        { x: hc - radius * 0.20 * hikerScale, y: attachY - radius * 0.34 * hikerScale }
       ];
       if (filled) {
         this.fillPolygonInterior(backpackVerts);
@@ -1162,8 +1163,7 @@ export class GraphicCanvas extends GridCanvas {
       }
     };
 
-    drawSingleHiker(cx - radius * 0.35); // Lower hiker
-    drawSingleHiker(cx + radius * 0.35); // Upper hiker
+    drawSingleHiker(cx);
   }
 
   drawAxe(cx: number, cy: number, radius: number, filled = false) {
@@ -1186,15 +1186,17 @@ export class GraphicCanvas extends GridCanvas {
     const headCx = cx + radius * 0.15;
     const headCy = cy - radius * 0.45;
 
-    // Define the axe head vertices
+    // Define the axe head vertices with a flared blade and curved bit
     const headVerts = [
-      { x: headCx - radius * 0.2, y: headCy - radius * 0.2 }, // top butt corner
-      { x: headCx + radius * 0.2, y: headCy - radius * 0.3 }, // top blade transition
-      { x: headCx + radius * 0.5, y: headCy - radius * 0.2 }, // upper blade tip
-      { x: headCx + radius * 0.55, y: headCy + radius * 0.2 }, // lower blade tip (curved edge)
-      { x: headCx + radius * 0.25, y: headCy + radius * 0.1 }, // bottom blade transition
-      { x: headCx - radius * 0.15, y: headCy + radius * 0.15 }, // bottom butt corner
-      { x: headCx - radius * 0.25, y: headCy + radius * 0.05 }  // back butt side
+      { x: headCx - radius * 0.35, y: headCy - radius * 0.35 }, // top-left butt corner
+      { x: headCx + radius * 0.25, y: headCy - radius * 0.35 }, // top blade transition
+      { x: headCx + radius * 0.65, y: headCy - radius * 0.45 }, // top blade tip (flared up)
+      { x: headCx + radius * 0.72, y: headCy - radius * 0.2 },  // upper cutting edge
+      { x: headCx + radius * 0.75, y: headCy },                 // middle apex of cutting edge
+      { x: headCx + radius * 0.72, y: headCy + radius * 0.2 },  // lower cutting edge
+      { x: headCx + radius * 0.6, y: headCy + radius * 0.4 },   // bottom blade tip (bearded)
+      { x: headCx + radius * 0.25, y: headCy + radius * 0.15 }, // bottom blade transition
+      { x: headCx - radius * 0.35, y: headCy + radius * 0.15 }  // bottom-left butt corner
     ];
 
     if (filled) {
