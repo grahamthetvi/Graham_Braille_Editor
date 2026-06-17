@@ -24,7 +24,8 @@ describe('2D Raised Print Tactile Text Feature', () => {
   it('loads the font successfully', () => {
     const font = getLoadedFont();
     expect(font).toBeDefined();
-    expect(font.names.windows?.fontFamily?.en).toBe('Open Sans');
+    const names = font.names as any;
+    expect(names.windows?.fontFamily?.en).toBe('Open Sans');
   });
 
   it('generates non-empty outline tactile print text graphic', () => {
