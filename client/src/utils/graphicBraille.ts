@@ -513,13 +513,13 @@ export class GraphicCanvas extends GridCanvas {
   drawLightningBolt(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
     const verts = [
-      { x: cx + radius * 0.2, y: cy - radius },
-      { x: cx + radius * 0.4, y: cy - radius * 0.2 },
-      { x: cx + radius * 0.1, y: cy - radius * 0.2 },
-      { x: cx + radius * 0.5, y: cy + radius * 0.3 },
-      { x: cx - radius * 0.3, y: cy + radius },
-      { x: cx - radius * 0.1, y: cy + radius * 0.1 },
-      { x: cx - radius * 0.4, y: cy + radius * 0.1 }
+      { x: cx + radius * 0.1, y: cy - radius },
+      { x: cx + radius * 0.45, y: cy - radius * 0.2 },
+      { x: cx + radius * 0.05, y: cy - radius * 0.25 }, // sharper cut-in
+      { x: cx + radius * 0.5, y: cy + radius * 0.25 },
+      { x: cx - radius * 0.2, y: cy + radius },
+      { x: cx - radius * 0.05, y: cy + radius * 0.15 }, // sharper cut-in
+      { x: cx - radius * 0.45, y: cy + radius * 0.1 }
     ];
 
     if (filled) {
@@ -530,6 +530,120 @@ export class GraphicCanvas extends GridCanvas {
       const b = verts[(i + 1) % verts.length];
       this.drawLine(a.x, a.y, b.x, b.y);
     }
+  }
+
+  drawCloudLightning(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const isInsideCloud = (x: number, y: number): boolean => {
+      const cloudCy = cy - radius * 0.25;
+      const dx = x - cx;
+      const dy = y - cloudCy;
+      const sx = dx / 1.3;
+      const sy = dy;
+
+      const centers = [
+        { x: 0, y: -radius * 0.2, rad: radius * 0.5 },
+        { x: -radius * 0.55, y: radius * 0.1, rad: radius * 0.38 },
+        { x: radius * 0.55, y: radius * 0.1, rad: radius * 0.38 },
+        { x: -radius * 0.28, y: -radius * 0.1, rad: radius * 0.45 },
+        { x: radius * 0.28, y: -radius * 0.1, rad: radius * 0.45 },
+        { x: 0, y: radius * 0.18, rad: radius * 0.42 }
+      ];
+
+      return centers.some(c => {
+        const d2 = (sx - c.x) ** 2 + (sy - c.y) ** 2;
+        return d2 <= c.rad ** 2;
+      });
+    };
+
+    const minX = cx - radius * 1.35;
+    const maxX = cx + radius * 1.35;
+    const minY = cy - radius * 1.35;
+    const maxY = cy + radius * 0.5;
+
+    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideCloud, true);
+
+    const bx = cx - radius * 0.05;
+    const by = cy + radius * 0.55;
+    const br = radius * 0.6;
+
+    const verts = [
+      { x: bx + br * 0.1, y: by - br },
+      { x: bx + br * 0.45, y: by - br * 0.2 },
+      { x: bx + br * 0.05, y: by - br * 0.25 },
+      { x: bx + br * 0.5, y: by + br * 0.25 },
+      { x: bx - br * 0.2, y: by + br },
+      { x: bx - br * 0.05, y: by + br * 0.15 },
+      { x: bx - br * 0.45, y: by + br * 0.1 }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    }
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  drawActingMask(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const drawSingleMask = (mcx: number, mcy: number, mr: number, isHappy: boolean) => {
+      const isInsideMask = (x: number, y: number): boolean => {
+        const dx = x - mcx;
+        const dy = y - mcy;
+        return (dx / 0.85) ** 2 + dy ** 2 <= mr ** 2;
+      };
+
+      const isInsideEyeLeft = (x: number, y: number): boolean => {
+        const ex = mcx - mr * 0.35;
+        const ey = mcy - mr * 0.25;
+        return (x - ex) ** 2 + ((y - ey) / 0.6) ** 2 <= (mr * 0.16) ** 2;
+      };
+
+      const isInsideEyeRight = (x: number, y: number): boolean => {
+        const ex = mcx + mr * 0.35;
+        const ey = mcy - mr * 0.25;
+        return (x - ex) ** 2 + ((y - ey) / 0.6) ** 2 <= (mr * 0.16) ** 2;
+      };
+
+      const isInsideMouth = (x: number, y: number): boolean => {
+        const my = mcy + mr * 0.35;
+        const mx = mcx;
+        const dy = y - my;
+        const dx = x - mx;
+        if (isHappy) {
+          const inOuter = (dx / 0.55) ** 2 + (dy / 0.35) ** 2 <= mr ** 2;
+          const inInner = (dx / 0.55) ** 2 + ((dy + mr * 0.15) / 0.35) ** 2 <= mr ** 2;
+          return inOuter && !inInner && y >= my - mr * 0.1;
+        } else {
+          const inOuter = (dx / 0.55) ** 2 + (dy / 0.35) ** 2 <= mr ** 2;
+          const inInner = (dx / 0.55) ** 2 + ((dy - mr * 0.15) / 0.35) ** 2 <= mr ** 2;
+          return inOuter && !inInner && y <= my + mr * 0.1;
+        }
+      };
+
+      const isInsideMaskCombined = (x: number, y: number): boolean => {
+        if (!isInsideMask(x, y)) return false;
+        if (isInsideEyeLeft(x, y)) return false;
+        if (isInsideEyeRight(x, y)) return false;
+        if (isInsideMouth(x, y)) return false;
+        return true;
+      };
+
+      const minX = mcx - mr * 1.1;
+      const maxX = mcx + mr * 1.1;
+      const minY = mcy - mr * 1.1;
+      const maxY = mcy + mr * 1.1;
+
+      this.drawImplicitShape(minX, maxX, minY, maxY, isInsideMaskCombined, filled);
+    };
+
+    const rMask = radius * 0.65;
+    drawSingleMask(cx - radius * 0.35, cy - radius * 0.2, rMask, true);
+    drawSingleMask(cx + radius * 0.35, cy + radius * 0.2, rMask, false);
   }
 
   drawStar(cx: number, cy: number, radius: number, filled = false) {
@@ -1240,7 +1354,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'circle' | 'heart' | 'cloud' | 'moon' | 'lightning' | 'star' | 'apple' | 'cross' | 'flower' | 'iceSkates' | 'vampireFangs' | 'paintbrush' | 'hiking' | 'axe' | 'candle';
+export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'paintbrush' | 'star' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1267,18 +1381,24 @@ export function generateInventoryShape(
   let spanX = r * 2;
   let spanY = r * 2;
 
-  if (kind === 'heart') {
+  if (kind === 'actingMask') {
     spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'cloud') {
-    spanX = r * 2.6;
-    spanY = r * 2.0;
-  } else if (kind === 'moon') {
-    spanX = r * 2.4;
     spanY = r * 2.2;
   } else if (kind === 'apple') {
     spanX = r * 2.2;
     spanY = r * 2.2;
+  } else if (kind === 'axe') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'candle') {
+    spanX = r * 2.4;
+    spanY = r * 2.6;
+  } else if (kind === 'cloud') {
+    spanX = r * 2.6;
+    spanY = r * 2.0;
+  } else if (kind === 'cloudLightning') {
+    spanX = r * 2.8;
+    spanY = r * 2.8;
   } else if (kind === 'cross') {
     const lenHoriz = crossParams?.lengthHorizontal ?? 30;
     const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
@@ -1287,24 +1407,24 @@ export function generateInventoryShape(
   } else if (kind === 'flower') {
     spanX = r * 2.2;
     spanY = r * 2.6;
-  } else if (kind === 'iceSkates') {
-    spanX = r * 2.8;
-    spanY = r * 2.6;
-  } else if (kind === 'vampireFangs') {
+  } else if (kind === 'heart') {
     spanX = r * 2.2;
-    spanY = r * 2.8;
-  } else if (kind === 'paintbrush') {
-    spanX = r * 1.8;
-    spanY = r * 3.6;
+    spanY = r * 2.2;
   } else if (kind === 'hiking') {
     spanX = r * 2.4;
     spanY = r * 2.4;
-  } else if (kind === 'axe') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'candle') {
-    spanX = r * 2.4;
+  } else if (kind === 'iceSkates') {
+    spanX = r * 2.8;
     spanY = r * 2.6;
+  } else if (kind === 'moon') {
+    spanX = r * 2.4;
+    spanY = r * 2.2;
+  } else if (kind === 'paintbrush') {
+    spanX = r * 1.8;
+    spanY = r * 3.6;
+  } else if (kind === 'vampireFangs') {
+    spanX = r * 2.2;
+    spanY = r * 2.8;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -1315,33 +1435,33 @@ export function generateInventoryShape(
 
   let label = '';
   switch (kind) {
+    case 'actingMask':
+      canvas.drawActingMask(cx, cy, r, filled);
+      label = 'Acting Mask';
+      break;
+    case 'apple':
+      canvas.drawApple(cx, cy, r, filled);
+      label = 'Apple';
+      break;
+    case 'axe':
+      canvas.drawAxe(cx, cy, r, filled);
+      label = 'Axe';
+      break;
+    case 'candle':
+      canvas.drawCandle(cx, cy, r, filled);
+      label = 'Candle';
+      break;
     case 'circle':
       canvas.drawCircle(cx, cy, r, filled);
       label = 'Circle';
-      break;
-    case 'heart':
-      canvas.drawHeart(cx, cy, r, filled);
-      label = 'Heart';
       break;
     case 'cloud':
       canvas.drawCloud(cx, cy, r, filled);
       label = 'Cloud';
       break;
-    case 'moon':
-      canvas.drawCrescentMoon(cx, cy, r, filled);
-      label = 'Crescent Moon';
-      break;
-    case 'lightning':
-      canvas.drawLightningBolt(cx, cy, r, filled);
-      label = 'Lightning Bolt';
-      break;
-    case 'star':
-      canvas.drawStar(cx, cy, r, filled);
-      label = 'Star (5-Pointed)';
-      break;
-    case 'apple':
-      canvas.drawApple(cx, cy, r, filled);
-      label = 'Apple';
+    case 'cloudLightning':
+      canvas.drawCloudLightning(cx, cy, r, filled);
+      label = 'Cloud with Lightning Bolt';
       break;
     case 'cross': {
       const lenHoriz = crossParams?.lengthHorizontal ?? 30;
@@ -1356,29 +1476,37 @@ export function generateInventoryShape(
       canvas.drawFlower(cx, cy, r, filled);
       label = 'Flower';
       break;
-    case 'iceSkates':
-      canvas.drawIceSkates(cx, cy, r, filled);
-      label = 'Ice Skating Skates';
-      break;
-    case 'vampireFangs':
-      canvas.drawVampireFangs(cx, cy, r, filled);
-      label = 'Vampire Fangs';
-      break;
-    case 'paintbrush':
-      canvas.drawPaintbrush(cx, cy, r, filled);
-      label = 'Paintbrush';
+    case 'heart':
+      canvas.drawHeart(cx, cy, r, filled);
+      label = 'Heart';
       break;
     case 'hiking':
       canvas.drawHiking(cx, cy, r, filled);
       label = 'Hiking';
       break;
-    case 'axe':
-      canvas.drawAxe(cx, cy, r, filled);
-      label = 'Axe';
+    case 'iceSkates':
+      canvas.drawIceSkates(cx, cy, r, filled);
+      label = 'Ice Skating Skates';
       break;
-    case 'candle':
-      canvas.drawCandle(cx, cy, r, filled);
-      label = 'Candle';
+    case 'lightning':
+      canvas.drawLightningBolt(cx, cy, r, filled);
+      label = 'Lightning Bolt';
+      break;
+    case 'moon':
+      canvas.drawCrescentMoon(cx, cy, r, filled);
+      label = 'Crescent Moon';
+      break;
+    case 'paintbrush':
+      canvas.drawPaintbrush(cx, cy, r, filled);
+      label = 'Paintbrush';
+      break;
+    case 'star':
+      canvas.drawStar(cx, cy, r, filled);
+      label = 'Star (5-Pointed)';
+      break;
+    case 'vampireFangs':
+      canvas.drawVampireFangs(cx, cy, r, filled);
+      label = 'Vampire Fangs';
       break;
   }
 

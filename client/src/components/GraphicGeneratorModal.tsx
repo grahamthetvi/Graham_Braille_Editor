@@ -398,21 +398,23 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       value={inventoryShape}
                       onChange={e => setInventoryShape(e.target.value as InventoryShapeKind)}
                     >
-                      <option value="circle">Circle</option>
-                      <option value="heart">Heart</option>
-                      <option value="cloud">Cloud</option>
-                      <option value="moon">Crescent Moon</option>
-                      <option value="lightning">Lightning Bolt</option>
-                      <option value="star">Star (5-Pointed)</option>
+                      <option value="actingMask">Acting Mask</option>
                       <option value="apple">Apple</option>
-                      <option value="cross">Cross</option>
-                      <option value="flower">Flower</option>
-                      <option value="iceSkates">Ice Skating Skates</option>
-                      <option value="vampireFangs">Vampire Fangs</option>
-                      <option value="paintbrush">Paintbrush</option>
-                      <option value="hiking">Hiking</option>
                       <option value="axe">Axe</option>
                       <option value="candle">Candle</option>
+                      <option value="circle">Circle</option>
+                      <option value="cloud">Cloud</option>
+                      <option value="cloudLightning">Cloud with Lightning Bolt</option>
+                      <option value="moon">Crescent Moon</option>
+                      <option value="cross">Cross</option>
+                      <option value="flower">Flower</option>
+                      <option value="heart">Heart</option>
+                      <option value="hiking">Hiking</option>
+                      <option value="iceSkates">Ice Skating Skates</option>
+                      <option value="lightning">Lightning Bolt</option>
+                      <option value="paintbrush">Paintbrush</option>
+                      <option value="star">Star (5-Pointed)</option>
+                      <option value="vampireFangs">Vampire Fangs</option>
                     </select>
                   </label>
                   <label>
