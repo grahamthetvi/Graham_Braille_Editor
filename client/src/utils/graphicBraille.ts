@@ -474,11 +474,11 @@ export class GraphicCanvas extends GridCanvas {
       }
       this.fillDisc(cx, headCy, centerR);
     } else {
-      // Outline bloom: each petal as its own circle, then a ringed centre.
+      // Outline bloom: open petal rings with a solid filled centre disc.
       for (const p of petalCenters) {
         this.drawCircle(p.x, p.y, Math.round(petalR), false);
       }
-      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), false);
+      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), true);
     }
 
     // Stem: a gently curved line dropping from the bloom.
