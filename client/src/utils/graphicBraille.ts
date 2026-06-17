@@ -478,7 +478,7 @@ export class GraphicCanvas extends GridCanvas {
       for (const p of petalCenters) {
         this.drawCircle(p.x, p.y, Math.round(petalR), false);
       }
-      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), false);
+      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), true);
     }
 
     // Stem: a gently curved line dropping from the bloom.
