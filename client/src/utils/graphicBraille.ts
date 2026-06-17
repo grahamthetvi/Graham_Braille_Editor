@@ -619,49 +619,38 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   /**
-   * Vampire fangs with curved lip, gum band, and sharp canine teeth.
+   * Vampire mouth: a curved upper gum line carrying a row of small teeth,
+   * two prominent pointed fangs, and a blood drip falling from one fang.
    */
   drawVampireFangs(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
-    const lipPoints: { x: number; y: number }[] = [];
-    const lipSteps = Math.max(32, Math.ceil(radius * 2.5));
-    for (let i = 0; i <= lipSteps; i++) {
-      const t = i / lipSteps;
-      const angle = Math.PI + t * Math.PI;
-      const lipR = radius * 0.72;
-      const cupidDip = radius * 0.06 * Math.pow(Math.sin(t * Math.PI), 2);
-      lipPoints.push({
-        x: Math.round(cx + lipR * Math.cos(angle)),
-        y: Math.round(cy - radius * 0.15 + lipR * 0.22 * Math.sin(angle) + cupidDip),
-      });
-    }
-    for (let i = 0; i < lipPoints.length - 1; i++) {
-      this.drawLine(lipPoints[i].x, lipPoints[i].y, lipPoints[i + 1].x, lipPoints[i + 1].y);
-    }
+    const halfW = radius * 0.85;
+    const gumTopY = cy - radius * 0.6;
+    const gumBaseY = cy - radius * 0.28;
 
-    const gumVerts = [
-      { x: cx - radius * 0.55, y: cy - radius * 0.08 },
-      { x: cx + radius * 0.55, y: cy - radius * 0.08 },
-      { x: cx + radius * 0.48, y: cy + radius * 0.06 },
-      { x: cx - radius * 0.48, y: cy + radius * 0.06 },
-    ];
-    if (filled) {
-      this.fillPolygonInterior(gumVerts);
-    }
-    for (let i = 0; i < gumVerts.length; i++) {
-      const a = gumVerts[i];
-      const b = gumVerts[(i + 1) % gumVerts.length];
-      this.drawLine(a.x, a.y, b.x, b.y);
-    }
+    // Upper gum: a shallow lip band whose lower edge dips in the middle (an open smile).
+    const gumLowerY = (x: number): number => {
+      const t = (x - cx) / halfW; // -1 .. 1
+      return gumBaseY + radius * 0.16 * (1 - t * t);
+    };
+    const isInsideGum = (x: number, y: number): boolean => {
+      if (x < cx - halfW || x > cx + halfW) return false;
+      return y >= gumTopY && y <= gumLowerY(x);
+    };
+    this.drawImplicitShape(
+      cx - halfW - 1, cx + halfW + 1, gumTopY - 1, gumBaseY + radius * 0.4,
+      isInsideGum, filled
+    );
 
-    const drawFang = (fangCx: number, outerX: number, innerX: number, tipX: number) => {
+    // A tapered tooth (or fang) hanging from the gum at the given centre.
+    const drawTooth = (toothCx: number, topWidth: number, depth: number) => {
+      const topY = gumLowerY(toothCx) - radius * 0.02;
+      const tipY = topY + depth;
       const verts = [
-        { x: outerX, y: cy + radius * 0.04 },
-        { x: innerX, y: cy + radius * 0.04 },
-        { x: tipX, y: cy + radius * 0.92 },
-        { x: fangCx + (outerX - fangCx) * 0.35, y: cy + radius * 0.55 },
-        { x: fangCx, y: cy + radius * 0.72 },
+        { x: toothCx - topWidth, y: topY },
+        { x: toothCx + topWidth, y: topY },
+        { x: toothCx, y: tipY },
       ];
       if (filled) {
         this.fillPolygonInterior(verts);
