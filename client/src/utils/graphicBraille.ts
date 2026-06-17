@@ -1105,53 +1105,53 @@ export class GraphicCanvas extends GridCanvas {
       const attachY = getSlopeY(hc);
       const hikerScale = 1.45;
 
-      // Head
+      // Head (moved up slightly for a clear neck gap)
       const headCx = hc + radius * 0.08 * hikerScale;
-      const headCy = attachY - radius * 0.65 * hikerScale;
+      const headCy = attachY - radius * 0.72 * hikerScale;
       const headR = Math.max(1, Math.round(radius * 0.1 * hikerScale));
       this.drawCircle(Math.round(headCx), Math.round(headCy), headR, filled);
 
       // Torso/Body line
       const shX = hc + radius * 0.05 * hikerScale;
-      const shY = attachY - radius * 0.55 * hikerScale;
+      const shY = attachY - radius * 0.52 * hikerScale;
       const hipX = hc - radius * 0.05 * hikerScale;
       const hipY = attachY - radius * 0.28 * hikerScale;
       this.drawLine(shX, shY, hipX, hipY);
 
-      // Front leg (bent/stepping forward)
-      const kneeFrontX = hc + radius * 0.1 * hikerScale;
-      const kneeFrontY = attachY - radius * 0.18 * hikerScale;
-      const footFrontX = hc + radius * 0.15 * hikerScale;
+      // Front leg (strongly bent/stepping forward)
+      const kneeFrontX = hc + radius * 0.18 * hikerScale;
+      const kneeFrontY = attachY - radius * 0.32 * hikerScale;
+      const footFrontX = hc + radius * 0.22 * hikerScale;
       const footFrontY = getSlopeY(footFrontX);
       this.drawLine(hipX, hipY, kneeFrontX, kneeFrontY);
       this.drawLine(kneeFrontX, kneeFrontY, footFrontX, footFrontY);
 
       // Back leg (stretching behind)
-      const kneeBackX = hc - radius * 0.15 * hikerScale;
+      const kneeBackX = hc - radius * 0.18 * hikerScale;
       const kneeBackY = attachY - radius * 0.15 * hikerScale;
-      const footBackX = hc - radius * 0.18 * hikerScale;
+      const footBackX = hc - radius * 0.24 * hikerScale;
       const footBackY = getSlopeY(footBackX);
       this.drawLine(hipX, hipY, kneeBackX, kneeBackY);
       this.drawLine(kneeBackX, kneeBackY, footBackX, footBackY);
 
       // Arm holding walking stick
-      const handX = hc + radius * 0.15 * hikerScale;
-      const handY = attachY - radius * 0.35 * hikerScale;
+      const handX = hc + radius * 0.18 * hikerScale;
+      const handY = attachY - radius * 0.38 * hikerScale;
       this.drawLine(shX, shY, handX, handY);
 
-      // Walking stick
-      const stickTopX = hc + radius * 0.22 * hikerScale;
-      const stickTopY = attachY - radius * 0.5 * hikerScale;
-      const stickBotX = hc + radius * 0.12 * hikerScale;
+      // Walking stick (touches the slope)
+      const stickTopX = hc + radius * 0.26 * hikerScale;
+      const stickTopY = attachY - radius * 0.55 * hikerScale;
+      const stickBotX = hc + radius * 0.14 * hikerScale;
       const stickBotY = getSlopeY(stickBotX);
       this.drawLine(stickTopX, stickTopY, stickBotX, stickBotY);
 
-      // Backpack
+      // Backpack (shifted leftward to avoid merging completely with torso)
       const backpackVerts = [
-        { x: hc - radius * 0.15 * hikerScale, y: attachY - radius * 0.5 * hikerScale },
-        { x: hc - radius * 0.02 * hikerScale, y: attachY - radius * 0.48 * hikerScale },
-        { x: hc - radius * 0.08 * hikerScale, y: attachY - radius * 0.32 * hikerScale },
-        { x: hc - radius * 0.20 * hikerScale, y: attachY - radius * 0.34 * hikerScale }
+        { x: hc - radius * 0.25 * hikerScale, y: attachY - radius * 0.48 * hikerScale },
+        { x: hc - radius * 0.08 * hikerScale, y: attachY - radius * 0.46 * hikerScale },
+        { x: hc - radius * 0.14 * hikerScale, y: attachY - radius * 0.28 * hikerScale },
+        { x: hc - radius * 0.28 * hikerScale, y: attachY - radius * 0.30 * hikerScale }
       ];
       if (filled) {
         this.fillPolygonInterior(backpackVerts);
