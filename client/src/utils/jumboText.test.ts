@@ -5,9 +5,10 @@ import { formatBrfPages } from './brailleFormat';
 const M = JUMBO_LINE_MARKER; // '\u0002'
 
 describe('jumbo / large-print text pipeline', () => {
-  it('passes jumbo-marked lines through asciiToUnicodeBraille as literal text', () => {
-    const jumboLine = `${M}48${M}Hello World`;
-    expect(asciiToUnicodeBraille(jumboLine)).toBe(jumboLine);
+  it('translates the text portion of jumbo-marked lines through asciiToUnicodeBraille to unicode braille while keeping the prefix intact', () => {
+    const jumboLine = `${M}48${M}abc`;
+    const expected = `${M}48${M}${asciiToUnicodeBraille('abc')}`;
+    expect(asciiToUnicodeBraille(jumboLine)).toBe(expected);
   });
 
   it('still translates normal lines to unicode braille', () => {
@@ -20,12 +21,12 @@ describe('jumbo / large-print text pipeline', () => {
   });
 
   it('handles a document mixing braille and jumbo lines', () => {
-    const input = `abc\n${M}48${M}Big Text\nxyz`;
+    const input = `abc\n${M}48${M}xyz\n123`;
     const out = asciiToUnicodeBraille(input);
     const lines = out.split('\n');
-    expect(lines[1]).toBe(`${M}48${M}Big Text`); // jumbo line untouched
-    expect(lines[0]).not.toBe('abc'); // braille translated
-    expect(lines[2]).not.toBe('xyz');
+    expect(lines[1]).toBe(`${M}48${M}${asciiToUnicodeBraille('xyz')}`); // prefix intact, text converted
+    expect(lines[0]).toBe(asciiToUnicodeBraille('abc')); // braille translated
+    expect(lines[2]).toBe(asciiToUnicodeBraille('123'));
   });
 
   it('keeps the jumbo marker + text intact through pagination (no braille wrapping)', () => {

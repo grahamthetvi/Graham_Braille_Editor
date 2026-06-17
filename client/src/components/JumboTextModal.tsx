@@ -16,8 +16,8 @@ const MIN_SIZE = 16;
 const MAX_SIZE = 200;
 
 /**
- * Inserts a large-print ("jumbo") text block. Instead of braille, the right-hand preview
- * renders this text as big print — useful for low-vision readers or dual print/braille pages.
+ * Inserts a large-print ("jumbo") text block. The right-hand preview
+ * renders this text as big braille — useful for low-vision readers or dual print/braille pages.
  */
 export function JumboTextModal({ onInsert, onClose }: JumboTextModalProps) {
   const [text, setText] = useState('');
@@ -45,14 +45,13 @@ export function JumboTextModal({ onInsert, onClose }: JumboTextModalProps) {
         style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column' }}
       >
         <header className="welcome-header">
-          <h2>Insert Large-Print Text</h2>
+          <h2>Insert Large-Print Braille</h2>
           <button className="welcome-close" onClick={onClose} aria-label="Close">✕</button>
         </header>
 
         <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
           <p style={{ margin: 0, fontSize: '0.9rem', opacity: 0.8 }}>
-            This text is shown as large print on the right-hand display instead of being
-            translated to braille — handy for low-vision readers or combined print/braille pages.
+            This text is translated and shown as large-print braille on the right-hand display — handy for low-vision readers or combined print/braille pages.
           </p>
 
           <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -62,7 +61,7 @@ export function JumboTextModal({ onInsert, onClose }: JumboTextModalProps) {
               onChange={e => setText(e.target.value)}
               rows={4}
               autoFocus
-              placeholder="Type the words to show in large print…"
+              placeholder="Type the words to show in large-print braille…"
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -150,7 +149,7 @@ export function JumboTextModal({ onInsert, onClose }: JumboTextModalProps) {
         <footer className="welcome-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
           <button className="welcome-btn-secondary" onClick={onClose}>Cancel</button>
           <button className="welcome-btn-primary" onClick={handleInsert} disabled={!text.trim()}>
-            Insert Large Print
+            Insert Large Print Braille
           </button>
         </footer>
       </div>

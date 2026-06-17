@@ -67,26 +67,28 @@ export const UEB_NEMETH_CLOSE_ASCII = unicodeBrailleToAscii(UEB_NEMETH_CLOSE);
 export function asciiToUnicodeBraille(asciiString: string): string {
     let unicodeStr = "";
     let atLineStart = true;
-    let literalLine = false;
     for (let i = 0; i < asciiString.length; i++) {
         const ch = asciiString.charAt(i);
 
         if (ch === '\n') {
             unicodeStr += ch;
             atLineStart = true;
-            literalLine = false;
             continue;
         }
 
-        // Jumbo / large-print lines hold literal text, not braille — pass them through unchanged.
+        // Jumbo / large-print lines hold translated BRF text — preserve the marker and size prefix,
+        // but translate the text itself.
         if (atLineStart && ch === JUMBO_LINE_MARKER) {
-            literalLine = true;
+            const nextMarkerIdx = asciiString.indexOf(JUMBO_LINE_MARKER, i + 1);
+            if (nextMarkerIdx !== -1) {
+                const prefix = asciiString.slice(i, nextMarkerIdx + 1);
+                unicodeStr += prefix;
+                i = nextMarkerIdx;
+                atLineStart = false;
+                continue;
+            }
         }
         atLineStart = false;
-        if (literalLine) {
-            unicodeStr += ch;
-            continue;
-        }
 
         let charCode = asciiString.charCodeAt(i);
 

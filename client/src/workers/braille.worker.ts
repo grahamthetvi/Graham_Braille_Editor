@@ -408,13 +408,22 @@ async function translateDocumentWithMathAndPositions(
     const matchLen = match[0].length;
 
     if (match[9] !== undefined) {
-      // Jumbo / large-print block: pass the inner text through literally, tagged with the
-      // jumbo marker + font size so the preview renders it as big print instead of braille.
+      // Jumbo / large-print block: translate the inner text to BRF format (ASCII braille),
+      // tagged with the jumbo marker + font size so the preview renders it as big print/braille.
       const params = match[10] ?? '';
       const sizeMatch = params.match(/size\s*=\s*(\d+)/);
       const jumboSize = sizeMatch ? sizeMatch[1] : '48';
       const lines = match[11].split('\n');
-      const jumboContent = '\n' + lines.map(l => '\u0002' + jumboSize + '\u0002' + l).join('\n') + '\n';
+      const translatedLines: string[] = [];
+      for (const l of lines) {
+        if (!l.trim()) {
+          translatedLines.push('');
+        } else {
+          const translated = liblouis!.translateString(textTable, l) || '';
+          translatedLines.push(translated);
+        }
+      }
+      const jumboContent = '\n' + translatedLines.map(l => '\u0002' + jumboSize + '\u0002' + l).join('\n') + '\n';
       for (let i = 0; i < matchLen; i++) {
         outputPos[matchStart + i] = result.length + Math.floor(i * jumboContent.length / matchLen);
       }

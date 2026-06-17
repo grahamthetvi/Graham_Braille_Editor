@@ -1189,13 +1189,35 @@ export default function App() {
                               const sizeStr = sep >= 0 ? rest.slice(0, sep) : '';
                               const text = sep >= 0 ? rest.slice(sep + 1) : rest;
                               const size = Math.min(400, Math.max(8, parseInt(sizeStr, 10) || 48));
+                              
+                              const jumboStyles = {
+                                fontSize: `${size}px`,
+                                '--braille-cell-height': `${size}px`,
+                                '--braille-cell-width': `${size * 0.64}px`,
+                                '--braille-cell-gap': `${size * 0.4}px`,
+                                '--braille-dot-size-active': `${size * 0.22}px`,
+                                '--braille-dot-size-inactive': `${size * 0.22 * (inactiveDotSize / Math.max(1, brailleSize * 0.22))}px`,
+                                '--braille-cell-height-8dot': `${size * 1.33}px`,
+                                '--braille-line-gap': `${size * 0.5}px`,
+                              } as React.CSSProperties;
+
                               return (
                                 <div
                                   key={lineIdx}
                                   className="brf-jumbo-line"
-                                  style={{ fontSize: `${size}px` }}
+                                  style={jumboStyles}
                                 >
-                                  {text.length > 0 ? text : '\u00a0'}
+                                  {text.length > 0 ? (
+                                    text.split('').map((char, charIdx) => (
+                                      <BrailleCell
+                                        key={charIdx}
+                                        char={char}
+                                        showEmptyDots={showEmptyDots}
+                                      />
+                                    ))
+                                  ) : (
+                                    '\u00a0'
+                                  )}
                                 </div>
                               );
                             }
