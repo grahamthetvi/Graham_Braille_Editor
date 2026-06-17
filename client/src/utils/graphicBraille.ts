@@ -445,78 +445,82 @@ export class GraphicCanvas extends GridCanvas {
   }
 
   /**
-   * Six-petal flower with layered petals, textured center, curved stem, and opposing leaves.
+   * Daisy-style flower: a round center ringed by distinct rounded petals,
+   * sitting on a straight stem with two opposing leaves.
+   * The flower head is centred above `cy`; the stem and leaves hang below.
    */
   drawFlower(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
+    const headCy = cy - radius * 0.42;
     const petalCount = 6;
-    const isInsideFlowerHead = (x: number, y: number): boolean => {
-      const dx = x - cx;
-      const dy = y - cy;
+    const petalDist = radius * 0.6;
+    const petalR = radius * 0.34;
+    const centerR = radius * 0.3;
 
-      const checkPetalLayer = (offsetAngle: number, distMul: number, aMul: number, bMul: number) => {
-        for (let i = 0; i < petalCount; i++) {
-          const angle = -Math.PI / 2 + offsetAngle + (i * 2 * Math.PI) / petalCount;
-          const cosA = Math.cos(angle);
-          const sinA = Math.sin(angle);
-          const lx = dx * cosA + dy * sinA;
-          const ly = -dx * sinA + dy * cosA;
-          const px = lx - radius * distMul;
-          const a = radius * aMul;
-          const b = radius * bMul;
-          if ((px / a) ** 2 + (ly / b) ** 2 <= 1) return true;
-        }
-        return false;
-      };
+    const petalCenters: { x: number; y: number }[] = [];
+    for (let i = 0; i < petalCount; i++) {
+      const angle = -Math.PI / 2 + (i * 2 * Math.PI) / petalCount;
+      petalCenters.push({
+        x: Math.round(cx + Math.cos(angle) * petalDist),
+        y: Math.round(headCy + Math.sin(angle) * petalDist),
+      });
+    }
 
-      if (checkPetalLayer(0, 0.36, 0.44, 0.26)) return true;
-      if (checkPetalLayer(Math.PI / petalCount, 0.22, 0.28, 0.18)) return true;
+    if (filled) {
+      // Solid bloom: every petal disc plus the central disc.
+      for (const p of petalCenters) {
+        this.fillDisc(p.x, p.y, petalR);
+      }
+      this.fillDisc(cx, headCy, centerR);
+    } else {
+      // Outline bloom: each petal as its own circle, then a ringed centre.
+      for (const p of petalCenters) {
+        this.drawCircle(p.x, p.y, Math.round(petalR), false);
+      }
+      this.drawCircle(Math.round(cx), Math.round(headCy), Math.round(centerR), false);
+    }
 
-      const centerR = radius * 0.17;
-      if (dx * dx + dy * dy <= centerR * centerR) return true;
+    // Stem: a gently curved line dropping from the bloom.
+    const stemTop = headCy + radius * 0.92;
+    const stemBottom = cy + radius * 1.4;
+    const stemSteps = Math.max(8, Math.ceil(radius));
+    let prevX = cx;
+    let prevY = stemTop;
+    for (let i = 1; i <= stemSteps; i++) {
+      const t = i / stemSteps;
+      const sx = cx + Math.sin(t * Math.PI) * radius * 0.12;
+      const sy = stemTop + (stemBottom - stemTop) * t;
+      this.drawLine(prevX, prevY, sx, sy);
+      prevX = sx;
+      prevY = sy;
+    }
 
-      const ringR = radius * 0.24;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist >= centerR * 0.85 && dist <= ringR) return true;
-
-      return false;
-    };
-
-    const headPad = radius * 1.05;
-    this.drawImplicitShape(
-      cx - headPad, cx + headPad, cy - headPad, cy + headPad * 0.55,
-      isInsideFlowerHead, filled
-    );
-
-    const stemTop = cy + radius * 0.42;
-    const stemBottom = cy + radius * 1.05;
-    const stemMidX = cx + radius * 0.04;
-    this.drawLine(cx, stemTop, stemMidX, stemBottom);
-
-    const leaf = (leafCx: number, leafCy: number, angle: number) => {
+    // Two opposing leaves growing outward from the stem.
+    const leaf = (attachX: number, attachY: number, dirX: number) => {
+      const angle = Math.atan2(0.5, dirX); // tilt the leaf upward as it reaches out
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
+      const a = radius * 0.3;
+      const b = radius * 0.12;
+      const leafCx = attachX + dirX * a * 0.9;
+      const leafCy = attachY - a * 0.45;
       const isInsideLeaf = (x: number, y: number): boolean => {
         const dx = x - leafCx;
         const dy = y - leafCy;
         const lx = dx * cosA + dy * sinA;
         const ly = -dx * sinA + dy * cosA;
-        const a = radius * 0.22;
-        const b = radius * 0.1;
         return (lx / a) ** 2 + (ly / b) ** 2 <= 1;
       };
-      const pad = radius * 0.28;
+      const pad = a + 1;
       this.drawImplicitShape(
         leafCx - pad, leafCx + pad, leafCy - pad, leafCy + pad,
         isInsideLeaf, filled
       );
-      this.drawLine(leafCx, leafCy, leafCx + cosA * radius * 0.18, leafCy + sinA * radius * 0.18);
     };
 
-    const stemAttachY = stemTop + radius * 0.28;
-    leaf(cx - radius * 0.12, stemAttachY, Math.PI * 0.72);
-    leaf(cx + radius * 0.12, stemAttachY + radius * 0.12, -Math.PI * 0.28);
+    leaf(cx, stemTop + (stemBottom - stemTop) * 0.4, -1);
+    leaf(cx, stemTop + (stemBottom - stemTop) * 0.62, 1);
   }
 
   private drawSingleIceSkate(
