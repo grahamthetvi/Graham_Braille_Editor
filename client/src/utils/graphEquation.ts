@@ -7,7 +7,7 @@
  * `sin.x`, `2x`, `x^2`, `sin(x)`, etc. all work.
  */
 
-import { create, all, type MathJsInstance } from 'mathjs';
+import { create, all, type MathJsInstance, type EvalFunction } from 'mathjs';
 import { GridCanvas } from './chartBraille';
 import type { GraphicResult } from './graphicBraille';
 
@@ -129,7 +129,7 @@ export function compileEquation(raw: string): CompiledEquation {
   const normalized = normalizeEquation(raw);
   if (!normalized) throw 'Please enter an equation.';
 
-  let compiled: ReturnType<typeof math.compile>;
+  let compiled: EvalFunction;
   try {
     compiled = math.compile(normalized);
   } catch (err: unknown) {
