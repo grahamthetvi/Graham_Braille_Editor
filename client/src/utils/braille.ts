@@ -25,6 +25,8 @@ const UNICODE_OFFSET_TO_ASCII: string[] = (() => {
             map[off] = String.fromCharCode(0x20 + i);
         }
     }
+    // Override 0x33 (dots 1-2-5-6) to map to '|' instead of '\' for UEB contraction compatibility
+    map[0x33] = '|';
     return map;
 })();
 

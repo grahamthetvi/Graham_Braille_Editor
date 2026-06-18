@@ -7,6 +7,7 @@ export const VIEW_PLUS_LEFT_PAD_PRESETS = {
     max: 15,
     rogue: 0,
     premier: 0,
+    embraille: 0,
 } as const;
 
 /** Default padding cells when none is stored (US Letter ViewPlus tuning). */

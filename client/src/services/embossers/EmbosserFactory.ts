@@ -44,7 +44,7 @@ export const EMBOSSER_LIST: EmbosserDefinition[] = [
     },
     {
         id: 'viewplus',
-        name: 'ViewPlus (Rogue / Max / Premier)',
+        name: 'ViewPlus (Rogue / Max / Premier / EmBraille)',
         creator: () => new ViewPlusEmbosser()
     }
 ];

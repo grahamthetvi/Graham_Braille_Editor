@@ -85,7 +85,7 @@ export function PrintPanel({
   function handlePrinterSelect(name: string) {
     setPrinterName(name);
     const lower = name.toLowerCase();
-    if (lower.includes('viewplus') || lower.includes('columbia') || lower.includes('emprint') || lower.includes('max') || lower.includes('premier') || lower.includes('rogue')) {
+    if (lower.includes('viewplus') || lower.includes('columbia') || lower.includes('emprint') || lower.includes('max') || lower.includes('premier') || lower.includes('rogue') || lower.includes('embraille')) {
       setSelectedDriverId('viewplus');
     } else if (lower.includes('romeo') || lower.includes('juliet') || lower.includes('enabling') || lower.includes('marathon') || lower.includes('thomas')) {
       setSelectedDriverId('enabling-romeo');

@@ -26,6 +26,8 @@ const UNICODE_OFFSET_TO_ASCII = new Array(64).fill(0x20); // space is 0x20
 for (let i = 0; i < BRF_TO_UNICODE_OFFSETS.length; i++) {
     UNICODE_OFFSET_TO_ASCII[BRF_TO_UNICODE_OFFSETS[i]] = 0x20 + i;
 }
+// Override 0x33 (dots 1-2-5-6) to map to 0x7C ('|') instead of 0x5C ('\')
+UNICODE_OFFSET_TO_ASCII[0x33] = 0x7C;
 
 export class GridCanvas {
     public width: number;

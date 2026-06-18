@@ -1062,6 +1062,8 @@ export default function App() {
                             setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.rogue }));
                           } else if (v === 'premier') {
                             setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.premier }));
+                          } else if (v === 'embraille') {
+                            setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.embraille }));
                           } else if (v === 'none') {
                             setPageSettings(s => ({ ...s, viewPlusLeftPadCells: VIEW_PLUS_LEFT_PAD_PRESETS.none }));
                           }
@@ -1073,6 +1075,7 @@ export default function App() {
                         <option value="max">ViewPlus Max (15)</option>
                         <option value="rogue">ViewPlus Rogue (0)</option>
                         <option value="premier">ViewPlus Premier (0)</option>
+                        <option value="embraille">ViewPlus EmBraille (0)</option>
                       </select>
                     </label>
                   </div>
