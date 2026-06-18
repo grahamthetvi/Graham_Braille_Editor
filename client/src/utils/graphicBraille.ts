@@ -646,6 +646,181 @@ export class GraphicCanvas extends GridCanvas {
     drawSingleMask(cx + radius * 0.45, cy + radius * 0.25, rMask, false);
   }
 
+  drawBirdHouse(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    if (filled) {
+      const isInsideBirdHouse = (x: number, y: number): boolean => {
+        const rx = x - cx;
+        const ry = y - cy;
+
+        // Roof triangle
+        if (ry >= -radius && ry <= -radius * 0.2) {
+          const roofWidth = (ry + radius) * 0.8 / 0.8;
+          if (Math.abs(rx) <= roofWidth) {
+            return true;
+          }
+        }
+
+        // Body rectangle
+        if (ry > -radius * 0.2 && ry <= radius * 0.7 && Math.abs(rx) <= radius * 0.6) {
+          const hx = rx;
+          const hy = ry - radius * 0.15;
+          const inHole = hx * hx + hy * hy <= (radius * 0.18) ** 2;
+          return !inHole;
+        }
+
+        return false;
+      };
+
+      const minX = cx - radius * 0.9;
+      const maxX = cx + radius * 0.9;
+      const minY = cy - radius;
+      const maxY = cy + radius * 0.7;
+
+      this.drawImplicitShape(minX, maxX, minY, maxY, isInsideBirdHouse, true);
+
+      // Draw pole & perch
+      this.drawLine(cx, cy + radius * 0.7, cx, cy + radius * 1.3);
+      this.drawLine(cx - radius * 0.15, cy + radius * 0.42, cx + radius * 0.15, cy + radius * 0.42);
+    } else {
+      // Outline mode
+      // Roof
+      this.drawLine(cx, cy - radius, cx - radius * 0.8, cy - radius * 0.2);
+      this.drawLine(cx, cy - radius, cx + radius * 0.8, cy - radius * 0.2);
+      this.drawLine(cx - radius * 0.8, cy - radius * 0.2, cx + radius * 0.8, cy - radius * 0.2);
+
+      // Body walls & floor
+      this.drawLine(cx - radius * 0.6, cy - radius * 0.2, cx - radius * 0.6, cy + radius * 0.7);
+      this.drawLine(cx + radius * 0.6, cy - radius * 0.2, cx + radius * 0.6, cy + radius * 0.7);
+      this.drawLine(cx - radius * 0.6, cy + radius * 0.7, cx + radius * 0.6, cy + radius * 0.7);
+
+      // Entrance hole
+      this.drawCircle(cx, cy + radius * 0.15, Math.round(radius * 0.18), false);
+
+      // Perch
+      this.drawLine(cx - radius * 0.15, cy + radius * 0.42, cx + radius * 0.15, cy + radius * 0.42);
+
+      // Pole
+      this.drawLine(cx, cy + radius * 0.7, cx, cy + radius * 1.3);
+    }
+  }
+
+  drawBeach(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const startX = Math.round(cx - radius);
+    const endX = Math.round(cx + radius);
+
+    // Shoreline function
+    const getShoreY = (x: number): number => {
+      return cy + radius * 0.1 + (x - cx) * 0.4 + Math.sin((x - cx) / (radius * 0.3 || 1)) * radius * 0.08;
+    };
+
+    if (filled) {
+      // Fill sand (below shoreline)
+      for (let x = startX; x <= endX; x++) {
+        const yShore = Math.round(getShoreY(x));
+        const yBottom = Math.round(cy + radius);
+        if (yShore <= yBottom) {
+          this.drawLine(x, yShore, x, yBottom);
+        }
+      }
+
+      // Fill sun
+      const sunCx = cx + radius * 0.5;
+      const sunCy = cy - radius * 0.5;
+      const sunR = radius * 0.24;
+      this.fillDisc(Math.round(sunCx), Math.round(sunCy), Math.round(sunR));
+    } else {
+      // Outline mode: draw shoreline line
+      let prevSX = startX;
+      let prevSY = Math.round(getShoreY(prevSX));
+      for (let x = startX + 1; x <= endX; x++) {
+        const yShore = Math.round(getShoreY(x));
+        this.drawLine(prevSX, prevSY, x, yShore);
+        prevSX = x;
+        prevSY = yShore;
+      }
+
+      // Draw sun circle
+      const sunCx = cx + radius * 0.5;
+      const sunCy = cy - radius * 0.5;
+      const sunR = radius * 0.24;
+      this.drawCircle(Math.round(sunCx), Math.round(sunCy), Math.round(sunR), false);
+
+      // Draw sun rays
+      const rayAngles = [135, 180, 225, 270];
+      const rayStart = sunR + 1;
+      const rayEnd = sunR + radius * 0.15;
+      for (const angleDeg of rayAngles) {
+        const rad = (angleDeg * Math.PI) / 180;
+        this.drawLine(
+          sunCx + rayStart * Math.cos(rad),
+          sunCy + rayStart * Math.sin(rad),
+          sunCx + rayEnd * Math.cos(rad),
+          sunCy + rayEnd * Math.sin(rad)
+        );
+      }
+    }
+
+    // Always draw waves in the water area
+    const drawWave = (wx: number, wy: number, wlen: number) => {
+      let prevX = wx;
+      let prevY = wy;
+      const wsteps = 6;
+      for (let i = 1; i <= wsteps; i++) {
+        const t = i / wsteps;
+        const x = wx + wlen * t;
+        const y = wy + Math.sin(t * Math.PI * 2) * (radius * 0.05);
+        this.drawLine(prevX, prevY, x, y);
+        prevX = x;
+        prevY = y;
+      }
+    };
+
+    drawWave(cx + radius * 0.1, cy + radius * 0.1, radius * 0.4);
+    drawWave(cx + radius * 0.4, cy - radius * 0.1, radius * 0.35);
+
+    // Always draw Palm tree
+    // Curved trunk
+    const steps = 10;
+    let prevX = cx - radius * 0.6;
+    let prevY = cy + radius * 0.7;
+    const trunkEndX = cx - radius * 0.3;
+    const trunkEndY = cy - radius * 0.15;
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      // Curved path
+      const tx = (1 - t) ** 2 * (cx - radius * 0.6) + 2 * (1 - t) * t * (cx - radius * 0.65) + t ** 2 * trunkEndX;
+      const ty = (1 - t) ** 2 * (cy + radius * 0.7) + 2 * (1 - t) * t * (cy + radius * 0.3) + t ** 2 * trunkEndY;
+      this.drawLine(prevX, prevY, tx, ty);
+      prevX = tx;
+      prevY = ty;
+    }
+
+    // Palm leaves (fronds)
+    const drawFrond = (fx: number, fy: number, tx: number, ty: number, controlYOffset: number) => {
+      let px = fx;
+      let py = fy;
+      const fsteps = 6;
+      for (let j = 1; j <= fsteps; j++) {
+        const t = j / fsteps;
+        const x = fx + (tx - fx) * t;
+        const y = fy + (ty - fy) * t - controlYOffset * Math.sin(t * Math.PI);
+        this.drawLine(px, py, x, y);
+        px = x;
+        py = y;
+      }
+    };
+
+    drawFrond(trunkEndX, trunkEndY, trunkEndX - radius * 0.45, trunkEndY + radius * 0.1, radius * 0.1);
+    drawFrond(trunkEndX, trunkEndY, trunkEndX - radius * 0.3, trunkEndY - radius * 0.15, radius * 0.15);
+    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.25, trunkEndY - radius * 0.2, radius * 0.18);
+    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.4, trunkEndY - radius * 0.02, radius * 0.12);
+    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.28, trunkEndY + radius * 0.18, radius * 0.05);
+  }
+
   drawStar(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
     const verts: { x: number; y: number }[] = [];
@@ -1356,7 +1531,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'paintbrush' | 'star' | 'vampireFangs';
+export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'paintbrush' | 'star' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1392,6 +1567,12 @@ export function generateInventoryShape(
   } else if (kind === 'axe') {
     spanX = r * 2.2;
     spanY = r * 2.2;
+  } else if (kind === 'beach') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'birdHouse') {
+    spanX = r * 1.8;
+    spanY = r * 2.6;
   } else if (kind === 'candle') {
     spanX = r * 2.4;
     spanY = r * 2.6;
@@ -1440,6 +1621,14 @@ export function generateInventoryShape(
     case 'actingMask':
       canvas.drawActingMask(cx, cy, r, filled);
       label = 'Acting Mask';
+      break;
+    case 'beach':
+      canvas.drawBeach(cx, cy, r, filled);
+      label = 'Beach';
+      break;
+    case 'birdHouse':
+      canvas.drawBirdHouse(cx, cy, r, filled);
+      label = 'Bird House';
       break;
     case 'apple':
       canvas.drawApple(cx, cy, r, filled);

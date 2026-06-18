@@ -401,6 +401,8 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       <option value="actingMask">Acting Mask</option>
                       <option value="apple">Apple</option>
                       <option value="axe">Axe</option>
+                      <option value="beach">Beach</option>
+                      <option value="birdHouse">Bird House</option>
                       <option value="candle">Candle</option>
                       <option value="circle">Circle</option>
                       <option value="cloud">Cloud</option>
