@@ -21,7 +21,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 	<key>CFBundleName</key>
 	<string>Graham Bridge</string>
 	<key>CFBundleVersion</key>
-	<string>3.3.0</string>
+	<string>3.4.0</string>
 	<key>LSUIElement</key>
 	<true/>
 </dict>
