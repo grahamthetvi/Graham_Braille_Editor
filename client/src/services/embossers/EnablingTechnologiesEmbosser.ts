@@ -38,6 +38,7 @@ export class EnablingTechnologiesEmbosser implements Embosser {
         return 64 + value;
     }
 
+    generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
         const encoder = new TextEncoder();
         const brfBytes = encoder.encode(brf.replace(/\|/g, '\\'));
 
