@@ -403,11 +403,13 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       <option value="axe">Axe</option>
                       <option value="beach">Beach</option>
                       <option value="birdHouse">Bird House</option>
+                      <option value="bowling">Bowling</option>
                       <option value="candle">Candle</option>
                       <option value="circle">Circle</option>
                       <option value="cloud">Cloud</option>
                       <option value="cloudLightning">Cloud with Lightning Bolt</option>
                       <option value="moon">Crescent Moon</option>
+                      <option value="movieProjector">Movie Projector</option>
                       <option value="cross">Cross</option>
                       <option value="flower">Flower</option>
                       <option value="heart">Heart</option>

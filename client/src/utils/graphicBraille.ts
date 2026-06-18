@@ -821,6 +821,191 @@ export class GraphicCanvas extends GridCanvas {
     drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.28, trunkEndY + radius * 0.18, radius * 0.05);
   }
 
+  drawMovieProjector(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    // Reel drawing helper
+    const drawReel = (rcx: number, rcy: number, rr: number) => {
+      if (filled) {
+        this.fillDisc(Math.round(rcx), Math.round(rcy), Math.round(rr));
+      } else {
+        this.drawCircle(Math.round(rcx), Math.round(rcy), Math.round(rr), false);
+        // Spokes
+        this.drawLine(rcx - rr, rcy, rcx + rr, rcy);
+        this.drawLine(rcx - rr * 0.7, rcy - rr * 0.7, rcx + rr * 0.7, rcy + rr * 0.7);
+        this.drawLine(rcx - rr * 0.7, rcy + rr * 0.7, rcx + rr * 0.7, rcy - rr * 0.7);
+      }
+    };
+
+    // 1. Reel centers and radii
+    const leftReelCx = cx - radius * 0.45;
+    const leftReelCy = cy - radius * 0.35;
+    const leftReelR = radius * 0.28;
+
+    const rightReelCx = cx + radius * 0.05;
+    const rightReelCy = cy - radius * 0.4;
+    const rightReelR = radius * 0.28;
+
+    // 2. Arms
+    this.drawLine(cx - radius * 0.25, cy + radius * 0.1, leftReelCx, leftReelCy);
+    this.drawLine(cx, cy + radius * 0.1, rightReelCx, rightReelCy);
+
+    // 3. Reels
+    drawReel(leftReelCx, leftReelCy, leftReelR);
+    drawReel(rightReelCx, rightReelCy, rightReelR);
+
+    // 4. Projector Body
+    const bx1 = cx - radius * 0.35;
+    const bx2 = cx + radius * 0.1;
+    const by1 = cy + radius * 0.1;
+    const by2 = cy + radius * 0.55;
+
+    if (filled) {
+      const bodyVerts = [
+        { x: bx1, y: by1 },
+        { x: bx2, y: by1 },
+        { x: bx2, y: by2 },
+        { x: bx1, y: by2 }
+      ];
+      this.fillPolygonInterior(bodyVerts);
+    } else {
+      this.drawLine(bx1, by1, bx2, by1);
+      this.drawLine(bx2, by1, bx2, by2);
+      this.drawLine(bx2, by2, bx1, by2);
+      this.drawLine(bx1, by2, bx1, by1);
+    }
+
+    // 5. Lens
+    const lx1 = cx + radius * 0.1;
+    const lx2 = cx + radius * 0.25;
+    const ly1 = cy + radius * 0.2;
+    const ly2 = cy + radius * 0.4;
+
+    if (filled) {
+      const lensVerts = [
+        { x: lx1, y: ly1 },
+        { x: lx2, y: ly1 },
+        { x: lx2, y: ly2 },
+        { x: lx1, y: ly2 }
+      ];
+      this.fillPolygonInterior(lensVerts);
+    } else {
+      this.drawLine(lx1, ly1, lx2, ly1);
+      this.drawLine(lx2, ly1, lx2, ly2);
+      this.drawLine(lx2, ly2, lx1, ly2);
+      this.drawLine(lx1, ly2, lx1, ly1);
+    }
+
+    // 6. Light Cone (always outline/rays to feel like light)
+    this.drawLine(cx + radius * 0.25, cy + radius * 0.25, cx + radius * 0.85, cy + radius * 0.05);
+    this.drawLine(cx + radius * 0.25, cy + radius * 0.35, cx + radius * 0.85, cy + radius * 0.55);
+    this.drawLine(cx + radius * 0.85, cy + radius * 0.05, cx + radius * 0.85, cy + radius * 0.55);
+
+    // Inner ray lines
+    this.drawLine(cx + radius * 0.25, cy + radius * 0.3, cx + radius * 0.85, cy + radius * 0.22);
+    this.drawLine(cx + radius * 0.25, cy + radius * 0.3, cx + radius * 0.85, cy + radius * 0.38);
+
+    // 7. Stand/Tripod (always outline)
+    const jx = cx - radius * 0.12;
+    const jy = cy + radius * 0.55;
+    this.drawLine(jx, jy, jx, cy + radius * 0.95);
+    this.drawLine(jx, jy, jx - radius * 0.26, cy + radius * 0.9);
+    this.drawLine(jx, jy, jx + radius * 0.26, cy + radius * 0.9);
+  }
+
+  drawBowling(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    // 1. Bowling Pin (on the right)
+    const pcx = cx + radius * 0.4;
+    const pcy = cy;
+    const ph = radius * 1.1;
+
+    const pinVerts = [
+      { x: pcx, y: pcy - ph * 0.5 },
+      { x: pcx + ph * 0.12, y: pcy - ph * 0.38 },
+      { x: pcx + ph * 0.06, y: pcy - ph * 0.22 },
+      { x: pcx + ph * 0.22, y: pcy + ph * 0.1 },
+      { x: pcx + ph * 0.12, y: pcy + ph * 0.5 },
+      { x: pcx - ph * 0.12, y: pcy + ph * 0.5 },
+      { x: pcx - ph * 0.22, y: pcy + ph * 0.1 },
+      { x: pcx - ph * 0.06, y: pcy - ph * 0.22 },
+      { x: pcx - ph * 0.12, y: pcy - ph * 0.38 }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(pinVerts);
+      
+      // Clear a stripe on the neck to make it recognizable
+      const sy1 = Math.round(pcy - ph * 0.26);
+      const sy2 = Math.round(pcy - ph * 0.20);
+      for (let y = sy1; y <= sy2; y++) {
+        const sxLeft = Math.round(pcx - ph * 0.1);
+        const sxRight = Math.round(pcx + ph * 0.1);
+        for (let x = sxLeft; x <= sxRight; x++) {
+          if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            this.data[y][x] = false;
+          }
+        }
+      }
+    } else {
+      // Draw outline of the pin
+      for (let i = 0; i < pinVerts.length; i++) {
+        const a = pinVerts[i];
+        const b = pinVerts[(i + 1) % pinVerts.length];
+        this.drawLine(a.x, a.y, b.x, b.y);
+      }
+      // Draw stripe lines
+      this.drawLine(pcx - ph * 0.08, pcy - ph * 0.26, pcx + ph * 0.08, pcy - ph * 0.26);
+      this.drawLine(pcx - ph * 0.07, pcy - ph * 0.20, pcx + ph * 0.07, pcy - ph * 0.20);
+    }
+
+    // 2. Bowling Ball (on the left)
+    const bcx = cx - radius * 0.4;
+    const bcy = cy + radius * 0.2;
+    const br = radius * 0.38;
+
+    if (filled) {
+      this.fillDisc(Math.round(bcx), Math.round(bcy), Math.round(br));
+
+      // Clear 3 finger holes
+      const holes = [
+        { hx: bcx - br * 0.15, hy: bcy - br * 0.3 },
+        { hx: bcx + br * 0.15, hy: bcy - br * 0.3 },
+        { hx: bcx, hy: bcy - br * 0.05 }
+      ];
+
+      for (const h of holes) {
+        const cx = Math.round(h.hx);
+        const cy = Math.round(h.hy);
+        const pts = [
+          { x: cx, y: cy },
+          { x: cx - 1, y: cy },
+          { x: cx + 1, y: cy },
+          { x: cx, y: cy - 1 },
+          { x: cx, y: cy + 1 }
+        ];
+        for (const pt of pts) {
+          if (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height) {
+            this.data[pt.y][pt.x] = false;
+          }
+        }
+      }
+    } else {
+      this.drawCircle(Math.round(bcx), Math.round(bcy), Math.round(br), false);
+
+      // Draw 3 finger holes as single dots
+      this.setPoint(Math.round(bcx - br * 0.15), Math.round(bcy - br * 0.3));
+      this.setPoint(Math.round(bcx + br * 0.15), Math.round(bcy - br * 0.3));
+      this.setPoint(Math.round(bcx), Math.round(bcy - br * 0.05));
+    }
+
+    // 3. Motion lines
+    this.drawLine(bcx - br * 1.3, bcy - br * 0.2, bcx - br * 1.0, bcy - br * 0.2);
+    this.drawLine(bcx - br * 1.4, bcy + br * 0.1, bcx - br * 1.1, bcy + br * 0.1);
+    this.drawLine(bcx - br * 1.2, bcy + br * 0.4, bcx - br * 0.9, bcy + br * 0.4);
+  }
+
   drawStar(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
     const verts: { x: number; y: number }[] = [];
@@ -1531,7 +1716,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'paintbrush' | 'star' | 'vampireFangs';
+export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'bowling' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'paintbrush' | 'star' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1573,6 +1758,9 @@ export function generateInventoryShape(
   } else if (kind === 'birdHouse') {
     spanX = r * 1.8;
     spanY = r * 2.6;
+  } else if (kind === 'bowling') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
   } else if (kind === 'candle') {
     spanX = r * 2.4;
     spanY = r * 2.6;
@@ -1602,6 +1790,9 @@ export function generateInventoryShape(
   } else if (kind === 'moon') {
     spanX = r * 2.4;
     spanY = r * 2.2;
+  } else if (kind === 'movieProjector') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
   } else if (kind === 'paintbrush') {
     spanX = r * 1.8;
     spanY = r * 3.6;
@@ -1629,6 +1820,14 @@ export function generateInventoryShape(
     case 'birdHouse':
       canvas.drawBirdHouse(cx, cy, r, filled);
       label = 'Bird House';
+      break;
+    case 'bowling':
+      canvas.drawBowling(cx, cy, r, filled);
+      label = 'Bowling';
+      break;
+    case 'movieProjector':
+      canvas.drawMovieProjector(cx, cy, r, filled);
+      label = 'Movie Projector';
       break;
     case 'apple':
       canvas.drawApple(cx, cy, r, filled);
