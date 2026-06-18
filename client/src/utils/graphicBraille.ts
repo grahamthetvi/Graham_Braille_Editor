@@ -642,8 +642,8 @@ export class GraphicCanvas extends GridCanvas {
     };
 
     const rMask = radius * 0.65;
-    drawSingleMask(cx - radius * 0.35, cy - radius * 0.2, rMask, true);
-    drawSingleMask(cx + radius * 0.35, cy + radius * 0.2, rMask, false);
+    drawSingleMask(cx - radius * 0.45, cy - radius * 0.25, rMask, true);
+    drawSingleMask(cx + radius * 0.45, cy + radius * 0.25, rMask, false);
   }
 
   drawStar(cx: number, cy: number, radius: number, filled = false) {
@@ -1384,8 +1384,8 @@ export function generateInventoryShape(
   let spanY = r * 2;
 
   if (kind === 'actingMask') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
+    spanX = r * 2.4;
+    spanY = r * 2.4;
   } else if (kind === 'apple') {
     spanX = r * 2.2;
     spanY = r * 2.2;
