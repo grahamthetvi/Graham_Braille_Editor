@@ -45,7 +45,20 @@ Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/rel
 
 ---
 
-### 🐧 Linux Setup (Ubuntu/Debian/ChromeOS — ZIP)
+### 🐧 Linux Setup (Recommended: Automated Installer)
+
+For generic Linux distributions, you can use the automated installer script to check for environment compatibility, install system dependencies (GTK3, libappindicator, and CUPS client), and configure launcher shortcuts automatically:
+
+1. Extract the downloaded `graham-bridge-linux.zip` file (which contains the binary, desktop configuration, and assets).
+2. Run the installer script from the extracted directory:
+   ```bash
+   ./install.sh
+   ```
+   *(Note: The script will automatically request sudo permissions to install required system packages and copy the binary to `/usr/local/bin`.)*
+
+### 🐧 Linux Manual Setup (Ubuntu/Debian/ChromeOS — ZIP)
+
+If you prefer to set up files manually:
 
 1. Extract the downloaded `graham-bridge-linux.zip` file.
 2. The zip contains the executable binary `graham-bridge-linux-amd64` and a desktop shortcut `graham-bridge.desktop`.
@@ -62,6 +75,7 @@ Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/rel
 6. You can now launch "Graham Braille Editor Bridge" from your application menu!
 
 ### 🎩 Linux Setup (Fedora / RPM)
+
 
 1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-<version>-linux-fedora.x86_64.rpm`** for the tag you want (built in CI on Ubuntu with `rpmbuild`; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
 2. Install (replace the filename with the one you downloaded):
