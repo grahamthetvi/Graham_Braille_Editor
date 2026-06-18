@@ -916,49 +916,145 @@ export class GraphicCanvas extends GridCanvas {
   drawBowling(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
-    // 1. Bowling Pin (on the right)
-    const pcx = cx + radius * 0.4;
-    const pcy = cy;
-    const ph = radius * 1.1;
+    // Helper to clear a line of dots
+    const clearLine = (x0: number, y0: number, x1: number, y1: number) => {
+      x0 = Math.round(x0);
+      y0 = Math.round(y0);
+      x1 = Math.round(x1);
+      y1 = Math.round(y1);
+      const dx = Math.abs(x1 - x0);
+      const dy = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1;
+      const sy = y0 < y1 ? 1 : -1;
+      let err = dx - dy;
+      while (true) {
+        if (x0 >= 0 && x0 < this.width && y0 >= 0 && y0 < this.height) {
+          this.data[y0][x0] = false;
+        }
+        if (x0 === x1 && y0 === y1) break;
+        const e2 = 2 * err;
+        if (e2 > -dy) {
+          err -= dy;
+          x0 += sx;
+        }
+        if (e2 < dx) {
+          err += dx;
+          y0 += sy;
+        }
+      }
+    };
 
-    const pinVerts = [
-      { x: pcx, y: pcy - ph * 0.5 },
-      { x: pcx + ph * 0.12, y: pcy - ph * 0.38 },
-      { x: pcx + ph * 0.06, y: pcy - ph * 0.22 },
-      { x: pcx + ph * 0.22, y: pcy + ph * 0.1 },
-      { x: pcx + ph * 0.12, y: pcy + ph * 0.5 },
-      { x: pcx - ph * 0.12, y: pcy + ph * 0.5 },
-      { x: pcx - ph * 0.22, y: pcy + ph * 0.1 },
-      { x: pcx - ph * 0.06, y: pcy - ph * 0.22 },
-      { x: pcx - ph * 0.12, y: pcy - ph * 0.38 }
-    ];
+    // Helper to get pin vertices
+    const getPinVerts = (pcx: number, pcy: number, ph: number) => {
+      return [
+        { x: pcx, y: pcy - ph * 0.5 },
+        { x: pcx + ph * 0.12, y: pcy - ph * 0.38 },
+        { x: pcx + ph * 0.06, y: pcy - ph * 0.22 },
+        { x: pcx + ph * 0.22, y: pcy + ph * 0.1 },
+        { x: pcx + ph * 0.12, y: pcy + ph * 0.5 },
+        { x: pcx - ph * 0.12, y: pcy + ph * 0.5 },
+        { x: pcx - ph * 0.22, y: pcy + ph * 0.1 },
+        { x: pcx - ph * 0.06, y: pcy - ph * 0.22 },
+        { x: pcx - ph * 0.12, y: pcy - ph * 0.38 }
+      ];
+    };
 
-    if (filled) {
-      this.fillPolygonInterior(pinVerts);
-      
-      // Clear a stripe on the neck to make it recognizable
-      const sy1 = Math.round(pcy - ph * 0.26);
-      const sy2 = Math.round(pcy - ph * 0.20);
-      for (let y = sy1; y <= sy2; y++) {
-        const sxLeft = Math.round(pcx - ph * 0.1);
-        const sxRight = Math.round(pcx + ph * 0.1);
-        for (let x = sxLeft; x <= sxRight; x++) {
-          if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+    const drawSinglePin = (pcx: number, pcy: number, ph: number) => {
+      const pinVerts = getPinVerts(pcx, pcy, ph);
+
+      if (filled) {
+        this.fillPolygonInterior(pinVerts);
+        
+        // Clear stripe
+        const sy1 = Math.round(pcy - ph * 0.26);
+        const sy2 = Math.round(pcy - ph * 0.20);
+        for (let y = sy1; y <= sy2; y++) {
+          const sxLeft = Math.round(pcx - ph * 0.1);
+          const sxRight = Math.round(pcx + ph * 0.1);
+          for (let x = sxLeft; x <= sxRight; x++) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+              this.data[y][x] = false;
+            }
+          }
+        }
+      } else {
+        // Draw outline of the pin
+        for (let i = 0; i < pinVerts.length; i++) {
+          const a = pinVerts[i];
+          const b = pinVerts[(i + 1) % pinVerts.length];
+          this.drawLine(a.x, a.y, b.x, b.y);
+        }
+        // Draw stripe lines
+        this.drawLine(pcx - ph * 0.08, pcy - ph * 0.26, pcx + ph * 0.08, pcy - ph * 0.26);
+        this.drawLine(pcx - ph * 0.07, pcy - ph * 0.20, pcx + ph * 0.07, pcy - ph * 0.20);
+      }
+    };
+
+    const clearPinInterior = (pcx: number, pcy: number, ph: number) => {
+      const pinVerts = getPinVerts(pcx, pcy, ph);
+      if (pinVerts.length < 3) return;
+      const xs = pinVerts.map(p => p.x);
+      const ys = pinVerts.map(p => p.y);
+      let minX = Math.floor(Math.min(...xs));
+      let maxX = Math.ceil(Math.max(...xs));
+      let minY = Math.floor(Math.min(...ys));
+      let maxY = Math.ceil(Math.max(...ys));
+      minX = Math.max(0, minX - 1);
+      maxX = Math.min(this.width - 1, maxX + 1);
+      minY = Math.max(0, minY - 1);
+      maxY = Math.min(this.height - 1, maxY + 1);
+      for (let y = minY; y <= maxY; y++) {
+        const py = y + 0.5;
+        for (let x = minX; x <= maxX; x++) {
+          const px = x + 0.5;
+          if (pointInPolygonEvenOdd(px, py, pinVerts)) {
             this.data[y][x] = false;
           }
         }
       }
-    } else {
-      // Draw outline of the pin
+    };
+
+    const clearPinOutline = (pcx: number, pcy: number, ph: number) => {
+      const pinVerts = getPinVerts(pcx, pcy, ph);
       for (let i = 0; i < pinVerts.length; i++) {
         const a = pinVerts[i];
         const b = pinVerts[(i + 1) % pinVerts.length];
-        this.drawLine(a.x, a.y, b.x, b.y);
+        clearLine(a.x, a.y, b.x, b.y);
+        clearLine(a.x - 1, a.y, b.x - 1, b.y);
+        clearLine(a.x + 1, a.y, b.x + 1, b.y);
+        clearLine(a.x, a.y - 1, b.x, b.y - 1);
+        clearLine(a.x, a.y + 1, b.x, b.y + 1);
       }
-      // Draw stripe lines
-      this.drawLine(pcx - ph * 0.08, pcy - ph * 0.26, pcx + ph * 0.08, pcy - ph * 0.26);
-      this.drawLine(pcx - ph * 0.07, pcy - ph * 0.20, pcx + ph * 0.07, pcy - ph * 0.20);
+    };
+
+    // Pin 1 (Back-left)
+    const p1cx = cx + radius * 0.22;
+    const p1cy = cy - radius * 0.1;
+    const p1h = radius * 0.8;
+
+    // Pin 2 (Back-right)
+    const p2cx = cx + radius * 0.58;
+    const p2cy = cy - radius * 0.1;
+    const p2h = radius * 0.8;
+
+    // Pin 3 (Front-center)
+    const p3cx = cx + radius * 0.4;
+    const p3cy = cy + radius * 0.2;
+    const p3h = radius * 0.8;
+
+    // Draw the two back pins
+    drawSinglePin(p1cx, p1cy, p1h);
+    drawSinglePin(p2cx, p2cy, p2h);
+
+    // Prepare space for front pin to create a clean depth separation
+    if (filled) {
+      clearPinOutline(p3cx, p3cy, p3h);
+    } else {
+      clearPinInterior(p3cx, p3cy, p3h);
     }
+
+    // Draw the front pin
+    drawSinglePin(p3cx, p3cy, p3h);
 
     // 2. Bowling Ball (on the left)
     const bcx = cx - radius * 0.4;
