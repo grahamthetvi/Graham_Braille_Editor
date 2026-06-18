@@ -26,6 +26,8 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: ./client # Adjust if your vite project is here
+        env:
+          VITE_GITHUB_BUILD_NUMBER: ${{ github.run_number }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

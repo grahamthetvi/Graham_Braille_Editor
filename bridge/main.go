@@ -28,6 +28,9 @@ import (
 
 const listenAddr = "127.0.0.1:8080"
 
+// BuildNumber is the GitHub Actions run number, set at build time.
+var BuildNumber = "dev"
+
 // ---------------------------------------------------------------------------
 // CORS middleware
 // ---------------------------------------------------------------------------
@@ -101,9 +104,15 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	resp := map[string]string{
+		"status":  "ok",
+		"app":     "graham-bridge",
+		"version": "3.4.0",
+		"build":   BuildNumber,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok","app":"graham-bridge","version":"3.4.0"}`))
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 // printRequest is the JSON body for the /print endpoint.

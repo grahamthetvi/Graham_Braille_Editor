@@ -31,7 +31,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         cd bridge
-        go build -o graham-bridge-linux-amd64 .
+        go build -ldflags="-X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-amd64 .
         zip -r graham-bridge-linux.zip graham-bridge-linux-amd64 graham-bridge.desktop
         chmod +x build-rpm.sh
         ./build-rpm.sh
@@ -50,7 +50,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         cd bridge
-        go build -ldflags="-H windowsgui" -o graham-bridge-windows.exe .
+        go build -ldflags="-H windowsgui -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-windows.exe .
         Compress-Archive -Path graham-bridge-windows.exe -DestinationPath graham-bridge-windows.zip
       env:
         CGO_ENABLED: 1
@@ -65,6 +65,7 @@ jobs:
         zip -r graham-bridge-macos.zip "Graham Bridge.app"
       env:
         CGO_ENABLED: 1
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
 
     - name: Upload Artifact (Linux)
       if: runner.os == 'Linux'

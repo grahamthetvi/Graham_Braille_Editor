@@ -530,7 +530,7 @@ export default function App() {
 
   function handleViewPlusPadChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = parseInt(e.target.value, 10);
-    if (!isNaN(v) && v >= 0 && v <= 80) {
+    if (!isNaN(v) && v >= -80 && v <= 80) {
       setPageSettings(s => ({ ...s, viewPlusLeftPadCells: v }));
     }
   }
@@ -805,6 +805,10 @@ export default function App() {
                 >
                   ☕ Tip Me
                 </a>
+
+                <span className="toolbar-version" style={{ marginLeft: 'auto', alignSelf: 'center', paddingRight: '1rem', fontSize: '0.8rem', opacity: 0.6 }}>
+                  Build: {import.meta.env.VITE_GITHUB_BUILD_NUMBER || 'dev'}
+                </span>
               </div>
             )}
           </div>
@@ -819,6 +823,7 @@ export default function App() {
               useWebUSB={useWebUSB}
               compact
               viewPlusLeftPadCells={pageSettings.viewPlusLeftPadCells}
+              onViewPlusLeftPadCellsChange={cells => setPageSettings(s => ({ ...s, viewPlusLeftPadCells: cells }))}
               viewPlusPaddingApplies={pageSettings.paperFormat === 'us-letter'}
               onExport={() => markExported(sessionId)}
             />
@@ -1037,7 +1042,7 @@ export default function App() {
                       <span>Left padding (cells)</span>
                       <input
                         type="number"
-                        min={0}
+                        min={-80}
                         max={80}
                         value={pageSettings.viewPlusLeftPadCells}
                         onChange={handleViewPlusPadChange}

@@ -14,6 +14,7 @@ interface PrintPanelProps {
   compact?: boolean;
   /** From Layout: stored ViewPlus left padding (cells). */
   viewPlusLeftPadCells?: number;
+  onViewPlusLeftPadCellsChange?: (cells: number) => void;
   /** From Layout: true only when paper format is US Letter 8.5×11. */
   viewPlusPaddingApplies?: boolean;
   /** Callback fired when a document is successfully sent to the printer. */
@@ -31,6 +32,7 @@ export function PrintPanel({
   useWebUSB,
   compact,
   viewPlusLeftPadCells = 0,
+  onViewPlusLeftPadCellsChange,
   viewPlusPaddingApplies = false,
   onExport,
 }: PrintPanelProps) {
@@ -82,21 +84,37 @@ export function PrintPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bridgeConnected, useWebUSB]);
 
+  function handleDriverSelect(driverId: string) {
+    setSelectedDriverId(driverId);
+    const embosser = EmbosserFactory.getEmbosser(driverId);
+    if (embosser && typeof (embosser as any).getDefaultLeftPadCells === 'function') {
+      const defaultPad = (embosser as any).getDefaultLeftPadCells();
+      onViewPlusLeftPadCellsChange?.(defaultPad);
+    }
+  }
+
   function handlePrinterSelect(name: string) {
     setPrinterName(name);
     const lower = name.toLowerCase();
-    if (lower.includes('viewplus') || lower.includes('columbia') || lower.includes('emprint') || lower.includes('max') || lower.includes('premier') || lower.includes('rogue') || lower.includes('embraille')) {
-      setSelectedDriverId('viewplus');
+    let driverId = selectedDriverId;
+    if (lower.includes('embraille')) {
+      driverId = 'viewplus-embraille';
+    } else if (lower.includes('viewplus') || lower.includes('columbia') || lower.includes('emprint') || lower.includes('max') || lower.includes('premier') || lower.includes('rogue')) {
+      driverId = 'viewplus';
     } else if (lower.includes('romeo') || lower.includes('juliet') || lower.includes('enabling') || lower.includes('marathon') || lower.includes('thomas')) {
-      setSelectedDriverId('enabling-romeo');
+      driverId = 'enabling-romeo';
     } else if (lower.includes('index') || lower.includes('everest') || lower.includes('basic-') || lower.includes('braille box')) {
-      setSelectedDriverId('index-basic');
+      driverId = 'index-basic';
     } else if (lower.includes('braillo')) {
-      setSelectedDriverId('braillo-200');
+      driverId = 'braillo-200';
     } else if (lower.includes('pageblaster')) {
-      setSelectedDriverId('aph-pageblaster');
+      driverId = 'aph-pageblaster';
     } else if (lower.includes('pixblaster')) {
-      setSelectedDriverId('aph-pixblaster');
+      driverId = 'aph-pixblaster';
+    }
+
+    if (driverId !== selectedDriverId) {
+      handleDriverSelect(driverId);
     }
   }
 
@@ -125,14 +143,20 @@ export function PrintPanel({
         activeBrf = selectedPageNums.map(n => allPages[n - 1]).join('\f');
       }
 
-      if (viewPlusPaddingApplies && viewPlusLeftPadCells > 0) {
-        const pad = ' '.repeat(viewPlusLeftPadCells);
-        activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
+      if (viewPlusPaddingApplies && viewPlusLeftPadCells !== 0) {
+        if (viewPlusLeftPadCells > 0) {
+          const pad = ' '.repeat(viewPlusLeftPadCells);
+          activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
+        } else {
+          const trimCount = Math.abs(viewPlusLeftPadCells);
+          activeBrf = activeBrf.split(/\r?\n/).map(line => line.slice(trimCount)).join('\n');
+        }
       }
 
       const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
       const bytes = embosser.generateBytes(activeBrf, {
         copies: 1,
+        viewPlusLeftPadCells: viewPlusPaddingApplies ? viewPlusLeftPadCells : undefined,
       });
 
       if (useWebUSB) {
@@ -149,7 +173,7 @@ export function PrintPanel({
   }
 
   const renderViewPlusNotice = () => {
-    if (selectedDriverId !== 'viewplus') return null;
+    if (selectedDriverId !== 'viewplus' && selectedDriverId !== 'viewplus-embraille') return null;
 
     const style = { fontSize: '0.8rem', marginTop: '0.4rem', lineHeight: 1.35 };
 
@@ -201,7 +225,7 @@ export function PrintPanel({
           className="printer-input"
           aria-label="Embosser driver model"
           value={selectedDriverId}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => handleDriverSelect(e.target.value)}
           style={{ width: '130px', marginLeft: '0.4rem' }}
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -295,7 +319,7 @@ export function PrintPanel({
         <select
           id="embosser-driver"
           value={selectedDriverId}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedDriverId(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => handleDriverSelect(e.target.value)}
           style={{ padding: '0.4rem' }}
         >
           {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}

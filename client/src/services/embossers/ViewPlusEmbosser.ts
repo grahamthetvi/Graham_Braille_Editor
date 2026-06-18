@@ -16,10 +16,15 @@ export const VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS = 16;
 export type ViewPlusModelPreset = keyof typeof VIEW_PLUS_LEFT_PAD_PRESETS;
 
 function padBrfLinesLeft(brf: string, cells: number): string {
-    if (cells <= 0) return brf;
-    const pad = ' '.repeat(cells);
+    if (cells === 0) return brf;
     const lines = brf.split(/\r?\n/);
-    return lines.map(line => pad + line).join('\n');
+    if (cells > 0) {
+        const pad = ' '.repeat(cells);
+        return lines.map(line => pad + line).join('\n');
+    } else {
+        const trimCount = Math.abs(cells);
+        return lines.map(line => line.slice(trimCount)).join('\n');
+    }
 }
 
 /**
@@ -28,7 +33,13 @@ function padBrfLinesLeft(brf: string, cells: number): string {
  * single-sheet registration (e.g. Max).
  */
 export class ViewPlusEmbosser implements Embosser {
-    private readonly generic = new GenericTextEmbosser('viewplus', 'ViewPlus');
+    private readonly generic: GenericTextEmbosser;
+    private readonly defaultPad: number;
+
+    constructor(id: string = 'viewplus', model: string = 'ViewPlus', defaultPad: number = 16) {
+        this.generic = new GenericTextEmbosser(id, model);
+        this.defaultPad = defaultPad;
+    }
 
     getId(): string {
         return this.generic.getId();
@@ -38,6 +49,10 @@ export class ViewPlusEmbosser implements Embosser {
     }
     getModel(): string {
         return this.generic.getModel();
+    }
+
+    getDefaultLeftPadCells(): number {
+        return this.defaultPad;
     }
 
     getMaximumPaper(): Rectangle {
@@ -51,8 +66,8 @@ export class ViewPlusEmbosser implements Embosser {
     }
 
     generateBytes(brf: string, attributes: EmbossingAttributeSet): Uint8Array {
-        const raw = attributes.viewPlusLeftPadCells ?? 0;
-        const cells = Math.max(0, Math.min(80, Math.floor(raw)));
+        const raw = attributes.viewPlusLeftPadCells ?? this.defaultPad;
+        const cells = Math.max(-80, Math.min(80, Math.floor(raw)));
         const padded = padBrfLinesLeft(brf, cells);
         return this.generic.generateBytes(padded, attributes);
     }

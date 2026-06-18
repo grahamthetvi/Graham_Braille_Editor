@@ -43,9 +43,14 @@ export const EMBOSSER_LIST: EmbosserDefinition[] = [
         creator: () => new EnablingTechnologiesEmbosser('aph-pixblaster', 'PixBlaster', { width: 300, height: 300 }, { width: 10, height: 10 }, true)
     },
     {
+        id: 'viewplus-embraille',
+        name: 'ViewPlus EmBraille',
+        creator: () => new ViewPlusEmbosser('viewplus-embraille', 'EmBraille', 0)
+    },
+    {
         id: 'viewplus',
-        name: 'ViewPlus (Rogue / Max / Premier / EmBraille)',
-        creator: () => new ViewPlusEmbosser()
+        name: 'ViewPlus (Rogue / Max / Premier)',
+        creator: () => new ViewPlusEmbosser('viewplus', 'ViewPlus', 16)
     }
 ];
 

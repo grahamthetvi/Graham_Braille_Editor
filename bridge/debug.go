@@ -123,7 +123,8 @@ func hexDump(data []byte) string {
 // handleDebugPage serves the standalone HTML debug UI.
 func handleDebugPage(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, debugHTML)
+	html := strings.ReplaceAll(debugHTML, "{{BUILD_NUMBER}}", BuildNumber)
+	fmt.Fprint(w, html)
 }
 
 // handleLogStream streams job events as Server-Sent Events.
@@ -333,7 +334,7 @@ tr:last-child td{border-bottom:none}
 </head>
 <body>
 <header>
-  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard</h1>
+  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard <small style="font-size:0.75rem;opacity:0.6;font-weight:normal;margin-left:0.5rem">Build: {{BUILD_NUMBER}}</small></h1>
   <span class="header-spacer" aria-hidden="true"></span>
   <button type="button" class="theme-btn" id="theme-btn">Dark</button>
   <span class="badge connecting" id="badge">CONNECTING</span>
