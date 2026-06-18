@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR } from './brailleFormat';
+import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput } from './brailleFormat';
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
@@ -38,5 +38,19 @@ describe('buildPlainTextToMatchBrailleWrap', () => {
     expect(para.length).toBe(2);
     expect(para[0].includes(SOFT_LINE_BREAK_CHAR)).toBe(true);
     expect(para[1].includes(SOFT_LINE_BREAK_CHAR)).toBe(true);
+  });
+});
+
+describe('formatBrfForOutput', () => {
+  it('replaces all pipe characters with backslashes', () => {
+    const rawBrf = 'j|rney |r way';
+    const result = formatBrfForOutput(rawBrf, 40, 25, false);
+    expect(result).toBe('j\\rney \\r way\r\n');
+  });
+
+  it('replaces pipe characters with backslashes when paginated with form feeds', () => {
+    const rawBrf = 'j|rney\f|r way';
+    const result = formatBrfForOutput(rawBrf, 40, 25, false);
+    expect(result).toBe('j\\rney\r\n\f\\r way\r\n');
   });
 });

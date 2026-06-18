@@ -26,9 +26,7 @@ export class GenericTextEmbosser implements Embosser {
      * Often, if a document "only prints one line", it's missing CR/LF line terminators.
      */
     generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
-        // Math (SRE) and passage markers may be Unicode braille; embossers expect
-        // North American ASCII BRF (one byte per cell). UTF-8 multi-byte cells often emboss blank.
-        const asciiBrf = unicodeBrailleToAscii(brf);
+        const asciiBrf = unicodeBrailleToAscii(brf).replace(/\|/g, '\\');
 
         // formatBrfForOutput() already inserts \f between pages (\r\n\f\r\n). If we also inject \f
         // every 25 lines AND treat split-only "\f" as a line of content, the embosser advances

@@ -78,9 +78,6 @@ func unsubscribe(ch chan JobEvent) {
 // ---------------------------------------------------------------------------
 
 func hexDump(data []byte) string {
-	if len(data) > 256 {
-		data = data[:256]
-	}
 	var sb strings.Builder
 	for i := 0; i < len(data); i += 16 {
 		end := i + 16
@@ -386,7 +383,7 @@ tr:last-child td{border-bottom:none}
 
 <!-- ── Hex Dump ── -->
 <section>
-  <div class="sh"><span>Hex Dump — first 256 bytes of last job</span></div>
+  <div class="sh"><span>Hex Dump — last job</span></div>
   <div class="sb">
     <div class="empty" id="hex-empty">No data yet.</div>
     <pre class="hex-box" id="hex-box" style="display:none"></pre>

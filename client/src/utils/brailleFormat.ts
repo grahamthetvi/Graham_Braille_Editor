@@ -811,7 +811,7 @@ export function formatBrfForOutput(
       paragraphStarts,
       1,
     );
-    return one.join('\r\n\f') + '\r\n';
+    return (one.join('\r\n\f') + '\r\n').replace(/\|/g, '\\');
   }
 
   const segments = rawBrf.split('\f');
@@ -830,5 +830,5 @@ export function formatBrfForOutput(
     allChunks.push(...pageChunks);
   }
 
-  return allChunks.join('\r\n\f') + '\r\n';
+  return (allChunks.join('\r\n\f') + '\r\n').replace(/\|/g, '\\');
 }
