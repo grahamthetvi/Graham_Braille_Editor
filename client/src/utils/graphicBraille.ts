@@ -709,97 +709,67 @@ export class GraphicCanvas extends GridCanvas {
   drawBeach(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
-    const startX = Math.round(cx - radius);
-    const endX = Math.round(cx + radius);
+    const rx = radius * 0.7;
+    const ry = radius * 0.3;
+    const baseY = cy + radius * 0.4;
 
-    // Shoreline function
-    const getShoreY = (x: number): number => {
-      return cy + radius * 0.1 + (x - cx) * 0.4 + Math.sin((x - cx) / (radius * 0.3 || 1)) * radius * 0.08;
-    };
+    // 1. Draw the top curve of the half oval
+    let prevX = cx - rx;
+    let prevY = baseY;
+    for (let x = cx - rx + 1; x <= cx + rx; x++) {
+      const ratio = (x - cx) / rx;
+      const y = baseY - ry * Math.sqrt(Math.max(0, 1 - ratio * ratio));
+      this.drawLine(prevX, prevY, x, y);
+      prevX = x;
+      prevY = y;
+    }
+    // Draw flat bottom line of the half oval
+    this.drawLine(cx - rx, baseY, cx + rx, baseY);
 
+    // 2. Dots to represent the sand inside the half oval
     if (filled) {
-      // Fill sand (below shoreline)
-      for (let x = startX; x <= endX; x++) {
-        const yShore = Math.round(getShoreY(x));
-        const yBottom = Math.round(cy + radius);
-        if (yShore <= yBottom) {
-          this.drawLine(x, yShore, x, yBottom);
-        }
+      // Solid filled sand
+      for (let x = Math.round(cx - rx); x <= Math.round(cx + rx); x++) {
+        const ratio = (x - cx) / rx;
+        const yTop = Math.round(baseY - ry * Math.sqrt(Math.max(0, 1 - ratio * ratio)));
+        this.drawLine(x, yTop, x, Math.round(baseY));
       }
-
-      // Fill sun
-      const sunCx = cx + radius * 0.5;
-      const sunCy = cy - radius * 0.5;
-      const sunR = radius * 0.24;
-      this.fillDisc(Math.round(sunCx), Math.round(sunCy), Math.round(sunR));
     } else {
-      // Outline mode: draw shoreline line
-      let prevSX = startX;
-      let prevSY = Math.round(getShoreY(prevSX));
-      for (let x = startX + 1; x <= endX; x++) {
-        const yShore = Math.round(getShoreY(x));
-        this.drawLine(prevSX, prevSY, x, yShore);
-        prevSX = x;
-        prevSY = yShore;
-      }
-
-      // Draw sun circle
-      const sunCx = cx + radius * 0.5;
-      const sunCy = cy - radius * 0.5;
-      const sunR = radius * 0.24;
-      this.drawCircle(Math.round(sunCx), Math.round(sunCy), Math.round(sunR), false);
-
-      // Draw sun rays
-      const rayAngles = [135, 180, 225, 270];
-      const rayStart = sunR + 1;
-      const rayEnd = sunR + radius * 0.15;
-      for (const angleDeg of rayAngles) {
-        const rad = (angleDeg * Math.PI) / 180;
-        this.drawLine(
-          sunCx + rayStart * Math.cos(rad),
-          sunCy + rayStart * Math.sin(rad),
-          sunCx + rayEnd * Math.cos(rad),
-          sunCy + rayEnd * Math.sin(rad)
-        );
+      // A few dots to represent the sand in outline mode
+      const sandOffsets = [
+        { dx: -0.4, dy: -0.1 },
+        { dx: -0.2, dy: -0.2 },
+        { dx: 0, dy: -0.1 },
+        { dx: 0.2, dy: -0.15 },
+        { dx: 0.4, dy: -0.08 },
+        { dx: -0.5, dy: -0.05 },
+        { dx: 0.5, dy: -0.05 },
+        { dx: -0.1, dy: -0.08 },
+        { dx: 0.1, dy: -0.22 }
+      ];
+      for (const off of sandOffsets) {
+        this.setPoint(Math.round(cx + radius * off.dx), Math.round(baseY + radius * off.dy));
       }
     }
 
-    // Always draw waves in the water area
-    const drawWave = (wx: number, wy: number, wlen: number) => {
-      let prevX = wx;
-      let prevY = wy;
-      const wsteps = 6;
-      for (let i = 1; i <= wsteps; i++) {
-        const t = i / wsteps;
-        const x = wx + wlen * t;
-        const y = wy + Math.sin(t * Math.PI * 2) * (radius * 0.05);
-        this.drawLine(prevX, prevY, x, y);
-        prevX = x;
-        prevY = y;
-      }
-    };
-
-    drawWave(cx + radius * 0.1, cy + radius * 0.1, radius * 0.4);
-    drawWave(cx + radius * 0.4, cy - radius * 0.1, radius * 0.35);
-
-    // Always draw Palm tree
-    // Curved trunk
-    const steps = 10;
-    let prevX = cx - radius * 0.6;
-    let prevY = cy + radius * 0.7;
-    const trunkEndX = cx - radius * 0.3;
-    const trunkEndY = cy - radius * 0.15;
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      // Curved path
-      const tx = (1 - t) ** 2 * (cx - radius * 0.6) + 2 * (1 - t) * t * (cx - radius * 0.65) + t ** 2 * trunkEndX;
-      const ty = (1 - t) ** 2 * (cy + radius * 0.7) + 2 * (1 - t) * t * (cy + radius * 0.3) + t ** 2 * trunkEndY;
-      this.drawLine(prevX, prevY, tx, ty);
-      prevX = tx;
-      prevY = ty;
+    // 3. Palm tree growing on the sand
+    const trunkX0 = cx - radius * 0.1;
+    const trunkY0 = baseY - radius * 0.05;
+    const trunkXt = cx - radius * 0.25;
+    const trunkYt = cy - radius * 0.45;
+    let prevTX = trunkX0;
+    let prevTY = trunkY0;
+    const tsteps = 8;
+    for (let i = 1; i <= tsteps; i++) {
+      const t = i / tsteps;
+      const tx = (1 - t) * trunkX0 + t * trunkXt - radius * 0.08 * Math.sin(t * Math.PI);
+      const ty = (1 - t) * trunkY0 + t * trunkYt;
+      this.drawLine(prevTX, prevTY, tx, ty);
+      prevTX = tx;
+      prevTY = ty;
     }
 
-    // Palm leaves (fronds)
+    // Palm leaves (fronds) at trunk top
     const drawFrond = (fx: number, fy: number, tx: number, ty: number, controlYOffset: number) => {
       let px = fx;
       let py = fy;
@@ -814,11 +784,32 @@ export class GraphicCanvas extends GridCanvas {
       }
     };
 
-    drawFrond(trunkEndX, trunkEndY, trunkEndX - radius * 0.45, trunkEndY + radius * 0.1, radius * 0.1);
-    drawFrond(trunkEndX, trunkEndY, trunkEndX - radius * 0.3, trunkEndY - radius * 0.15, radius * 0.15);
-    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.25, trunkEndY - radius * 0.2, radius * 0.18);
-    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.4, trunkEndY - radius * 0.02, radius * 0.12);
-    drawFrond(trunkEndX, trunkEndY, trunkEndX + radius * 0.28, trunkEndY + radius * 0.18, radius * 0.05);
+    drawFrond(trunkXt, trunkYt, trunkXt - radius * 0.4, trunkYt + radius * 0.1, radius * 0.1);
+    drawFrond(trunkXt, trunkYt, trunkXt - radius * 0.3, trunkYt - radius * 0.15, radius * 0.15);
+    drawFrond(trunkXt, trunkYt, trunkXt + radius * 0.25, trunkYt - radius * 0.2, radius * 0.18);
+    drawFrond(trunkXt, trunkYt, trunkXt + radius * 0.4, trunkYt - radius * 0.02, radius * 0.12);
+    drawFrond(trunkXt, trunkYt, trunkXt + radius * 0.28, trunkYt + radius * 0.18, radius * 0.05);
+
+    // 4. Wave underneath the sand
+    const waveYBase = cy + radius * 0.65;
+    let prevWX = cx - radius * 0.8;
+    let prevWY = waveYBase + Math.sin((-radius * 0.8) / (radius * 0.35 || 1)) * radius * 0.08;
+    for (let x = cx - radius * 0.8 + 1; x <= cx + radius * 0.8; x++) {
+      const wy = waveYBase + Math.sin((x - cx) / (radius * 0.35 || 1)) * radius * 0.08;
+      this.drawLine(prevWX, prevWY, x, wy);
+      prevWX = x;
+      prevWY = wy;
+    }
+
+    const waveYBase2 = cy + radius * 0.8;
+    let prevWX2 = cx - radius * 0.6;
+    let prevWY2 = waveYBase2 + Math.sin((-radius * 0.6) / (radius * 0.35 || 1)) * radius * 0.08;
+    for (let x = cx - radius * 0.6 + 1; x <= cx + radius * 0.6; x++) {
+      const wy = waveYBase2 + Math.sin((x - cx) / (radius * 0.35 || 1)) * radius * 0.08;
+      this.drawLine(prevWX2, prevWY2, x, wy);
+      prevWX2 = x;
+      prevWY2 = wy;
+    }
   }
 
   drawMovieProjector(cx: number, cy: number, radius: number, filled = false) {
