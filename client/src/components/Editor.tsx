@@ -155,6 +155,22 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       lineNumbers: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
+      renderControlCharacters: true,
+    });
+
+    editorRef.current.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const position = editor.getPosition();
+      if (!position) return;
+      editor.executeEdits('keyboard-shortcut', [
+        {
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+          text: '\f',
+          forceMoveMarkers: true,
+        }
+      ]);
+      editor.pushUndoStop();
     });
 
     editorRef.current.onDidScrollChange((e) => {

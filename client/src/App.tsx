@@ -536,6 +536,30 @@ Accuracy: _____________ %
   const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
   const [syncHighlight, setSyncHighlight] = useState(true);
+  const [currentPreviewPage, setCurrentPreviewPage] = useState(1);
+
+  const scrollToPage = useCallback((pageIndex: number) => {
+    const container = brfContainerRef.current;
+    if (!container) return;
+    const pageElements = container.getElementsByClassName('brf-page');
+    const targetPage = pageElements[pageIndex] as HTMLElement | undefined;
+    if (targetPage) {
+      container.scrollTo({
+        top: targetPage.offsetTop,
+        behavior: 'smooth'
+      });
+    }
+  }, []);
+
+  const handleInsertPageBreak = useCallback(() => {
+    editorRef.current?.insertTextAtCursor('\f');
+  }, []);
+
+  useEffect(() => {
+    if (brfPages.length > 0 && currentPreviewPage > brfPages.length) {
+      setCurrentPreviewPage(brfPages.length);
+    }
+  }, [brfPages.length, currentPreviewPage]);
 
   const activeBrfWordRange = useMemo((): [number, number] | null => {
     if (!syncHighlight || !activeWordRange) return null;
@@ -566,6 +590,19 @@ Accuracy: _____________ %
       const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
       setEditorScrollPercentage(percentage);
     }
+
+    // Determine active page
+    const pageElements = container.getElementsByClassName('brf-page');
+    let activeIndex = 0;
+    for (let i = 0; i < pageElements.length; i++) {
+      const pageEl = pageElements[i] as HTMLElement;
+      if (pageEl.offsetTop - container.scrollTop <= container.clientHeight / 2) {
+        activeIndex = i;
+      } else {
+        break;
+      }
+    }
+    setCurrentPreviewPage(activeIndex + 1);
   }, []);
 
   // ── Page settings input handlers ─────────────────────────────────────────
@@ -935,8 +972,18 @@ Accuracy: _____________ %
       <main id="main-content" className="app-main">
         {/* Left pane: text editor */}
         <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="pane-title">
-            Text Input
+          <div className="pane-title-row">
+            <div className="pane-title" style={{ margin: 0 }}>
+              Text Input
+            </div>
+            <button
+              className="layout-settings-btn"
+              onClick={handleInsertPageBreak}
+              title="Insert page break / Form Feed (Cmd+Enter / Ctrl+Enter)"
+              aria-label="Insert page break"
+            >
+              📄 Page Break
+            </button>
           </div>
           
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
@@ -971,6 +1018,31 @@ Accuracy: _____________ %
                     <span className="preview-loading"> — translating…</span>
                   )}
                 </div>
+                {brfPages.length > 1 && (
+                  <div className="preview-page-navigation" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      className="layout-settings-btn"
+                      onClick={() => scrollToPage(currentPreviewPage - 2)}
+                      disabled={currentPreviewPage <= 1}
+                      title="Jump to previous page"
+                      aria-label="Previous page"
+                    >
+                      ◀
+                    </button>
+                    <span className="toolbar-label" style={{ fontSize: '0.75rem', minWidth: '70px', textAlign: 'center', userSelect: 'none' }}>
+                      Page {currentPreviewPage} of {brfPages.length}
+                    </span>
+                    <button
+                      className="layout-settings-btn"
+                      onClick={() => scrollToPage(currentPreviewPage)}
+                      disabled={currentPreviewPage >= brfPages.length}
+                      title="Jump to next page"
+                      aria-label="Next page"
+                    >
+                      ▶
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Page layout settings panel */}
