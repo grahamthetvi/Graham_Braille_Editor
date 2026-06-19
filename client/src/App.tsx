@@ -188,6 +188,22 @@ export default function App() {
     localStorage.setItem('graham-braille-theme', theme);
   }, [theme]);
 
+  const [gradingSheetOnAllPages, setGradingSheetOnAllPages] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('graham-braille-grading-all-pages') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('graham-braille-grading-all-pages', gradingSheetOnAllPages ? 'true' : 'false');
+    } catch {
+      /* ignore */
+    }
+  }, [gradingSheetOnAllPages]);
+
   function cycleTheme() {
     setTheme(prev =>
       prev === 'dark' ? 'light' : prev === 'light' ? 'high-contrast' : 'dark'
@@ -458,14 +474,22 @@ GRADING SHEET
 Word Count: ${wordCount}
 Character Count: ${charCount}
 
-Time: _________________
-WPM:  _________________
-LPM:  _________________
+Date: _________________
+WPM:  _________________ (number of words/total seconds*60)
+LPM:  _________________ (number of letters/total seconds*60)
 Accuracy: _____________ %
 ================================================================
 
 `;
-    const fullContent = gradingHeader + body;
+    
+    let fullContent = '';
+    if (gradingSheetOnAllPages) {
+      const pages = body.split('\f');
+      fullContent = pages.map(page => gradingHeader + page).join('\f');
+    } else {
+      fullContent = gradingHeader + body;
+    }
+
     const rtfContent = convertToRtf(fullContent);
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
@@ -862,15 +886,36 @@ Accuracy: _____________ %
                   Graphics
                 </button>
 
-                <button
-                  className="toolbar-btn"
-                  onClick={handleDownloadGradingPrintLayoutText}
-                  disabled={!inputText.trim() || isPerkinsMode}
-                  title="Download print layout (.txt) matching the braille wrapping with grading metrics prepended at the top."
-                  aria-label="Download grading print layout text file"
-                >
-                  Download Grading Print Layout
-                </button>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    className="toolbar-btn"
+                    onClick={handleDownloadGradingPrintLayoutText}
+                    disabled={!inputText.trim() || isPerkinsMode}
+                    title="Download print layout (.rtf) matching the braille wrapping with grading metrics prepended."
+                    aria-label="Download grading print layout text file"
+                  >
+                    Download Grading Print Layout
+                  </button>
+                  <label 
+                    className="settings-field" 
+                    style={{ 
+                      gap: '0.3rem', 
+                      padding: '0.2rem 0.4rem', 
+                      fontSize: '0.78rem', 
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={gradingSheetOnAllPages}
+                      onChange={(e) => setGradingSheetOnAllPages(e.target.checked)}
+                      style={{ cursor: 'pointer', margin: 0 }}
+                    />
+                    <span>On all pages</span>
+                  </label>
+                </div>
 
                 <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
                   UEB Math is standard and $$math$$ is Nemeth.
