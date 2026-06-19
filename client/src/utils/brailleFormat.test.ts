@@ -39,6 +39,13 @@ describe('buildPlainTextToMatchBrailleWrap', () => {
     expect(para[0].includes(SOFT_LINE_BREAK_CHAR)).toBe(true);
     expect(para[1].includes(SOFT_LINE_BREAK_CHAR)).toBe(true);
   });
+
+  it('preserves form feeds between segments', () => {
+    const source = 'page one\fpage two';
+    const asciiBrf = 'AAAA\fBBBB';
+    const result = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40);
+    expect(result).toBe('page one\fpage two');
+  });
 });
 
 describe('formatBrfForOutput', () => {
@@ -75,6 +82,12 @@ describe('convertToRtf', () => {
     const rtf = convertToRtf(text);
     expect(rtf).toContain('hello \\{world\\} \\\\ backslash\\par\r\ntwo');
     expect(rtf).toContain('\\f0\\fmodern\\fprq1\\fcharset0 Courier New;');
+  });
+
+  it('converts form feeds to RTF page break commands', () => {
+    const text = 'first page\fsecond page';
+    const rtf = convertToRtf(text);
+    expect(rtf).toContain('first page\\page\\par\r\nsecond page');
   });
 });
 

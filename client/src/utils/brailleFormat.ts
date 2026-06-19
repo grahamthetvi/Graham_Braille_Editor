@@ -454,17 +454,30 @@ export function buildPlainTextToMatchBrailleWrap(
   cellsPerRow: number,
   paragraphStarts?: ParagraphLineStarts,
 ): string {
-  const srcLines = sourceText.split('\n');
-  const brfLines = asciiBrf.split('\n');
-  const max = Math.max(srcLines.length, brfLines.length);
-  const out: string[] = [];
-  for (let i = 0; i < max; i++) {
-    const s = srcLines[i] ?? '';
-    const b = brfLines[i] ?? '';
-    const unicode = asciiToUnicodeBraille(b);
-    out.push(syncPlainLineToBrailleWrap(s, unicode, cellsPerRow, paragraphStarts));
+  const srcSegs = sourceText.split('\f');
+  const brfSegs = asciiBrf.split('\f');
+  const maxSegs = Math.max(srcSegs.length, brfSegs.length);
+  const outSegs: string[] = [];
+
+  for (let sIdx = 0; sIdx < maxSegs; sIdx++) {
+    const srcSeg = srcSegs[sIdx] ?? '';
+    const brfSeg = brfSegs[sIdx] ?? '';
+
+    const srcLines = srcSeg.split('\n');
+    const brfLines = brfSeg.split('\n');
+    const maxLines = Math.max(srcLines.length, brfLines.length);
+    const outLines: string[] = [];
+
+    for (let i = 0; i < maxLines; i++) {
+      const s = srcLines[i] ?? '';
+      const b = brfLines[i] ?? '';
+      const unicode = asciiToUnicodeBraille(b);
+      outLines.push(syncPlainLineToBrailleWrap(s, unicode, cellsPerRow, paragraphStarts));
+    }
+    outSegs.push(outLines.join('\n'));
   }
-  return out.join('\n');
+
+  return outSegs.join('\f');
 }
 
 function clampParagraphCell(n: number, cellsPerRow: number): number {
@@ -754,7 +767,8 @@ export function convertToRtf(text: string): string {
     .replace(/{/g, '\\{')
     .replace(/}/g, '\\}');
   
-  const lines = escaped.replace(/\r\n/g, '\n').split(/[\n\r]/);
+  const formFeedsReplaced = escaped.replace(/\f/g, '\\page\r\n');
+  const lines = formFeedsReplaced.replace(/\r\n/g, '\n').split(/[\n\r]/);
   const rtfContent = lines.join('\\par\r\n');
 
   return `{\\rtf1\\ansi\\deff0\r\n{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Courier New;}}\r\n\\viewkind4\\uc1\\pard\\f0\\fs24\r\n${rtfContent}\\par\r\n}`;
