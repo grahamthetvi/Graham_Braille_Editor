@@ -134,7 +134,8 @@ body {
   white-space: nowrap;
 }
 
-.table-select {
+.table-select,
+.language-select {
   flex: 1;
   min-width: 260px;
   max-width: 420px;
@@ -147,19 +148,22 @@ body {
   cursor: pointer;
 }
 
-.table-select:focus-visible {
+.table-select:focus-visible,
+.language-select:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring);
   outline-offset: 1px;
 }
 
-.table-select optgroup {
+.table-select optgroup,
+.language-select optgroup {
   background: var(--bg-overlay);
   color: var(--text-secondary);
   font-style: normal;
   font-weight: 600;
 }
 
-.table-select option {
+.table-select option,
+.language-select option {
   background: var(--bg-overlay);
   color: var(--text-primary);
 }

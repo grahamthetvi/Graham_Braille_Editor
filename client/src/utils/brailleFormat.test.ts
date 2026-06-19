@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput } from './brailleFormat';
+import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf } from './brailleFormat';
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
@@ -54,3 +54,43 @@ describe('formatBrfForOutput', () => {
     expect(result).toBe('j\\rney\r\n\f\\r way\r\n');
   });
 });
+
+describe('defaultPrintLayoutTextFilename', () => {
+  it('generates filename with correct prefix, date pattern, and extension', () => {
+    const name = defaultPrintLayoutTextFilename();
+    expect(name).toMatch(/^print-layout-\d{4}-\d{2}-\d{2}-\d{4}\.rtf$/);
+  });
+});
+
+describe('defaultGradingPrintLayoutFilename', () => {
+  it('generates filename with correct prefix, date pattern, and extension', () => {
+    const name = defaultGradingPrintLayoutFilename();
+    expect(name).toMatch(/^grading-print-layout-\d{4}-\d{2}-\d{2}-\d{4}\.rtf$/);
+  });
+});
+
+describe('convertToRtf', () => {
+  it('correctly escapes special characters and formats newlines', () => {
+    const text = 'hello {world} \\ backslash\ntwo';
+    const rtf = convertToRtf(text);
+    expect(rtf).toContain('hello \\{world\\} \\\\ backslash\\par\r\ntwo');
+    expect(rtf).toContain('\\f0\\fmodern\\fprq1\\fcharset0 Courier New;');
+  });
+});
+
+describe('horizontal word alignment', () => {
+  it('aligns print words to matching braille start positions', () => {
+    const source = 'hello brave world';
+    const asciiBrf = ',hello brave world';
+    const result = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40);
+    expect(result).toBe('hello  brave world');
+  });
+
+  it('respects paragraph margins', () => {
+    const source = 'hello world';
+    const asciiBrf = 'hello world';
+    const result = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40, { firstLineStartCell: 3, runoverStartCell: 5 });
+    expect(result).toBe('  hello world');
+  });
+});
+

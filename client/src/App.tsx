@@ -22,8 +22,10 @@ import {
   normalizeImportedBrf,
   defaultBrfDownloadFilename,
   defaultPrintLayoutTextFilename,
+  defaultGradingPrintLayoutFilename,
   formatPlainTextForPrintDownload,
   buildPlainTextToMatchBrailleWrap,
+  convertToRtf,
 } from './utils/brailleFormat';
 import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
@@ -122,7 +124,7 @@ export default function App() {
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
-  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'tools' | 'help'>('file');
+  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -422,7 +424,8 @@ export default function App() {
     }
     
     const body = formatPlainTextForPrintDownload(alignedText);
-    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const rtfContent = convertToRtf(body);
+    const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -433,6 +436,49 @@ export default function App() {
       console.error('Failed to mark session as exported', err);
     });
   }
+
+  function handleDownloadGradingPrintLayoutText() {
+    if (!inputText.trim()) return;
+    
+    let alignedText = inputText;
+    // Align with Braille wrapping formatting if translation is available
+    if (workerReady && translatedText) {
+      alignedText = buildPlainTextToMatchBrailleWrap(
+        inputText,
+        translatedText,
+        pageSettings.cellsPerRow,
+        paragraphStarts,
+      );
+    }
+    
+    const body = formatPlainTextForPrintDownload(alignedText);
+    const gradingHeader = `================================================================
+GRADING SHEET
+================================================================
+Word Count: ${wordCount}
+Character Count: ${charCount}
+
+Time: _________________
+WPM:  _________________
+LPM:  _________________
+Accuracy: _____________ %
+================================================================
+
+`;
+    const fullContent = gradingHeader + body;
+    const rtfContent = convertToRtf(fullContent);
+    const blob = new Blob([rtfContent], { type: 'application/rtf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = defaultGradingPrintLayoutFilename();
+    a.click();
+    URL.revokeObjectURL(url);
+    markExported(sessionId).catch(err => {
+      console.error('Failed to mark session as exported', err);
+    });
+  }
+
 
   // ── Paginated braille output ─────────────────────────────────────────────
   const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
@@ -585,12 +631,20 @@ export default function App() {
               View & Layout
             </button>
             <button 
+              className={`tab-btn${activeTab === 'languages-codes' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('languages-codes')}
+              role="tab"
+              aria-selected={activeTab === 'languages-codes'}
+            >
+              Languages & Codes
+            </button>
+            <button 
               className={`tab-btn${activeTab === 'tools' ? ' tab-btn--active' : ''}`}
               onClick={() => setActiveTab('tools')}
               role="tab"
               aria-selected={activeTab === 'tools'}
             >
-              Tools
+              Teaching Tools
             </button>
             <button 
               className={`tab-btn${activeTab === 'help' ? ' tab-btn--active' : ''}`}
@@ -690,15 +744,6 @@ export default function App() {
                 </button>
 
                 <button
-                  className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setIsPerkinsMode(s => !s)}
-                  aria-expanded={isPerkinsMode}
-                  title="Toggle Perkins Brailler Translator layout"
-                >
-                  🎹 Perkins Viewer
-                </button>
-
-                <button
                   className={`toolbar-btn${syncHighlight ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setSyncHighlight(s => !s)}
                   disabled={isPerkinsMode}
@@ -719,9 +764,22 @@ export default function App() {
               </div>
             )}
 
-            {activeTab === 'tools' && (
+            {activeTab === 'languages-codes' && (
               <div className="toolbar">
-                <label className="toolbar-label" htmlFor="table-select">
+                <label className="toolbar-label" htmlFor="language-select">
+                  Languages
+                </label>
+                <select
+                  id="language-select"
+                  className="language-select"
+                  defaultValue="en"
+                  title="Select language"
+                  aria-label="Select language"
+                >
+                  <option value="en">English</option>
+                </select>
+
+                <label className="toolbar-label" htmlFor="table-select" style={{ marginLeft: '0.5rem' }}>
                   Table
                 </label>
                 <select
@@ -743,6 +801,19 @@ export default function App() {
                     </optgroup>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {activeTab === 'tools' && (
+              <div className="toolbar">
+                <button
+                  className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setIsPerkinsMode(s => !s)}
+                  aria-expanded={isPerkinsMode}
+                  title="Toggle Perkins Brailler Translator layout"
+                >
+                  🎹 Perkins Viewer
+                </button>
 
                 <button
                   className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
@@ -752,6 +823,16 @@ export default function App() {
                   aria-label="Tactile Graphics Editor"
                 >
                   Graphics
+                </button>
+
+                <button
+                  className="toolbar-btn"
+                  onClick={handleDownloadGradingPrintLayoutText}
+                  disabled={!inputText.trim() || isPerkinsMode}
+                  title="Download print layout (.txt) matching the braille wrapping with grading metrics prepended at the top."
+                  aria-label="Download grading print layout text file"
+                >
+                  Download Grading Print Layout
                 </button>
 
                 <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>

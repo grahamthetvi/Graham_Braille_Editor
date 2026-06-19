@@ -1729,37 +1729,537 @@ export class GraphicCanvas extends GridCanvas {
   drawMustache(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
-    const maxT = 1.15;
-    const minThickness = 0.13;
-
-    const isInsideMustache = (x: number, y: number): boolean => {
-      const dx = (x - cx) / radius;
-      const dy = (y - cy) / radius;
-      const t = Math.abs(dx);
-
-      if (t > maxT) return false;
-
-      // Centerline curves down, then curves up on the sides (negative is up)
-      const yCenter = 0.7 * t - 1.0 * t * t;
-      
-      // Thickness is non-zero in the middle (connected), bulges slightly, and tapers to a point
-      let thickness = (0.25 + 0.15 * Math.sin((t * Math.PI) / maxT)) * (maxT - t);
-      if (thickness < minThickness) {
-        thickness = minThickness;
-      }
-
-      const yTop = yCenter - thickness / 2;
-      const yBottom = yCenter + thickness / 2;
-
-      return dy >= yTop && dy <= yBottom;
+    const bezier = (
+      p0: { x: number; y: number },
+      p1: { x: number; y: number },
+      p2: { x: number; y: number },
+      p3: { x: number; y: number },
+      t: number
+    ) => {
+      const mt = 1 - t;
+      const x = mt*mt*mt*p0.x + 3*mt*mt*t*p1.x + 3*mt*t*t*p2.x + t*t*t*p3.x;
+      const y = mt*mt*mt*p0.y + 3*mt*mt*t*p1.y + 3*mt*t*t*p2.y + t*t*t*p3.y;
+      return { x, y };
     };
 
-    const minX = cx - radius * 1.25;
-    const maxX = cx + radius * 1.25;
-    const minY = cy - radius * 0.8;
-    const maxY = cy + radius * 0.6;
+    const steps = Math.max(15, Math.min(60, Math.ceil(radius * 1.5)));
+    const topLobe: { x: number; y: number }[] = [];
+    const p0_1 = { x: 0, y: 0.06 };
+    const cp1_1 = { x: 0.15, y: -0.22 };
+    const cp2_1 = { x: 0.45, y: -0.22 };
+    const p3_1 = { x: 0.65, y: -0.05 };
+    for (let i = 0; i <= steps; i++) {
+      topLobe.push(bezier(p0_1, cp1_1, cp2_1, p3_1, i / steps));
+    }
 
-    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideMustache, filled);
+    const innerHook: { x: number; y: number }[] = [];
+    const p0_2 = p3_1;
+    const cp1_2 = { x: 0.72, y: -0.1 };
+    const cp2_2 = { x: 0.78, y: -0.2 };
+    const p3_2 = { x: 0.85, y: -0.18 };
+    for (let i = 1; i <= steps; i++) {
+      innerHook.push(bezier(p0_2, cp1_2, cp2_2, p3_2, i / steps));
+    }
+
+    const tipWrap: { x: number; y: number }[] = [];
+    const p0_3 = p3_2;
+    const cp1_3 = { x: 0.88, y: -0.16 };
+    const cp2_3 = { x: 0.86, y: -0.08 };
+    const p3_3 = { x: 0.8, y: -0.12 };
+    for (let i = 1; i <= steps; i++) {
+      tipWrap.push(bezier(p0_3, cp1_3, cp2_3, p3_3, i / steps));
+    }
+
+    const outerHook: { x: number; y: number }[] = [];
+    const p0_4 = p3_3;
+    const cp1_4 = { x: 0.88, y: -0.34 };
+    const cp2_4 = { x: 1.15, y: -0.34 };
+    const p3_4 = { x: 1.12, y: -0.15 };
+    for (let i = 1; i <= steps; i++) {
+      outerHook.push(bezier(p0_4, cp1_4, cp2_4, p3_4, i / steps));
+    }
+
+    const swoopBottom: { x: number; y: number }[] = [];
+    const p0_5 = p3_4;
+    const cp1_5 = { x: 1.1, y: 0.05 };
+    const cp2_5 = { x: 1.02, y: 0.08 };
+    const p3_5 = { x: 0.95, y: 0.08 };
+    for (let i = 1; i <= steps; i++) {
+      swoopBottom.push(bezier(p0_5, cp1_5, cp2_5, p3_5, i / steps));
+    }
+
+    const bottomLobe: { x: number; y: number }[] = [];
+    const p0_6 = p3_5;
+    const cp1_6 = { x: 0.8, y: 0.35 };
+    const cp2_6 = { x: 0.4, y: 0.38 };
+    const p3_6 = { x: 0, y: 0.12 };
+    for (let i = 1; i <= steps; i++) {
+      bottomLobe.push(bezier(p0_6, cp1_6, cp2_6, p3_6, i / steps));
+    }
+
+    const rightHalf = [
+      ...topLobe,
+      ...innerHook,
+      ...tipWrap,
+      ...outerHook,
+      ...swoopBottom,
+      ...bottomLobe
+    ];
+
+    const leftHalf = rightHalf.map(p => ({ x: -p.x, y: p.y })).reverse();
+
+    const combined = [
+      ...leftHalf,
+      ...rightHalf.slice(1)
+    ];
+
+    const verts = combined.map(p => ({
+      x: Math.round(cx + p.x * radius),
+      y: Math.round(cy + p.y * radius)
+    }));
+
+    if (filled) {
+      this.fillPolygonInterior(verts);
+    } else {
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i];
+        const b = verts[(i + 1) % verts.length];
+        this.drawLine(a.x, a.y, b.x, b.y);
+      }
+    }
+  }
+
+  drawDog(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const r = radius;
+
+    // Body coordinates
+    const bodyVerts = [
+      { x: cx - r * 0.4, y: cy - r * 0.1 },
+      { x: cx + r * 0.4, y: cy - r * 0.1 },
+      { x: cx + r * 0.4, y: cy + r * 0.3 },
+      { x: cx - r * 0.4, y: cy + r * 0.3 }
+    ];
+
+    // Head parameters
+    const headCx = cx - r * 0.5;
+    const headCy = cy - r * 0.4;
+    const headR = r * 0.22;
+
+    // Snout
+    const snoutVerts = [
+      { x: headCx - headR * 0.6, y: headCy - headR * 0.3 },
+      { x: headCx - headR * 1.5, y: headCy - headR * 0.1 },
+      { x: headCx - headR * 1.5, y: headCy + headR * 0.5 },
+      { x: headCx - headR * 0.3, y: headCy + headR * 0.8 }
+    ];
+
+    // Ear
+    const earVerts = [
+      { x: headCx + headR * 0.2, y: headCy - headR * 0.8 },
+      { x: headCx + headR * 0.8, y: headCy - headR * 0.3 },
+      { x: headCx + headR * 0.5, y: headCy + headR * 0.4 },
+      { x: headCx + headR * 0.0, y: headCy - headR * 0.2 }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(bodyVerts);
+      this.fillDisc(Math.round(headCx), Math.round(headCy), Math.round(headR));
+      this.fillPolygonInterior(snoutVerts);
+      this.fillPolygonInterior(earVerts);
+
+      // Tail
+      const tailVerts = [
+        { x: cx + r * 0.35, y: cy - r * 0.1 },
+        { x: cx + r * 0.65, y: cy - r * 0.5 },
+        { x: cx + r * 0.7, y: cy - r * 0.45 },
+        { x: cx + r * 0.4, y: cy - r * 0.05 }
+      ];
+      this.fillPolygonInterior(tailVerts);
+
+      // Legs
+      const legWidth = Math.max(1, Math.round(r * 0.1));
+      const drawLegFilled = (lx: number) => {
+        const legVerts = [
+          { x: lx, y: cy + r * 0.3 },
+          { x: lx + legWidth, y: cy + r * 0.3 },
+          { x: lx + legWidth, y: cy + r * 0.85 },
+          { x: lx, y: cy + r * 0.85 }
+        ];
+        this.fillPolygonInterior(legVerts);
+      };
+      drawLegFilled(cx - r * 0.35);
+      drawLegFilled(cx - r * 0.15);
+      drawLegFilled(cx + r * 0.15);
+      drawLegFilled(cx + r * 0.28);
+    } else {
+      // Outline mode
+      // Body outline
+      for (let i = 0; i < bodyVerts.length; i++) {
+        this.drawLine(bodyVerts[i].x, bodyVerts[i].y, bodyVerts[(i + 1) % bodyVerts.length].x, bodyVerts[(i + 1) % bodyVerts.length].y);
+      }
+      // Head circle
+      this.drawCircle(Math.round(headCx), Math.round(headCy), Math.round(headR), false);
+      // Snout outline
+      for (let i = 0; i < snoutVerts.length; i++) {
+        this.drawLine(snoutVerts[i].x, snoutVerts[i].y, snoutVerts[(i + 1) % snoutVerts.length].x, snoutVerts[(i + 1) % snoutVerts.length].y);
+      }
+      // Ear outline
+      for (let i = 0; i < earVerts.length; i++) {
+        this.drawLine(earVerts[i].x, earVerts[i].y, earVerts[(i + 1) % earVerts.length].x, earVerts[(i + 1) % earVerts.length].y);
+      }
+      // Tail line
+      this.drawLine(cx + r * 0.38, cy - r * 0.08, cx + r * 0.7, cy - r * 0.48);
+
+      // Legs
+      const legWidth = Math.max(1, Math.round(r * 0.1));
+      const drawLegOutline = (lx: number) => {
+        this.drawLine(lx, cy + r * 0.3, lx, cy + r * 0.85);
+        this.drawLine(lx + legWidth, cy + r * 0.3, lx + legWidth, cy + r * 0.85);
+        this.drawLine(lx, cy + r * 0.85, lx + legWidth, cy + r * 0.85);
+      };
+      drawLegOutline(cx - r * 0.35);
+      drawLegOutline(cx - r * 0.15);
+      drawLegOutline(cx + r * 0.15);
+      drawLegOutline(cx + r * 0.28);
+    }
+  }
+
+  drawCat(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const r = radius;
+
+    // Head
+    const headCx = cx;
+    const headCy = cy - r * 0.35;
+    const headR = r * 0.25;
+
+    // Body
+    const bodyVerts = [
+      { x: cx - r * 0.15, y: cy - r * 0.15 },
+      { x: cx + r * 0.15, y: cy - r * 0.15 },
+      { x: cx + r * 0.35, y: cy + r * 0.3 },
+      { x: cx + r * 0.35, y: cy + r * 0.8 },
+      { x: cx - r * 0.35, y: cy + r * 0.8 },
+      { x: cx - r * 0.45, y: cy + r * 0.3 }
+    ];
+
+    // Ears
+    const earL = [
+      { x: headCx - headR * 0.8, y: headCy - headR * 0.4 },
+      { x: headCx - headR * 0.9, y: headCy - headR * 1.5 },
+      { x: headCx - headR * 0.2, y: headCy - headR * 0.95 }
+    ];
+
+    const earR = [
+      { x: headCx + headR * 0.2, y: headCy - headR * 0.95 },
+      { x: headCx + headR * 0.9, y: headCy - headR * 1.5 },
+      { x: headCx + headR * 0.8, y: headCy - headR * 0.4 }
+    ];
+
+    // Tail curve path for outline
+    const tailPoints = [
+      { x: cx - r * 0.35, y: cy + r * 0.7 },
+      { x: cx - r * 0.55, y: cy + r * 0.65 },
+      { x: cx - r * 0.7, y: cy + r * 0.4 },
+      { x: cx - r * 0.65, y: cy + r * 0.15 },
+      { x: cx - r * 0.5, y: cy + r * 0.2 }
+    ];
+
+    if (filled) {
+      this.fillPolygonInterior(bodyVerts);
+      this.fillDisc(Math.round(headCx), Math.round(headCy), Math.round(headR));
+      this.fillPolygonInterior(earL);
+      this.fillPolygonInterior(earR);
+
+      // Tail as filled polygon
+      const tailVerts = [
+        { x: cx - r * 0.35, y: cy + r * 0.75 },
+        { x: cx - r * 0.58, y: cy + r * 0.7 },
+        { x: cx - r * 0.75, y: cy + r * 0.42 },
+        { x: cx - r * 0.7, y: cy + r * 0.1 },
+        { x: cx - r * 0.6, y: cy + r * 0.08 },
+        { x: cx - r * 0.6, y: cy + r * 0.2 },
+        { x: cx - r * 0.65, y: cy + r * 0.38 },
+        { x: cx - r * 0.52, y: cy + r * 0.58 },
+        { x: cx - r * 0.35, y: cy + r * 0.62 }
+      ];
+      this.fillPolygonInterior(tailVerts);
+    } else {
+      // Body outline
+      for (let i = 0; i < bodyVerts.length; i++) {
+        this.drawLine(bodyVerts[i].x, bodyVerts[i].y, bodyVerts[(i + 1) % bodyVerts.length].x, bodyVerts[(i + 1) % bodyVerts.length].y);
+      }
+      // Head outline
+      this.drawCircle(Math.round(headCx), Math.round(headCy), Math.round(headR), false);
+      // Ears outlines
+      for (let i = 0; i < 3; i++) {
+        this.drawLine(earL[i].x, earL[i].y, earL[(i + 1) % 3].x, earL[(i + 1) % 3].y);
+        this.drawLine(earR[i].x, earR[i].y, earR[(i + 1) % 3].x, earR[(i + 1) % 3].y);
+      }
+      // Tail line
+      for (let i = 0; i < tailPoints.length - 1; i++) {
+        this.drawLine(tailPoints[i].x, tailPoints[i].y, tailPoints[i + 1].x, tailPoints[i + 1].y);
+      }
+    }
+
+    // Whiskers (always drawn)
+    const wY1 = headCy + headR * 0.1;
+    const wY2 = headCy + headR * 0.25;
+    const wY3 = headCy + headR * 0.4;
+    // Left
+    this.drawLine(headCx - headR * 0.5, wY1, headCx - headR * 1.8, wY1 - r * 0.05);
+    this.drawLine(headCx - headR * 0.5, wY2, headCx - headR * 1.9, wY2);
+    this.drawLine(headCx - headR * 0.5, wY3, headCx - headR * 1.8, wY3 + r * 0.05);
+    // Right
+    this.drawLine(headCx + headR * 0.5, wY1, headCx + headR * 1.8, wY1 - r * 0.05);
+    this.drawLine(headCx + headR * 0.5, wY2, headCx + headR * 1.9, wY2);
+    this.drawLine(headCx + headR * 0.5, wY3, headCx + headR * 1.8, wY3 + r * 0.05);
+  }
+
+  drawHouse(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const r = radius;
+
+    // Body
+    const bx1 = cx - r * 0.65;
+    const bx2 = cx + r * 0.65;
+    const by1 = cy - r * 0.15;
+    const by2 = cy + r * 0.85;
+
+    // Roof
+    const rx1 = cx - r * 0.75;
+    const rx2 = cx + r * 0.75;
+    const ry1 = cy - r * 0.15;
+    const ry2 = cy - r * 0.85;
+
+    const roofVerts = [
+      { x: rx1, y: ry1 },
+      { x: cx, y: ry2 },
+      { x: rx2, y: ry1 }
+    ];
+
+    // Chimney
+    const chx1 = cx - r * 0.52;
+    const chx2 = cx - r * 0.35;
+    const chy1 = cy - r * 0.4;
+    const chy2 = cy - r * 0.75;
+
+    // Door
+    const dx1 = cx - r * 0.18;
+    const dx2 = cx + r * 0.18;
+    const dy1 = cy + r * 0.4;
+    const dy2 = cy + r * 0.85;
+
+    // Windows
+    const w1x1 = cx - r * 0.48;
+    const w1x2 = cx - r * 0.22;
+    const wy1 = cy + r * 0.1;
+    const wy2 = cy + r * 0.32;
+
+    const w2x1 = cx + r * 0.22;
+    const w2x2 = cx + r * 0.48;
+
+    if (filled) {
+      // Fill roof
+      this.fillPolygonInterior(roofVerts);
+
+      // Fill body
+      const bodyVerts = [
+        { x: bx1, y: by1 },
+        { x: bx2, y: by1 },
+        { x: bx2, y: by2 },
+        { x: bx1, y: by2 }
+      ];
+      this.fillPolygonInterior(bodyVerts);
+
+      // Fill chimney
+      const chVerts = [
+        { x: chx1, y: chy1 },
+        { x: chx1, y: chy2 },
+        { x: chx2, y: chy2 },
+        { x: chx2, y: chy1 }
+      ];
+      this.fillPolygonInterior(chVerts);
+
+      // Clear door and windows
+      const clearBox = (xStart: number, xEnd: number, yStart: number, yEnd: number) => {
+        const xS = Math.round(Math.min(xStart, xEnd));
+        const xE = Math.round(Math.max(xStart, xEnd));
+        const yS = Math.round(Math.min(yStart, yEnd));
+        const yE = Math.round(Math.max(yStart, yEnd));
+        for (let y = yS; y <= yE; y++) {
+          for (let x = xS; x <= xE; x++) {
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+              this.data[y][x] = false;
+            }
+          }
+        }
+      };
+
+      clearBox(dx1, dx2, dy1, dy2);
+      clearBox(w1x1, w1x2, wy1, wy2);
+      clearBox(w2x1, w2x2, wy1, wy2);
+
+      // Draw outlines over cleared shapes to maintain detail
+      this.drawLine(dx1, dy1, dx2, dy1);
+      this.drawLine(dx2, dy1, dx2, dy2);
+      this.drawLine(dx1, dy1, dx1, dy2);
+
+      const drawWinOutline = (x1: number, x2: number) => {
+        this.drawLine(x1, wy1, x2, wy1);
+        this.drawLine(x2, wy1, x2, wy2);
+        this.drawLine(x2, wy2, x1, wy2);
+        this.drawLine(x1, wy2, x1, wy1);
+        // Window pane cross
+        const midX = (x1 + x2) / 2;
+        const midY = (wy1 + wy2) / 2;
+        this.drawLine(midX, wy1, midX, wy2);
+        this.drawLine(x1, midY, x2, midY);
+      };
+      drawWinOutline(w1x1, w1x2);
+      drawWinOutline(w2x1, w2x2);
+
+      // Doorknob
+      this.setPoint(Math.round(cx + r * 0.1), Math.round(cy + r * 0.62));
+    } else {
+      // Outline mode
+      // Roof
+      this.drawLine(rx1, ry1, cx, ry2);
+      this.drawLine(cx, ry2, rx2, ry1);
+      this.drawLine(rx2, ry1, rx1, ry1);
+
+      // Body walls & floor
+      this.drawLine(bx1, by1, bx1, by2);
+      this.drawLine(bx2, by1, bx2, by2);
+      this.drawLine(bx1, by2, bx2, by2);
+
+      // Chimney
+      this.drawLine(chx1, cy - r * 0.4, chx1, chy2);
+      this.drawLine(chx1, chy2, chx2, chy2);
+      this.drawLine(chx2, chy2, chx2, cy - r * 0.55);
+
+      // Door
+      this.drawLine(dx1, dy1, dx2, dy1);
+      this.drawLine(dx2, dy1, dx2, dy2);
+      this.drawLine(dx1, dy1, dx1, dy2);
+
+      // Doorknob
+      this.setPoint(Math.round(cx + r * 0.1), Math.round(cy + r * 0.62));
+
+      // Windows
+      const drawWinOutline = (x1: number, x2: number) => {
+        this.drawLine(x1, wy1, x2, wy1);
+        this.drawLine(x2, wy1, x2, wy2);
+        this.drawLine(x2, wy2, x1, wy2);
+        this.drawLine(x1, wy2, x1, wy1);
+        // Window pane cross
+        const midX = (x1 + x2) / 2;
+        const midY = (wy1 + wy2) / 2;
+        this.drawLine(midX, wy1, midX, wy2);
+        this.drawLine(x1, midY, x2, midY);
+      };
+      drawWinOutline(w1x1, w1x2);
+      drawWinOutline(w2x1, w2x2);
+    }
+  }
+
+  drawBed(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const r = radius;
+
+    // Headboard
+    const hx1 = cx - r * 0.8;
+    const hx2 = cx - r * 0.68;
+    const hy1 = cy - r * 0.6;
+    const hy2 = cy + r * 0.85;
+
+    // Footboard
+    const fx1 = cx + r * 0.68;
+    const fx2 = cx + r * 0.8;
+    const fy1 = cy - r * 0.2;
+    const fy2 = cy + r * 0.85;
+
+    // Mattress/Frame
+    const mx1 = cx - r * 0.68;
+    const mx2 = cx + r * 0.68;
+    const my1 = cy + r * 0.15;
+    const my2 = cy + r * 0.55;
+
+    // Pillow
+    const px1 = cx - r * 0.62;
+    const px2 = cx - r * 0.32;
+    const py1 = cy - r * 0.02;
+    const py2 = cy + r * 0.15;
+
+    if (filled) {
+      // Headboard
+      const headVerts = [{ x: hx1, y: hy1 }, { x: hx2, y: hy1 }, { x: hx2, y: hy2 }, { x: hx1, y: hy2 }];
+      this.fillPolygonInterior(headVerts);
+
+      // Footboard
+      const footVerts = [{ x: fx1, y: fy1 }, { x: fx2, y: fy1 }, { x: fx2, y: fy2 }, { x: fx1, y: fy2 }];
+      this.fillPolygonInterior(footVerts);
+
+      // Mattress
+      const mattVerts = [{ x: mx1, y: my1 }, { x: mx2, y: my1 }, { x: mx2, y: my2 }, { x: mx1, y: my2 }];
+      this.fillPolygonInterior(mattVerts);
+
+      // Pillow
+      const pillVerts = [{ x: px1, y: py1 }, { x: px2, y: py1 }, { x: px2, y: py2 }, { x: px1, y: py2 }];
+      this.fillPolygonInterior(pillVerts);
+
+      // Draw separation lines by clearing
+      // 1. Vertical lines separating wood from mattress
+      for (let y = Math.round(my1); y <= Math.round(my2); y++) {
+        const xHead = Math.round(hx2);
+        const xFoot = Math.round(fx1);
+        if (xHead >= 0 && xHead < this.width && y >= 0 && y < this.height) this.data[y][xHead] = false;
+        if (xFoot >= 0 && xFoot < this.width && y >= 0 && y < this.height) this.data[y][xFoot] = false;
+      }
+      // 2. Horizontal line under pillow
+      for (let x = Math.round(px1); x <= Math.round(px2); x++) {
+        const yPill = Math.round(py2);
+        if (x >= 0 && x < this.width && yPill >= 0 && yPill < this.height) this.data[yPill][x] = false;
+      }
+
+      // Re-draw outer boundaries to keep it neat
+      this.drawLine(hx1, hy1, hx2, hy1);
+      this.drawLine(hx1, hy1, hx1, hy2);
+      this.drawLine(hx2, hy1, hx2, hy2);
+      this.drawLine(fx1, fy1, fx2, fy1);
+      this.drawLine(fx1, fy1, fx1, fy2);
+      this.drawLine(fx2, fy1, fx2, fy2);
+      this.drawLine(mx1, my2, mx2, my2);
+      // Pillow outline
+      this.drawLine(px1, py1, px2, py1);
+      this.drawLine(px1, py1, px1, py2);
+      this.drawLine(px2, py1, px2, py2);
+    } else {
+      // Outline mode
+      // Headboard
+      this.drawLine(hx1, hy1, hx2, hy1);
+      this.drawLine(hx1, hy1, hx1, hy2);
+      this.drawLine(hx2, hy1, hx2, hy2);
+
+      // Footboard
+      this.drawLine(fx1, fy1, fx2, fy1);
+      this.drawLine(fx1, fy1, fx1, fy2);
+      this.drawLine(fx2, fy1, fx2, fy2);
+
+      // Mattress frame
+      this.drawLine(mx1, my1, mx2, my1);
+      this.drawLine(mx1, my2, mx2, my2);
+
+      // Pillow outline
+      this.drawLine(px1, py1, px2, py1);
+      this.drawLine(px1, py1, px1, py2);
+      this.drawLine(px2, py1, px2, py2);
+
+      // Blanket crease/fold line
+      const foldX = cx + r * 0.1;
+      this.drawLine(foldX, my1, foldX, my2);
+    }
   }
 }
 
@@ -1839,7 +2339,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'bowling' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'mustache' | 'paintbrush' | 'star' | 'vampireFangs';
+export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'bed' | 'birdHouse' | 'bowling' | 'candle' | 'cat' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'dog' | 'flower' | 'heart' | 'hiking' | 'house' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'mustache' | 'paintbrush' | 'star' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1878,6 +2378,9 @@ export function generateInventoryShape(
   } else if (kind === 'beach') {
     spanX = r * 2.2;
     spanY = r * 2.2;
+  } else if (kind === 'bed') {
+    spanX = r * 2.4;
+    spanY = r * 2.0;
   } else if (kind === 'birdHouse') {
     spanX = r * 1.8;
     spanY = r * 2.6;
@@ -1887,6 +2390,9 @@ export function generateInventoryShape(
   } else if (kind === 'candle') {
     spanX = r * 2.4;
     spanY = r * 2.6;
+  } else if (kind === 'cat') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
   } else if (kind === 'cloud') {
     spanX = r * 2.6;
     spanY = r * 2.0;
@@ -1898,6 +2404,9 @@ export function generateInventoryShape(
     const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
     spanX = rHoriz * 2;
     spanY = r * 2;
+  } else if (kind === 'dog') {
+    spanX = r * 2.2;
+    spanY = r * 2.0;
   } else if (kind === 'flower') {
     spanX = r * 2.2;
     spanY = r * 2.6;
@@ -1907,6 +2416,9 @@ export function generateInventoryShape(
   } else if (kind === 'hiking') {
     spanX = r * 2.4;
     spanY = r * 2.4;
+  } else if (kind === 'house') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
   } else if (kind === 'iceSkates') {
     spanX = r * 2.8;
     spanY = r * 2.6;
@@ -1943,6 +2455,10 @@ export function generateInventoryShape(
       canvas.drawBeach(cx, cy, r, filled);
       label = 'Beach';
       break;
+    case 'bed':
+      canvas.drawBed(cx, cy, r, filled);
+      label = 'Bed';
+      break;
     case 'birdHouse':
       canvas.drawBirdHouse(cx, cy, r, filled);
       label = 'Bird House';
@@ -1967,6 +2483,10 @@ export function generateInventoryShape(
       canvas.drawCandle(cx, cy, r, filled);
       label = 'Candle';
       break;
+    case 'cat':
+      canvas.drawCat(cx, cy, r, filled);
+      label = 'Cat';
+      break;
     case 'circle':
       canvas.drawCircle(cx, cy, r, filled);
       label = 'Circle';
@@ -1988,6 +2508,10 @@ export function generateInventoryShape(
       label = 'Cross';
       break;
     }
+    case 'dog':
+      canvas.drawDog(cx, cy, r, filled);
+      label = 'Dog';
+      break;
     case 'flower':
       canvas.drawFlower(cx, cy, r, filled);
       label = 'Flower';
@@ -1999,6 +2523,10 @@ export function generateInventoryShape(
     case 'hiking':
       canvas.drawHiking(cx, cy, r, filled);
       label = 'Hiking';
+      break;
+    case 'house':
+      canvas.drawHouse(cx, cy, r, filled);
+      label = 'House';
       break;
     case 'iceSkates':
       canvas.drawIceSkates(cx, cy, r, filled);

@@ -387,12 +387,38 @@ function syncPlainLineToBrailleWrap(
 
   if (m === n && n > 0) {
     const lineParts: string[] = [];
-    for (const pl of physical) {
-      const segParts: string[] = [];
-      for (const sp of pl.spans) {
-        segParts.push(sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n));
+    for (let k = 0; k < physical.length; k++) {
+      const pl = physical[k];
+      const margin = paragraphStarts
+        ? clampParagraphCell(k === 0 ? paragraphStarts.firstLineStartCell : paragraphStarts.runoverStartCell, cellsPerRow) - 1
+        : 0;
+
+      let currentLineStr = '';
+      let lastPrintEnd = 0;
+      let spanStartCell = margin;
+
+      for (let idx = 0; idx < pl.spans.length; idx++) {
+        const sp = pl.spans[idx];
+        const printWord = sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n);
+        
+        // The braille start position of this word on the row
+        const brailleStartCell = spanStartCell;
+        
+        // The target print start column: must be at least brailleStartCell,
+        // and if there is a previous word, at least lastPrintEnd + 1 to keep a space gap.
+        const printStartColumn = Math.max(brailleStartCell, lastPrintEnd + (idx > 0 ? 1 : 0));
+        
+        const spacesNeeded = printStartColumn - currentLineStr.length;
+        if (spacesNeeded > 0) {
+          currentLineStr += ' '.repeat(spacesNeeded);
+        }
+        currentLineStr += printWord;
+        lastPrintEnd = currentLineStr.length;
+        
+        // Update spanStartCell for the next word: length of current braille word + 1 space separator
+        spanStartCell += (sp.charEnd - sp.charStart) + 1;
       }
-      lineParts.push(segParts.join(' ').trimEnd());
+      lineParts.push(currentLineStr.trimEnd());
     }
     return leadingSpace + lineParts.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
   }
@@ -408,7 +434,14 @@ function syncPlainLineToBrailleWrap(
 
   const srcJoined = srcWords.join(' ');
   const outLines = splitSrcJoinedByBrailleWeights(srcJoined, lineWeights);
-  return leadingSpace + outLines.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
+  const alignedOutLines = outLines.map((line, k) => {
+    const margin = paragraphStarts
+      ? clampParagraphCell(k === 0 ? paragraphStarts.firstLineStartCell : paragraphStarts.runoverStartCell, cellsPerRow) - 1
+      : 0;
+    return ' '.repeat(margin) + line;
+  });
+
+  return leadingSpace + alignedOutLines.join(SOFT_LINE_BREAK_CHAR) + trailingSpace;
 }
 
 /**
@@ -700,8 +733,34 @@ export function defaultBrfDownloadFilename(): string {
 export function defaultPrintLayoutTextFilename(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
-  return `print-layout-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.txt`;
+  return `print-layout-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.rtf`;
 }
+
+/** Default name for the grading print-layout text export. */
+export function defaultGradingPrintLayoutFilename(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `grading-print-layout-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.rtf`;
+}
+
+/**
+ * Converts a plain text string to Rich Text Format (RTF) using Courier New.
+ * Escapes special characters like backslashes and curly braces, and converts
+ * newlines to the RTF paragraph break control word (\par).
+ */
+export function convertToRtf(text: string): string {
+  const escaped = text
+    .replace(/\\/g, '\\\\')
+    .replace(/{/g, '\\{')
+    .replace(/}/g, '\\}');
+  
+  const lines = escaped.replace(/\r\n/g, '\n').split(/[\n\r]/);
+  const rtfContent = lines.join('\\par\r\n');
+
+  return `{\\rtf1\\ansi\\deff0\r\n{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Courier New;}}\r\n\\viewkind4\\uc1\\pard\\f0\\fs24\r\n${rtfContent}\\par\r\n}`;
+}
+
+
 
 /**
  * Converts editor buffer (soft breaks = {@link SOFT_LINE_BREAK_CHAR}, user lines = \\n) to plain text
