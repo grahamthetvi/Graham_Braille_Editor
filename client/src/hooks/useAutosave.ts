@@ -20,27 +20,40 @@ export function useAutosave(
   const [hasChecked, setHasChecked] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Migrate any old version 1 string text backups into the new array structure 
-  useEffect(() => {
-    migrateLegacyAutosave();
-    cleanupOldSessions();
-  }, []);
-
-  // 1. Initial Load: Check for backup
+  // Initial Load: Migrate, Cleanup, and check for backups sequentially
   useEffect(() => {
     if (isChecking || hasChecked) return;
     
-    // If we're the second tab opened, act as a fresh document, don't show recover modal.
-    if (!isSecondaryInstance) {
-      const backups = getRecoverableSessions();
-      if (backups.length > 0) {
-        onBackupsFound(backups);
+    let isMounted = true;
+    
+    async function initAutosave() {
+      try {
+        await migrateLegacyAutosave();
+        await cleanupOldSessions();
+        
+        if (!isSecondaryInstance) {
+          const backups = await getRecoverableSessions();
+          if (isMounted && backups.length > 0) {
+            onBackupsFound(backups);
+          }
+        }
+      } catch (err) {
+        console.error('Error during autosave initialization', err);
+      } finally {
+        if (isMounted) {
+          setHasChecked(true);
+        }
       }
     }
-    setHasChecked(true);
+
+    initAutosave();
+
+    return () => {
+      isMounted = false;
+    };
   }, [hasChecked, isChecking, isSecondaryInstance, onBackupsFound]);
 
-  // 2. Debounced save
+  // Debounced save
   useEffect(() => {
     if (!hasChecked || isChecking || !enabled) return;
 
@@ -49,7 +62,9 @@ export function useAutosave(
     }
 
     timerRef.current = setTimeout(() => {
-      saveSession(sessionId, currentText);
+      saveSession(sessionId, currentText).catch(err => {
+        console.error('Failed to autosave session', err);
+      });
     }, AUTOSAVE_DEBOUNCE_MS);
 
     return () => {

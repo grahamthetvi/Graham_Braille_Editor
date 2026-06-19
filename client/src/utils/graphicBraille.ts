@@ -1729,29 +1729,35 @@ export class GraphicCanvas extends GridCanvas {
   drawMustache(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
 
+    const maxT = 1.15;
+    const minThickness = 0.13;
+
     const isInsideMustache = (x: number, y: number): boolean => {
       const dx = (x - cx) / radius;
       const dy = (y - cy) / radius;
       const t = Math.abs(dx);
 
-      if (t > 1.0) return false;
+      if (t > maxT) return false;
 
-      // Handlebar mustache equations:
-      // Top boundary curve (negative is up)
-      const yTop = -0.4 * Math.sin(t * Math.PI) - 0.2 * Math.sin(t * Math.PI * 0.5) - 0.05;
+      // Centerline curves down, then curves up on the sides (negative is up)
+      const yCenter = 0.7 * t - 1.0 * t * t;
       
-      // Thickness at t
-      const thickness = 0.45 * Math.sin(t * Math.PI) * (1.0 - t * 0.2);
-      
-      const yBottom = yTop + thickness;
+      // Thickness is non-zero in the middle (connected), bulges slightly, and tapers to a point
+      let thickness = (0.25 + 0.15 * Math.sin((t * Math.PI) / maxT)) * (maxT - t);
+      if (thickness < minThickness) {
+        thickness = minThickness;
+      }
+
+      const yTop = yCenter - thickness / 2;
+      const yBottom = yCenter + thickness / 2;
 
       return dy >= yTop && dy <= yBottom;
     };
 
-    const minX = cx - radius * 1.1;
-    const maxX = cx + radius * 1.1;
+    const minX = cx - radius * 1.25;
+    const maxX = cx + radius * 1.25;
     const minY = cy - radius * 0.8;
-    const maxY = cy + radius * 0.8;
+    const maxY = cy + radius * 0.6;
 
     this.drawImplicitShape(minX, maxX, minY, maxY, isInsideMustache, filled);
   }
@@ -1911,7 +1917,7 @@ export function generateInventoryShape(
     spanX = r * 2.2;
     spanY = r * 2.2;
   } else if (kind === 'mustache') {
-    spanX = r * 2.2;
+    spanX = r * 2.4;
     spanY = r * 1.8;
   } else if (kind === 'paintbrush') {
     spanX = r * 1.8;

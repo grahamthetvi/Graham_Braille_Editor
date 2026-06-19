@@ -47,7 +47,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
             <p>No unsaved drafts found.</p>
           ) : (
             <>
-              <p>These documents were autosaved recently and haven't been downloaded or printed.</p>
+              <p>These documents were autosaved recently. Active drafts and exported files are preserved here.</p>
               <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {sessions.map(session => (
                   <div
@@ -63,9 +63,40 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        Last edited: {new Date(session.updatedAt).toLocaleString()}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          Last edited: {new Date(session.updatedAt).toLocaleString()}
+                        </span>
+                        {session.isExported ? (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            padding: '0.1rem 0.4rem',
+                            background: 'color-mix(in srgb, var(--success) 15%, transparent)',
+                            color: 'var(--success)',
+                            border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+                            borderRadius: '3px',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            Exported
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            padding: '0.1rem 0.4rem',
+                            background: 'color-mix(in srgb, var(--accent) 15%, transparent)',
+                            color: 'var(--accent)',
+                            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+                            borderRadius: '3px',
+                            fontWeight: 'bold',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            Active Draft
+                          </span>
+                        )}
+                      </div>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button 
                           className="welcome-btn-secondary" 

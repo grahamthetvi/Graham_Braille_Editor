@@ -316,29 +316,42 @@ export default function App() {
   );
 
   function handleOpenDrafts() {
-    setDrafts(getRecoverableSessions());
-    setShowDrafts(true);
+    getRecoverableSessions().then(sessions => {
+      setDrafts(sessions);
+      setShowDrafts(true);
+    }).catch(err => {
+      console.error('Failed to open drafts', err);
+    });
   }
 
   function handleRestoreSession(id: string) {
-    const text = getSessionText(id);
-    if (text) {
-      setInputText(text);
-      setFileContent(text);
-      if (text.trim()) {
-        translate(text, selectedTable, mathCode);
+    getSessionText(id).then(text => {
+      if (text) {
+        setInputText(text);
+        setFileContent(text);
+        if (text.trim()) {
+          translate(text, selectedTable, mathCode);
+        }
       }
-    }
+    }).catch(err => {
+      console.error('Failed to restore session', err);
+    });
   }
 
   function handleDiscardSessionItem(id: string) {
-    discardSession(id);
-    setDrafts(prev => prev.filter(s => s.id !== id));
+    discardSession(id).then(() => {
+      setDrafts(prev => prev.filter(s => s.id !== id));
+    }).catch(err => {
+      console.error('Failed to discard session', err);
+    });
   }
 
   function handleDiscardAllSessions() {
-    discardAllSessions();
-    setDrafts([]);
+    discardAllSessions().then(() => {
+      setDrafts([]);
+    }).catch(err => {
+      console.error('Failed to discard all sessions', err);
+    });
   }
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -389,7 +402,9 @@ export default function App() {
     a.download = defaultBrfDownloadFilename();
     a.click();
     URL.revokeObjectURL(url);
-    markExported(sessionId);
+    markExported(sessionId).catch(err => {
+      console.error('Failed to mark session as exported', err);
+    });
   }
 
   function handleDownloadPrintLayoutText() {
@@ -414,7 +429,9 @@ export default function App() {
     a.download = defaultPrintLayoutTextFilename();
     a.click();
     URL.revokeObjectURL(url);
-    markExported(sessionId);
+    markExported(sessionId).catch(err => {
+      console.error('Failed to mark session as exported', err);
+    });
   }
 
   // ── Paginated braille output ─────────────────────────────────────────────
