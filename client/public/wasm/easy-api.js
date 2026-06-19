@@ -104,23 +104,21 @@ liblouis.translateString = function(table, inbuf, backtranslate) {
 	}
 
 	var mode = 0;
+	var char_size = liblouis.charSize() || 2;
+	var L = inbuf.length;
+	var max_out_len = Math.max(100, L * 10);
 
-	var bufflen = inbuf.length*4+2;
-	var inbuff_ptr = capi._malloc(bufflen);
-	var outbuff_ptr = capi._malloc(bufflen);
+	var inbuff_ptr = capi._malloc((L + 1) * char_size);
+	var outbuff_ptr = capi._malloc(max_out_len * char_size);
 
-	// UCS-2 to UTF-16LE 
-	// TODO: internally no conversion is done, only copies values
-	// to memory, which is okay for BMP
-	// TODO: this writes an unnecessary null byte
-	capi.stringToUTF16(inbuf, inbuff_ptr, bufflen);
+	capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
 
 	// in emscripten we need a 32bit cell for each pointer
 	var bufflen_ptr = capi._malloc(4);
 	var strlen_ptr = capi._malloc(4);
 
-	capi.setValue(bufflen_ptr, bufflen, "i32");
-	capi.setValue(strlen_ptr, bufflen, "i32");
+	capi.setValue(bufflen_ptr, max_out_len, "i32");
+	capi.setValue(strlen_ptr, L, "i32");
 
 	var success = capi.ccall(backtranslate ?
 			'lou_backTranslateString' :
@@ -131,6 +129,10 @@ liblouis.translateString = function(table, inbuf, backtranslate) {
 			null, mode]);
 
 	if(!success) {
+		capi._free(outbuff_ptr);
+		capi._free(inbuff_ptr);
+		capi._free(bufflen_ptr);
+		capi._free(strlen_ptr);
 		return null;
 	}
 
@@ -158,20 +160,22 @@ liblouis.translate = function(table, inbuf) {
 	}
 
 	var mode = 0;
+	var char_size = liblouis.charSize() || 2;
+	var L = inbuf.length;
+	var max_out_len = Math.max(100, L * 10);
 
-	var bufflen = inbuf.length*4+2;
-	var inbuff_ptr = capi._malloc(bufflen);
-	var outbuff_ptr = capi._malloc(bufflen);
+	var inbuff_ptr = capi._malloc((L + 1) * char_size);
+	var outbuff_ptr = capi._malloc(max_out_len * char_size);
 
-	capi.stringToUTF16(inbuf, inbuff_ptr, bufflen);
+	capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
 
 	var inlen_ptr = capi._malloc(4);
 	var outlen_ptr = capi._malloc(4);
 
-	capi.setValue(inlen_ptr, bufflen, "i32");
-	capi.setValue(outlen_ptr, bufflen, "i32");
+	capi.setValue(inlen_ptr, L, "i32");
+	capi.setValue(outlen_ptr, max_out_len, "i32");
 
-	var outputPos_ptr = capi._malloc(bufflen * 4);
+	var outputPos_ptr = capi._malloc(L * 4);
 
 	var success;
 	try {

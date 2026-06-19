@@ -108,6 +108,71 @@ easyApiScript = easyApiScript.replace(
 	liblouis._log_callback_fn_pointer = capi.Runtime.addFunction(function(logLvl, msg) {`
 );
 
+// Patch buffer-overflow and memory-leak bugs in liblouis.translateString:
+// 1. Allocate correctly scaled char-size buffers.
+// 2. Set outlen to the max number of characters the buffer can hold, preventing overflow.
+// 3. Set inlen to the actual string character count instead of bytes.
+// 4. Free resources on translation failure.
+const patchedTranslateStringCode = `liblouis.translateString = function(table, inbuf, backtranslate) {
+
+	if(typeof inbuf !== "string" || inbuf.length === 0) {
+		return "";
+	}
+
+	var mode = 0;
+	var char_size = liblouis.charSize() || 2;
+	var L = inbuf.length;
+	var max_out_len = Math.max(100, L * 10);
+
+	var inbuff_ptr = capi._malloc((L + 1) * char_size);
+	var outbuff_ptr = capi._malloc(max_out_len * char_size);
+
+	capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
+
+	// in emscripten we need a 32bit cell for each pointer
+	var bufflen_ptr = capi._malloc(4);
+	var strlen_ptr = capi._malloc(4);
+
+	capi.setValue(bufflen_ptr, max_out_len, "i32");
+	capi.setValue(strlen_ptr, L, "i32");
+
+	var success = capi.ccall(backtranslate ?
+			'lou_backTranslateString' :
+			'lou_translateString', 'number', ['string',
+			'number', 'number', 'number', 'number',
+			'number', 'number'], [table, inbuff_ptr,
+			strlen_ptr, outbuff_ptr, bufflen_ptr, null,
+			null, mode]);
+
+	if(!success) {
+		capi._free(outbuff_ptr);
+		capi._free(inbuff_ptr);
+		capi._free(bufflen_ptr);
+		capi._free(strlen_ptr);
+		return null;
+	}
+
+	// string does not seam to be terminated by null byte,
+	// therefore we cannot use emscripten to convert the buffer to
+	// string.
+	//var outstr = UTF16ToString(outbuff_ptr);
+	var start_index = outbuff_ptr >> 1;
+	var end_index = start_index + capi.getValue(bufflen_ptr, "i32");
+	var outstr_buff = capi.HEAP16.slice(start_index, end_index);
+
+	capi._free(outbuff_ptr);
+	capi._free(inbuff_ptr);
+	capi._free(bufflen_ptr);
+	capi._free(strlen_ptr);
+
+	return String.fromCharCode.apply(null, outstr_buff);
+};`;
+
+easyApiScript = easyApiScript.replace(
+  /liblouis\.translateString = function\s*\(table,\s*inbuf,\s*backtranslate\)\s*\{[\s\S]*?return String\.fromCharCode\.apply\(null,\s*outstr_buff\);\s*\};/,
+  patchedTranslateStringCode
+);
+
 // Inject liblouis.translate() — calls lou_translate with outputPos mapping
 // so the highlight system can map source characters to braille output characters.
 const translateMethod = `
@@ -118,20 +183,22 @@ liblouis.translate = function(table, inbuf) {
 	}
 
 	var mode = 0;
+	var char_size = liblouis.charSize() || 2;
+	var L = inbuf.length;
+	var max_out_len = Math.max(100, L * 10);
 
-	var bufflen = inbuf.length*4+2;
-	var inbuff_ptr = capi._malloc(bufflen);
-	var outbuff_ptr = capi._malloc(bufflen);
+	var inbuff_ptr = capi._malloc((L + 1) * char_size);
+	var outbuff_ptr = capi._malloc(max_out_len * char_size);
 
-	capi.stringToUTF16(inbuf, inbuff_ptr, bufflen);
+	capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
 
 	var inlen_ptr = capi._malloc(4);
 	var outlen_ptr = capi._malloc(4);
 
-	capi.setValue(inlen_ptr, bufflen, "i32");
-	capi.setValue(outlen_ptr, bufflen, "i32");
+	capi.setValue(inlen_ptr, L, "i32");
+	capi.setValue(outlen_ptr, max_out_len, "i32");
 
-	var outputPos_ptr = capi._malloc(bufflen * 4);
+	var outputPos_ptr = capi._malloc(L * 4);
 
 	var success;
 	try {
@@ -180,6 +247,7 @@ liblouis.translate = function(table, inbuf) {
 	return { output: String.fromCharCode.apply(null, outstr_buff), outputPos: outputPosArr };
 };
 `;
+
 easyApiScript = easyApiScript.replace(
   'liblouis.loadTable = function(tablename, url) {',
   translateMethod + '\nliblouis.loadTable = function(tablename, url) {'
