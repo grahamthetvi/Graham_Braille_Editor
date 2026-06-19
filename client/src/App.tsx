@@ -822,6 +822,8 @@ export default function App() {
               bridgeConnected={bridgeConnected}
               useWebUSB={useWebUSB}
               compact
+              cellsPerRow={pageSettings.cellsPerRow}
+              linesPerPage={pageSettings.linesPerPage}
               viewPlusLeftPadCells={pageSettings.viewPlusLeftPadCells}
               onViewPlusLeftPadCellsChange={cells => setPageSettings(s => ({ ...s, viewPlusLeftPadCells: cells }))}
               viewPlusPaddingApplies={pageSettings.paperFormat === 'us-letter'}

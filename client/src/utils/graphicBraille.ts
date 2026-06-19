@@ -1725,6 +1725,36 @@ export class GraphicCanvas extends GridCanvas {
     const handleR = Math.max(1, Math.round(radius * 0.18));
     this.drawCircle(Math.round(handleCx), Math.round(handleCy), handleR, false);
   }
+
+  drawMustache(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+
+    const isInsideMustache = (x: number, y: number): boolean => {
+      const dx = (x - cx) / radius;
+      const dy = (y - cy) / radius;
+      const t = Math.abs(dx);
+
+      if (t > 1.0) return false;
+
+      // Handlebar mustache equations:
+      // Top boundary curve (negative is up)
+      const yTop = -0.4 * Math.sin(t * Math.PI) - 0.2 * Math.sin(t * Math.PI * 0.5) - 0.05;
+      
+      // Thickness at t
+      const thickness = 0.45 * Math.sin(t * Math.PI) * (1.0 - t * 0.2);
+      
+      const yBottom = yTop + thickness;
+
+      return dy >= yTop && dy <= yBottom;
+    };
+
+    const minX = cx - radius * 1.1;
+    const maxX = cx + radius * 1.1;
+    const minY = cy - radius * 0.8;
+    const maxY = cy + radius * 0.8;
+
+    this.drawImplicitShape(minX, maxX, minY, maxY, isInsideMustache, filled);
+  }
 }
 
 export interface GraphicResult {
@@ -1803,7 +1833,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'bowling' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'paintbrush' | 'star' | 'vampireFangs';
+export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'birdHouse' | 'bowling' | 'candle' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'flower' | 'heart' | 'hiking' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'mustache' | 'paintbrush' | 'star' | 'vampireFangs';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -1880,6 +1910,9 @@ export function generateInventoryShape(
   } else if (kind === 'movieProjector') {
     spanX = r * 2.2;
     spanY = r * 2.2;
+  } else if (kind === 'mustache') {
+    spanX = r * 2.2;
+    spanY = r * 1.8;
   } else if (kind === 'paintbrush') {
     spanX = r * 1.8;
     spanY = r * 3.6;
@@ -1972,6 +2005,10 @@ export function generateInventoryShape(
     case 'moon':
       canvas.drawCrescentMoon(cx, cy, r, filled);
       label = 'Crescent Moon';
+      break;
+    case 'mustache':
+      canvas.drawMustache(cx, cy, r, filled);
+      label = 'Mustache';
       break;
     case 'paintbrush':
       canvas.drawPaintbrush(cx, cy, r, filled);

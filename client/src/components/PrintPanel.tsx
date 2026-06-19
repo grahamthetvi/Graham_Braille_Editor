@@ -19,6 +19,9 @@ interface PrintPanelProps {
   viewPlusPaddingApplies?: boolean;
   /** Callback fired when a document is successfully sent to the printer. */
   onExport?: () => void;
+  /** Current editor layout parameters */
+  cellsPerRow?: number;
+  linesPerPage?: number;
 }
 
 /**
@@ -35,6 +38,8 @@ export function PrintPanel({
   onViewPlusLeftPadCellsChange,
   viewPlusPaddingApplies = false,
   onExport,
+  cellsPerRow = 32,
+  linesPerPage = 25,
 }: PrintPanelProps) {
   const [printerName, setPrinterName] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
@@ -172,6 +177,45 @@ export function PrintPanel({
     }
   }
 
+  async function handlePrintBoundaryTest() {
+    const W = cellsPerRow;
+    const H = linesPerPage;
+    const testBrf = generateBoundaryTestBrf(W, H);
+
+    setStatus('printing');
+    setErrorMsg('');
+    try {
+      let activeBrf = testBrf;
+
+      if (viewPlusPaddingApplies && viewPlusLeftPadCells !== 0) {
+        if (viewPlusLeftPadCells > 0) {
+          const pad = ' '.repeat(viewPlusLeftPadCells);
+          activeBrf = activeBrf.split(/\r?\n/).map(line => pad + line).join('\n');
+        } else {
+          const trimCount = Math.abs(viewPlusLeftPadCells);
+          activeBrf = activeBrf.split(/\r?\n/).map(line => line.slice(trimCount)).join('\n');
+        }
+      }
+
+      const embosser = EmbosserFactory.getEmbosser(selectedDriverId);
+      const bytes = embosser.generateBytes(activeBrf, {
+        copies: 1,
+        viewPlusLeftPadCells: viewPlusPaddingApplies ? viewPlusLeftPadCells : undefined,
+      });
+
+      if (useWebUSB) {
+        await printBrfWebUSB(bytes);
+      } else {
+        await printBrf(printerName.trim(), bytes);
+      }
+      setStatus('success');
+      onExport?.();
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+    }
+  }
+
   const renderViewPlusNotice = () => {
     if (selectedDriverId !== 'viewplus' && selectedDriverId !== 'viewplus-embraille') return null;
 
@@ -257,6 +301,15 @@ export function PrintPanel({
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
           {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
+        </button>
+        <button
+          className="toolbar-btn"
+          onClick={handlePrintBoundaryTest}
+          disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
+          title="Print a test page with numbered rows/columns to check print margins and limits"
+          style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
+        >
+          Boundary Test
         </button>
         {bridgeConnected && !useWebUSB && (
           <button
@@ -370,6 +423,13 @@ export function PrintPanel({
         >
           {status === 'printing' ? 'Printing...' : useWebUSB ? 'Select Embosser & Print' : 'Print'}
         </button>
+        <button
+          onClick={handlePrintBoundaryTest}
+          disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
+          style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+        >
+          Print Boundary Test
+        </button>
         
         {bridgeConnected && !useWebUSB && (
           <button
@@ -392,4 +452,38 @@ export function PrintPanel({
       )}
     </div>
   );
+}
+
+export function generateBoundaryTestBrf(width: number, height: number): string {
+  let brf = '';
+  for (let r = 0; r < height; r++) {
+    let line = '';
+    if (r === 0) {
+      line += '  ';
+      for (let c = 3; c <= width; c++) {
+        const tens = Math.floor(c / 10);
+        line += tens > 0 ? tens.toString() : ' ';
+      }
+    } else if (r === 1) {
+      line += '  ';
+      for (let c = 3; c <= width; c++) {
+        line += (c % 10).toString();
+      }
+    } else {
+      const rowNum = r + 1;
+      const tens = Math.floor(rowNum / 10);
+      line += tens > 0 ? tens.toString() : ' ';
+      line += (rowNum % 10).toString();
+
+      for (let c = 3; c <= width; c++) {
+        const isBorder = (r === 2 || r === height - 1 || c === 3 || c === width);
+        line += isBorder ? '=' : ' ';
+      }
+    }
+    brf += line;
+    if (r < height - 1) {
+      brf += '\r\n';
+    }
+  }
+  return brf;
 }

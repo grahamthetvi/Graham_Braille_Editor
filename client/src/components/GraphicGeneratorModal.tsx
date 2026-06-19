@@ -409,13 +409,14 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                       <option value="cloud">Cloud</option>
                       <option value="cloudLightning">Cloud with Lightning Bolt</option>
                       <option value="moon">Crescent Moon</option>
-                      <option value="movieProjector">Movie Projector</option>
                       <option value="cross">Cross</option>
                       <option value="flower">Flower</option>
                       <option value="heart">Heart</option>
                       <option value="hiking">Hiking</option>
                       <option value="iceSkates">Ice Skating Skates</option>
                       <option value="lightning">Lightning Bolt</option>
+                      <option value="movieProjector">Movie Projector</option>
+                      <option value="mustache">Mustache</option>
                       <option value="paintbrush">Paintbrush</option>
                       <option value="star">Star (5-Pointed)</option>
                       <option value="vampireFangs">Vampire Fangs</option>
