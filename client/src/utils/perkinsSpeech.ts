@@ -51,16 +51,53 @@ export function buildFingersSpeech(active: number[], isSpace: boolean): string {
     return `Press together: ${listed}.`;
 }
 
+let currentUtterance: SpeechSynthesisUtterance | null = null;
+let speechTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
 export function speakPerkinsHint(text: string): void {
     if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
+    if (speechTimeoutId !== null) {
+        clearTimeout(speechTimeoutId);
+        speechTimeoutId = null;
+    }
+
     window.speechSynthesis.cancel();
+
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 0.92;
-    window.speechSynthesis.speak(u);
+
+    u.onend = () => {
+        if (currentUtterance === u) {
+            currentUtterance = null;
+        }
+    };
+    u.onerror = () => {
+        if (currentUtterance === u) {
+            currentUtterance = null;
+        }
+    };
+
+    currentUtterance = u;
+
+    // Use a 50ms delay to prevent Chromium from asynchronously cancelling 
+    // the newly queued utterance right after calling cancel().
+    speechTimeoutId = setTimeout(() => {
+        if (currentUtterance === u) {
+            window.speechSynthesis.speak(u);
+        }
+        speechTimeoutId = null;
+    }, 50);
 }
 
 export function cancelPerkinsSpeech(): void {
+    if (speechTimeoutId !== null) {
+        clearTimeout(speechTimeoutId);
+        speechTimeoutId = null;
+    }
+    currentUtterance = null;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel();
     }
 }
+

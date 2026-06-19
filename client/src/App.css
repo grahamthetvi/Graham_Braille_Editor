@@ -1520,3 +1520,42 @@ label.stl-export-field {
   text-align: right;
 }
 
+/* ── Alphabet Generator Modal ─────────────────────────────────────────── */
+.alphabet-gen-modal {
+  max-width: 800px;
+}
+
+.gen-option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gen-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.gen-radio-label input[type="radio"] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.gen-radio-label span {
+  display: inline-block;
+}
+
+.gen-radio-label code {
+  font-family: monospace;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  padding: 0.05rem 0.2rem;
+  border-radius: 3px;
+  color: var(--accent);
+}
+
+

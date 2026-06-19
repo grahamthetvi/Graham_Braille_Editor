@@ -10,6 +10,7 @@ import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { BrailleCell } from './components/BrailleCell';
+import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
@@ -122,6 +123,7 @@ export default function App() {
     () => !!localStorage.getItem('graham-braille-privacy-seen')
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
+  const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'tools' | 'help'>('file');
@@ -886,6 +888,16 @@ Accuracy: _____________ %
                   Graphics
                 </button>
 
+                <button
+                  className={`toolbar-btn${showAlphabetGenerator ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowAlphabetGenerator(s => !s)}
+                  disabled={isPerkinsMode}
+                  title="Insert alphabet and simple words exercises"
+                  aria-label="Alphabet & Words Generator"
+                >
+                  🔤 Alphabet Exercises
+                </button>
+
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     className="toolbar-btn"
@@ -1514,6 +1526,16 @@ Accuracy: _____________ %
             setShowGraphicsEditor(false);
           }}
           onClose={() => setShowGraphicsEditor(false)}
+        />
+      )}
+
+      {showAlphabetGenerator && (
+        <AlphabetGeneratorModal
+          onInsert={(text) => {
+            editorRef.current?.insertTextAtCursor(text);
+            setShowAlphabetGenerator(false);
+          }}
+          onClose={() => setShowAlphabetGenerator(false)}
         />
       )}
 
