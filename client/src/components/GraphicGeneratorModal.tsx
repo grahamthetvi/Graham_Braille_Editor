@@ -172,19 +172,57 @@ export function GraphicGeneratorModal({
     return Array.from({ length: hCells * 3 }, () => Array(wCells * 2).fill(false));
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setPhotoImage(event.target.result as string);
-        setPhotoScale(100);
-        setPhotoOffsetX(0);
-        setPhotoOffsetY(0);
+
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      try {
+        const pdfjsLib = await loadPdfJs();
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          if (!event.target?.result) return;
+          const typedarray = new Uint8Array(event.target.result as ArrayBuffer);
+          try {
+            const pdf = await pdfjsLib.getDocument(typedarray).promise;
+            const page = await pdf.getPage(1);
+
+            const viewport = page.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            if (context) {
+              await page.render({ canvasContext: context, viewport }).promise;
+              const imgDataUrl = canvas.toDataURL('image/png');
+              setPhotoImage(imgDataUrl);
+              setPhotoScale(100);
+              setPhotoOffsetX(0);
+              setPhotoOffsetY(0);
+            }
+          } catch (pdfErr) {
+            console.error('Error rendering PDF page', pdfErr);
+            alert('Failed to parse PDF file.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (err) {
+        console.error('Failed to load PDF library', err);
+        alert('Failed to load PDF library.');
       }
-    };
-    reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setPhotoImage(event.target.result as string);
+          setPhotoScale(100);
+          setPhotoOffsetX(0);
+          setPhotoOffsetY(0);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleClearCanvas = () => {
@@ -692,7 +730,7 @@ export function GraphicGeneratorModal({
                 } else if (type === 'graph') {
                   label = 'Graphs';
                 } else if (type === 'photo') {
-                  label = 'Photo';
+                  label = 'Photo Overlay';
                 }
                 return (
                   <button
@@ -809,20 +847,24 @@ export function GraphicGeneratorModal({
           ) : graphicType === 'photo' ? (
             <div style={{ flex: 1, padding: '1rem', display: 'flex', gap: '1.5rem', overflowY: 'auto' }}>
               {/* Left Column: Controls & Canvas */}
-              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
-                {/* Control Bar: Image Upload & Opacity */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)' }}>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.9rem' }}>Select Photo:</label>
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0 }}>
+                
+                {/* Condensed Control Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', border: '1px solid var(--border-color)', padding: '0.5rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.8rem' }}>
+                  {/* File Upload */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Photo:</span>
                     <input 
                       type="file" 
-                      accept="image/*" 
+                      accept="image/*,.pdf" 
                       onChange={handlePhotoUpload} 
-                      style={{ fontSize: '0.8rem', width: '100%' }}
+                      style={{ fontSize: '0.75rem', width: '120px' }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.9rem' }}>Photo Opacity: {(photoOpacity * 100).toFixed(0)}%</label>
+
+                  {/* Opacity slider */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Opacity: {(photoOpacity * 100).toFixed(0)}%</span>
                     <input 
                       type="range" 
                       min={0} 
@@ -830,154 +872,164 @@ export function GraphicGeneratorModal({
                       step={0.05} 
                       value={photoOpacity} 
                       onChange={e => setPhotoOpacity(parseFloat(e.target.value))}
-                      style={{ width: '100%' }}
+                      style={{ width: '70px', height: '14px', margin: 0 }}
                     />
                   </div>
-                </div>
 
-                {/* Scale & Offsets */}
-                {photoImage && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)', marginTop: '-0.5rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>Image Scale: {photoScale}%</label>
-                      <input 
-                        type="range" 
-                        min={10} 
-                        max={300} 
-                        value={photoScale} 
-                        onChange={e => setPhotoScale(parseInt(e.target.value, 10))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>X Offset: {photoOffsetX}px</label>
-                      <input 
-                        type="range" 
-                        min={-400} 
-                        max={400} 
-                        value={photoOffsetX} 
-                        onChange={e => setPhotoOffsetX(parseInt(e.target.value, 10))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>Y Offset: {photoOffsetY}px</label>
-                      <input 
-                        type="range" 
-                        min={-400} 
-                        max={400} 
-                        value={photoOffsetY} 
-                        onChange={e => setPhotoOffsetY(parseInt(e.target.value, 10))}
-                        style={{ width: '100%' }}
-                      />
-                    </div>
-                  </div>
-                )}
+                  {/* Scale & Offsets (only if photo is uploaded) */}
+                  {photoImage && (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Scale: {photoScale}%</span>
+                        <input 
+                          type="range" 
+                          min={10} 
+                          max={300} 
+                          value={photoScale} 
+                          onChange={e => setPhotoScale(parseInt(e.target.value, 10))}
+                          style={{ width: '60px', height: '14px', margin: 0 }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Offsets:</span>
+                        <input 
+                          type="number" 
+                          value={photoOffsetX} 
+                          onChange={e => setPhotoOffsetX(parseInt(e.target.value, 10) || 0)}
+                          style={{ width: '35px', padding: '1px 2px', fontSize: '0.75rem' }}
+                          title="X Offset"
+                        />
+                        <span>,</span>
+                        <input 
+                          type="number" 
+                          value={photoOffsetY} 
+                          onChange={e => setPhotoOffsetY(parseInt(e.target.value, 10) || 0)}
+                          style={{ width: '35px', padding: '1px 2px', fontSize: '0.75rem' }}
+                          title="Y Offset"
+                        />
+                      </div>
+                    </>
+                  )}
 
-                {/* Tool Selector Bar */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Drawing Tool:</span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {(['pencil', 'eraser', 'line', 'stamp'] as const).map(tool => (
-                        <button
-                          key={tool}
-                          type="button"
-                          className={`toolbar-btn ${photoTool === tool ? 'toolbar-btn--active' : ''}`}
-                          onClick={() => {
-                            setPhotoTool(tool);
-                            setLineStart(null);
-                          }}
-                          style={{ padding: '4px 8px', fontSize: '0.8rem', textTransform: 'capitalize' }}
-                        >
-                          {tool}
-                        </button>
-                      ))}
-                    </div>
+                  {/* Drawing Tool */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Tool:</span>
+                    <select
+                      value={photoTool}
+                      onChange={e => {
+                        setPhotoTool(e.target.value as any);
+                        setLineStart(null);
+                      }}
+                      style={{ padding: '1px 3px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)' }}
+                    >
+                      <option value="pencil">Pencil</option>
+                      <option value="eraser">Eraser</option>
+                      <option value="line">Line</option>
+                      <option value="stamp">Stamp</option>
+                    </select>
                   </div>
 
+                  {/* Tool Config (Brush Size / Stamp details) */}
                   {(photoTool === 'pencil' || photoTool === 'eraser' || photoTool === 'line') && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
-                      <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Brush Size: {photoBrushSize}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Brush: {photoBrushSize}</span>
                       <input 
                         type="range" 
                         min={1} 
                         max={5} 
                         value={photoBrushSize} 
                         onChange={e => setPhotoBrushSize(parseInt(e.target.value, 10))}
-                        style={{ width: '100%' }}
+                        style={{ width: '55px', height: '14px', margin: 0 }}
                       />
                     </div>
                   )}
 
                   {photoTool === 'stamp' && (
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Shape:</span>
-                        <select
-                          value={photoStampShape}
-                          onChange={e => setPhotoStampShape(e.target.value as InventoryShapeKind)}
-                          style={{ padding: '2px 4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
-                        >
-                          <option value="actingMask">Acting Mask</option>
-                          <option value="apple">Apple</option>
-                          <option value="axe">Axe</option>
-                          <option value="beach">Beach</option>
-                          <option value="bed">Bed</option>
-                          <option value="birdHouse">Bird House</option>
-                          <option value="bowling">Bowling</option>
-                          <option value="candle">Candle</option>
-                          <option value="cat">Cat</option>
-                          <option value="circle">Circle</option>
-                          <option value="cloud">Cloud</option>
-                          <option value="cloudLightning">Cloud with Lightning Bolt</option>
-                          <option value="moon">Crescent Moon</option>
-                          <option value="cross">Cross</option>
-                          <option value="dog">Dog</option>
-                          <option value="flower">Flower</option>
-                          <option value="heart">Heart</option>
-                          <option value="hiking">Hiking</option>
-                          <option value="house">House</option>
-                          <option value="iceSkates">Ice Skating Skates</option>
-                          <option value="lightning">Lightning Bolt</option>
-                          <option value="movieProjector">Movie Projector</option>
-                          <option value="mustache">Mustache</option>
-                          <option value="paintbrush">Paintbrush</option>
-                          <option value="star">Star (5-Pointed)</option>
-                          <option value="vampireFangs">Vampire Fangs</option>
-                        </select>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Size:</span>
-                        <input 
-                          type="number" 
-                          min={2} 
-                          max={30} 
-                          value={photoStampSize} 
-                          onChange={e => setPhotoStampSize(parseInt(e.target.value, 10))}
-                          style={{ width: '50px', padding: '2px 4px', fontSize: '0.8rem' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <select
+                        value={photoStampShape}
+                        onChange={e => setPhotoStampShape(e.target.value as InventoryShapeKind)}
+                        style={{ padding: '1px 3px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', maxWidth: '90px' }}
+                      >
+                        <option value="actingMask">Mask</option>
+                        <option value="apple">Apple</option>
+                        <option value="axe">Axe</option>
+                        <option value="beach">Beach</option>
+                        <option value="bed">Bed</option>
+                        <option value="birdHouse">Bird H.</option>
+                        <option value="bowling">Bowling</option>
+                        <option value="candle">Candle</option>
+                        <option value="cat">Cat</option>
+                        <option value="circle">Circle</option>
+                        <option value="cloud">Cloud</option>
+                        <option value="cloudLightning">Cloud+Lt</option>
+                        <option value="moon">Moon</option>
+                        <option value="cross">Cross</option>
+                        <option value="dog">Dog</option>
+                        <option value="flower">Flower</option>
+                        <option value="heart">Heart</option>
+                        <option value="hiking">Hiking</option>
+                        <option value="house">House</option>
+                        <option value="iceSkates">Skates</option>
+                        <option value="lightning">Lightning</option>
+                        <option value="movieProjector">Proj.</option>
+                        <option value="mustache">Mustache</option>
+                        <option value="paintbrush">Brush</option>
+                        <option value="star">Star</option>
+                        <option value="vampireFangs">Fangs</option>
+                      </select>
+                      <input 
+                        type="number" 
+                        min={2} 
+                        max={30} 
+                        value={photoStampSize} 
+                        onChange={e => setPhotoStampSize(parseInt(e.target.value, 10) || 5)}
+                        style={{ width: '30px', padding: '1px 2px', fontSize: '0.75rem' }}
+                        title="Stamp Size"
+                      />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem', cursor: 'pointer' }}>
                         <input 
                           type="checkbox" 
                           checked={photoStampFilled} 
                           onChange={e => setPhotoStampFilled(e.target.checked)}
-                          id="stamp-filled-check"
+                          style={{ margin: 0 }}
                         />
-                        <label htmlFor="stamp-filled-check" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Filled</label>
-                      </div>
+                        Fill
+                      </label>
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', marginLeft: 'auto' }}>
+                  {/* Width & Height */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontWeight: 'bold' }}>Grid:</span>
+                    <input 
+                      type="number" 
+                      min={10} 
+                      max={60} 
+                      value={photoWidthCells} 
+                      onChange={e => setPhotoWidthCells(parseInt(e.target.value, 10) || 40)}
+                      style={{ width: '30px', padding: '1px 2px', fontSize: '0.75rem' }}
+                      title="Width (cells)"
+                    />
+                    <span>×</span>
+                    <input 
+                      type="number" 
+                      min={5} 
+                      max={40} 
+                      value={photoHeightCells} 
+                      onChange={e => setPhotoHeightCells(parseInt(e.target.value, 10) || 20)}
+                      style={{ width: '30px', padding: '1px 2px', fontSize: '0.75rem' }}
+                      title="Height (lines)"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
                     <button 
                       type="button" 
                       className="toolbar-btn" 
                       onClick={() => setGridVisible(v => !v)}
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
                     >
                       {gridVisible ? 'Hide Grid' : 'Show Grid'}
                     </button>
@@ -985,7 +1037,7 @@ export function GraphicGeneratorModal({
                       type="button" 
                       className="toolbar-btn" 
                       onClick={handleClearCanvas}
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
                     >
                       Clear
                     </button>
@@ -993,94 +1045,31 @@ export function GraphicGeneratorModal({
                       type="button" 
                       className="toolbar-btn" 
                       onClick={handleInvertCanvas}
-                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                      style={{ padding: '2px 6px', fontSize: '0.75rem' }}
                     >
                       Invert
                     </button>
                   </div>
                 </div>
 
-                {/* Stamp Cross Parameters if Cross is selected */}
-                {photoTool === 'stamp' && photoStampShape === 'cross' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)', marginTop: '-0.5rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Horiz Length:</label>
-                      <input 
-                        type="number" 
-                        min={2} 
-                        value={photoStampCrossParams.lengthHorizontal} 
-                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, lengthHorizontal: parseInt(e.target.value, 10) || 10 }))}
-                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Vert Thick:</label>
-                      <input 
-                        type="number" 
-                        min={1} 
-                        value={photoStampCrossParams.thicknessVertical} 
-                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessVertical: parseInt(e.target.value, 10) || 2 }))}
-                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Horiz Thick:</label>
-                      <input 
-                        type="number" 
-                        min={1} 
-                        value={photoStampCrossParams.thicknessHorizontal} 
-                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessHorizontal: parseInt(e.target.value, 10) || 2 }))}
-                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Height Ratio:</label>
-                      <input 
-                        type="number" 
-                        step={0.05} 
-                        min={0.1} 
-                        max={0.9} 
-                        value={photoStampCrossParams.heightRatio} 
-                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, heightRatio: parseFloat(e.target.value) || 0.35 }))}
-                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Grid Size Settings & Info */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border-color)', padding: '0.5rem 0.75rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <label>
-                      Width (cells):{' '}
-                      <input 
-                        type="number" 
-                        min={10} 
-                        max={60} 
-                        value={photoWidthCells} 
-                        onChange={e => setPhotoWidthCells(parseInt(e.target.value, 10) || 40)}
-                        style={{ width: '45px', padding: '2px 4px' }}
-                      />
-                    </label>
-                    <label>
-                      Height (lines):{' '}
-                      <input 
-                        type="number" 
-                        min={5} 
-                        max={40} 
-                        value={photoHeightCells} 
-                        onChange={e => setPhotoHeightCells(parseInt(e.target.value, 10) || 20)}
-                        style={{ width: '45px', padding: '2px 4px' }}
-                      />
-                    </label>
-                  </div>
-                  <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                {/* Subtitle / Extra Parameters Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '-0.25rem', padding: '0 0.25rem' }}>
+                  <div>
                     Default layout size: {defaultCellsPerRow} cells × {defaultLinesPerPage} lines
                   </div>
+                  {photoTool === 'stamp' && photoStampShape === 'cross' && (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>Cross:</span>
+                      <label>H-Len: <input type="number" min={2} value={photoStampCrossParams.lengthHorizontal} onChange={e => setPhotoStampCrossParams(p => ({ ...p, lengthHorizontal: parseInt(e.target.value, 10) || 10 }))} style={{ width: '25px', fontSize: '0.7rem' }} /></label>
+                      <label>V-Thick: <input type="number" min={1} value={photoStampCrossParams.thicknessVertical} onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessVertical: parseInt(e.target.value, 10) || 2 }))} style={{ width: '25px', fontSize: '0.7rem' }} /></label>
+                      <label>H-Thick: <input type="number" min={1} value={photoStampCrossParams.thicknessHorizontal} onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessHorizontal: parseInt(e.target.value, 10) || 2 }))} style={{ width: '25px', fontSize: '0.7rem' }} /></label>
+                      <label>H-Ratio: <input type="number" step={0.05} min={0.1} max={0.9} value={photoStampCrossParams.heightRatio} onChange={e => setPhotoStampCrossParams(p => ({ ...p, heightRatio: parseFloat(e.target.value) || 0.35 }))} style={{ width: '35px', fontSize: '0.7rem' }} /></label>
+                    </div>
+                  )}
                 </div>
 
                 {/* Drawing Canvas Container */}
-                <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '400px', border: '1px solid var(--border-color)', borderRadius: '6px', background: '#333', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '500px', border: '1px solid var(--border-color)', borderRadius: '6px', background: '#333', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
                   {photoImage && (
                     <img 
                       src={photoImage} 
@@ -1514,3 +1503,21 @@ function stampShapeOnGrid(
   }
   return newGrid;
 }
+
+const loadPdfJs = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).pdfjsLib) {
+      resolve((window as any).pdfjsLib);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js';
+    script.onload = () => {
+      const pdfjsLib = (window as any).pdfjsLib;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+      resolve(pdfjsLib);
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
