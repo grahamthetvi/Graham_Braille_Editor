@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { ChartGenerator } from './ChartGenerator';
 import type { MathCode } from '../hooks/useBraille';
 import {
@@ -10,6 +10,7 @@ import {
   generateCustomShape,
   generateInventoryShape,
   generateRaisedPrintTextGraphic,
+  GraphicCanvas,
   type GraphicResult,
   type InventoryShapeKind
 } from '../utils/graphicBraille';
@@ -22,6 +23,8 @@ import fontUrl from '@fontsource/open-sans/files/open-sans-latin-700-normal.woff
 interface GraphicGeneratorModalProps {
   mathCode: MathCode;
   onMathCodeChange: (code: MathCode) => void;
+  defaultCellsPerRow: number;
+  defaultLinesPerPage: number;
   onInsert: (block: string) => void;
   onClose: () => void;
 }
@@ -34,11 +37,19 @@ type GraphicType =
   | 'manipulatives'
   | 'customShape'
   | 'shapeInventory'
+  | 'photo'
   | 'raisedPrintText'
   | 'graph'
   | 'chart';
 
-export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, onClose }: GraphicGeneratorModalProps) {
+export function GraphicGeneratorModal({
+  mathCode,
+  onMathCodeChange,
+  defaultCellsPerRow,
+  defaultLinesPerPage,
+  onInsert,
+  onClose
+}: GraphicGeneratorModalProps) {
   const [graphicType, setGraphicType] = useState<GraphicType>('clock');
 
   // Clock state
@@ -127,6 +138,432 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
     }
   }, [graphicType, printFont, fontLoading]);
 
+  // Photo state
+  const [photoImage, setPhotoImage] = useState<string | null>(null);
+  const [photoWidthCells, setPhotoWidthCells] = useState(defaultCellsPerRow);
+  const [photoHeightCells, setPhotoHeightCells] = useState(defaultLinesPerPage);
+  const [photoOpacity, setPhotoOpacity] = useState(0.5);
+  const [photoScale, setPhotoScale] = useState(100);
+  const [photoOffsetX, setPhotoOffsetX] = useState(0);
+  const [photoOffsetY, setPhotoOffsetY] = useState(0);
+  const [photoTool, setPhotoTool] = useState<'pencil' | 'eraser' | 'line' | 'stamp'>('pencil');
+  const [photoBrushSize, setPhotoBrushSize] = useState(1);
+  const [photoStampShape, setPhotoStampShape] = useState<InventoryShapeKind>('circle');
+  const [photoStampSize, setPhotoStampSize] = useState(5);
+  const [photoStampFilled, setPhotoStampFilled] = useState(false);
+  const [photoStampCrossParams, setPhotoStampCrossParams] = useState({
+    lengthHorizontal: 10,
+    thicknessVertical: 2,
+    thicknessHorizontal: 2,
+    heightRatio: 0.35,
+  });
+  const [gridVisible, setGridVisible] = useState(true);
+  const [photoDrawingGrid, setPhotoDrawingGrid] = useState<boolean[][]>(() =>
+    Array.from({ length: defaultLinesPerPage * 3 }, () => Array(defaultCellsPerRow * 2).fill(false))
+  );
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(true); // true = draw, false = erase
+  const [lineStart, setLineStart] = useState<{ x: number; y: number } | null>(null);
+  const [mouseHoverGrid, setMouseHoverGrid] = useState<{ x: number; y: number } | null>(null);
+
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const createBlankGrid = (wCells: number, hCells: number) => {
+    return Array.from({ length: hCells * 3 }, () => Array(wCells * 2).fill(false));
+  };
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setPhotoImage(event.target.result as string);
+        setPhotoScale(100);
+        setPhotoOffsetX(0);
+        setPhotoOffsetY(0);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearCanvas = () => {
+    if (window.confirm("Are you sure you want to clear your drawing?")) {
+      setPhotoDrawingGrid(createBlankGrid(photoWidthCells, photoHeightCells));
+    }
+  };
+
+  const handleInvertCanvas = () => {
+    setPhotoDrawingGrid(current => current.map(row => row.map(cell => !cell)));
+  };
+
+  // Resize drawing grid when dimensions change
+  useEffect(() => {
+    setPhotoDrawingGrid(current => {
+      const newHDots = photoHeightCells * 3;
+      const newWDots = photoWidthCells * 2;
+      const newGrid = Array.from({ length: newHDots }, () => Array(newWDots).fill(false));
+      const oldHDots = current.length;
+      const oldWDots = oldHDots > 0 ? current[0].length : 0;
+      
+      for (let y = 0; y < Math.min(oldHDots, newHDots); y++) {
+        for (let x = 0; x < Math.min(oldWDots, newWDots); x++) {
+          newGrid[y][x] = current[y][x];
+        }
+      }
+      return newGrid;
+    });
+  }, [photoWidthCells, photoHeightCells]);
+
+  const applyBrush = (grid: boolean[][], gridX: number, gridY: number, val: boolean) => {
+    const cols = photoWidthCells * 2;
+    const rows = photoHeightCells * 3;
+    const radius = (photoBrushSize - 1) / 2;
+    
+    for (let dy = -Math.ceil(radius); dy <= Math.ceil(radius); dy++) {
+      for (let dx = -Math.ceil(radius); dx <= Math.ceil(radius); dx++) {
+        if (dx * dx + dy * dy <= radius * radius + 0.1) {
+          const tx = gridX + dx;
+          const ty = gridY + dy;
+          if (tx >= 0 && tx < cols && ty >= 0 && ty < rows) {
+            grid[ty][tx] = val;
+          }
+        }
+      }
+    }
+  };
+
+  const drawLineOnGrid = (grid: boolean[][], x0: number, y0: number, x1: number, y1: number, val: boolean) => {
+    const cols = photoWidthCells * 2;
+    const rows = photoHeightCells * 3;
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+    let cx = x0;
+    let cy = y0;
+
+    while (true) {
+      if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) {
+        applyBrush(grid, cx, cy, val);
+      }
+      if (cx === x1 && cy === y1) break;
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        cx += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        cy += sy;
+      }
+    }
+  };
+
+  // Canvas drawing effect
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const cols = photoWidthCells * 2;
+    const rows = photoHeightCells * 3;
+    const cellWidth = rect.width / cols;
+    const cellHeight = rect.height / rows;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    if (gridVisible) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (!photoDrawingGrid[y] || !photoDrawingGrid[y][x]) {
+            const cx = (x + 0.5) * cellWidth;
+            const cy = (y + 0.5) * cellHeight;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 1.2, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    ctx.fillStyle = '#00a8ff';
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (photoDrawingGrid[y] && photoDrawingGrid[y][x]) {
+          const cx = (x + 0.5) * cellWidth;
+          const cy = (y + 0.5) * cellHeight;
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.min(cellWidth, cellHeight) * 0.35, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      }
+    }
+
+    if (photoTool === 'line' && lineStart && mouseHoverGrid) {
+      ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+      ctx.lineWidth = photoBrushSize;
+      
+      const x0 = (lineStart.x + 0.5) * cellWidth;
+      const y0 = (lineStart.y + 0.5) * cellHeight;
+      const x1 = (mouseHoverGrid.x + 0.5) * cellWidth;
+      const y1 = (mouseHoverGrid.y + 0.5) * cellHeight;
+      
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+
+    if (photoTool === 'stamp' && mouseHoverGrid) {
+      const previewCanvas = new GraphicCanvas(Math.ceil(cols / 2), Math.ceil(rows / 3));
+      const cx = mouseHoverGrid.x;
+      const cy = mouseHoverGrid.y;
+      const size = photoStampSize;
+      const filled = photoStampFilled;
+      
+      switch (photoStampShape) {
+        case 'actingMask': previewCanvas.drawActingMask(cx, cy, size, filled); break;
+        case 'apple': previewCanvas.drawApple(cx, cy, size, filled); break;
+        case 'axe': previewCanvas.drawAxe(cx, cy, size, filled); break;
+        case 'beach': previewCanvas.drawBeach(cx, cy, size, filled); break;
+        case 'bed': previewCanvas.drawBed(cx, cy, size, filled); break;
+        case 'birdHouse': previewCanvas.drawBirdHouse(cx, cy, size, filled); break;
+        case 'bowling': previewCanvas.drawBowling(cx, cy, size, filled); break;
+        case 'candle': previewCanvas.drawCandle(cx, cy, size, filled); break;
+        case 'cat': previewCanvas.drawCat(cx, cy, size, filled); break;
+        case 'circle': previewCanvas.drawCircle(cx, cy, size, filled); break;
+        case 'cloud': previewCanvas.drawCloud(cx, cy, size, filled); break;
+        case 'cloudLightning': previewCanvas.drawCloudLightning(cx, cy, size, filled); break;
+        case 'moon': previewCanvas.drawCrescentMoon(cx, cy, size, filled); break;
+        case 'cross':
+          previewCanvas.drawCross(
+            cx,
+            cy,
+            size,
+            photoStampCrossParams.lengthHorizontal,
+            photoStampCrossParams.thicknessVertical,
+            photoStampCrossParams.thicknessHorizontal,
+            photoStampCrossParams.heightRatio,
+            filled
+          );
+          break;
+        case 'dog': previewCanvas.drawDog(cx, cy, size, filled); break;
+        case 'flower': previewCanvas.drawFlower(cx, cy, size, filled); break;
+        case 'heart': previewCanvas.drawHeart(cx, cy, size, filled); break;
+        case 'hiking': previewCanvas.drawHiking(cx, cy, size, filled); break;
+        case 'house': previewCanvas.drawHouse(cx, cy, size, filled); break;
+        case 'iceSkates': previewCanvas.drawIceSkates(cx, cy, size, filled); break;
+        case 'lightning': previewCanvas.drawLightningBolt(cx, cy, size, filled); break;
+        case 'movieProjector': previewCanvas.drawMovieProjector(cx, cy, size, filled); break;
+        case 'mustache': previewCanvas.drawMustache(cx, cy, size, filled); break;
+        case 'paintbrush': previewCanvas.drawPaintbrush(cx, cy, size, filled); break;
+        case 'star': previewCanvas.drawStar(cx, cy, size, filled); break;
+        case 'vampireFangs': previewCanvas.drawVampireFangs(cx, cy, size, filled); break;
+      }
+      
+      ctx.fillStyle = 'rgba(255, 75, 75, 0.5)';
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (previewCanvas.data[y] && previewCanvas.data[y][x]) {
+            const dotCx = (x + 0.5) * cellWidth;
+            const dotCy = (y + 0.5) * cellHeight;
+            ctx.beginPath();
+            ctx.arc(dotCx, dotCy, Math.min(cellWidth, cellHeight) * 0.35, 0, 2 * Math.PI);
+            ctx.fill();
+          }
+        }
+      }
+    }
+  }, [
+    photoDrawingGrid,
+    photoWidthCells,
+    photoHeightCells,
+    gridVisible,
+    photoTool,
+    lineStart,
+    mouseHoverGrid,
+    photoStampShape,
+    photoStampSize,
+    photoStampFilled,
+    photoStampCrossParams,
+    photoBrushSize
+  ]);
+
+  const getGridCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    
+    let clientX = 0;
+    let clientY = 0;
+    
+    if ('touches' in e) {
+      if (e.touches.length === 0) return null;
+      clientX = e.touches[0].clientX - rect.left;
+      clientY = e.touches[0].clientY - rect.top;
+    } else {
+      clientX = e.clientX - rect.left;
+      clientY = e.clientY - rect.top;
+    }
+    
+    const cols = photoWidthCells * 2;
+    const rows = photoHeightCells * 3;
+    const gridX = Math.floor((clientX / rect.width) * cols);
+    const gridY = Math.floor((clientY / rect.height) * rows);
+    
+    return {
+      x: Math.max(0, Math.min(cols - 1, gridX)),
+      y: Math.max(0, Math.min(rows - 1, gridY))
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const coords = getGridCoords(e);
+    if (!coords) return;
+    
+    if (photoTool === 'stamp') {
+      setPhotoDrawingGrid(current => 
+        stampShapeOnGrid(
+          current, 
+          coords.x, 
+          coords.y, 
+          photoStampShape, 
+          photoStampSize, 
+          photoStampFilled, 
+          photoStampCrossParams
+        )
+      );
+      return;
+    }
+    
+    setIsDrawing(true);
+    if (photoTool === 'line') {
+      setLineStart(coords);
+      return;
+    }
+    
+    const mode = photoTool === 'pencil';
+    setIsDrawingMode(mode);
+    setPhotoDrawingGrid(current => {
+      const grid = current.map(row => [...row]);
+      applyBrush(grid, coords.x, coords.y, mode);
+      return grid;
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const coords = getGridCoords(e);
+    if (!coords) return;
+    
+    setMouseHoverGrid(coords);
+    if (!isDrawing) return;
+    
+    if (photoTool === 'pencil' || photoTool === 'eraser') {
+      setPhotoDrawingGrid(current => {
+        const grid = current.map(row => [...row]);
+        applyBrush(grid, coords.x, coords.y, isDrawingMode);
+        return grid;
+      });
+    }
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing) return;
+    
+    if (photoTool === 'line' && lineStart) {
+      const coords = getGridCoords(e) || mouseHoverGrid;
+      if (coords) {
+        setPhotoDrawingGrid(current => {
+          const grid = current.map(row => [...row]);
+          drawLineOnGrid(grid, lineStart.x, lineStart.y, coords.x, coords.y, true);
+          return grid;
+        });
+      }
+    }
+    setIsDrawing(false);
+    setLineStart(null);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const coords = getGridCoords(e);
+    if (!coords) return;
+    
+    if (photoTool === 'stamp') {
+      setPhotoDrawingGrid(current => 
+        stampShapeOnGrid(
+          current, 
+          coords.x, 
+          coords.y, 
+          photoStampShape, 
+          photoStampSize, 
+          photoStampFilled, 
+          photoStampCrossParams
+        )
+      );
+      return;
+    }
+    
+    setIsDrawing(true);
+    if (photoTool === 'line') {
+      setLineStart(coords);
+      return;
+    }
+    
+    const mode = photoTool === 'pencil';
+    setIsDrawingMode(mode);
+    setPhotoDrawingGrid(current => {
+      const grid = current.map(row => [...row]);
+      applyBrush(grid, coords.x, coords.y, mode);
+      return grid;
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const coords = getGridCoords(e);
+    if (!coords) return;
+    
+    setMouseHoverGrid(coords);
+    if (!isDrawing) return;
+    
+    if (photoTool === 'pencil' || photoTool === 'eraser') {
+      setPhotoDrawingGrid(current => {
+        const grid = current.map(row => [...row]);
+        applyBrush(grid, coords.x, coords.y, isDrawingMode);
+        return grid;
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawing) return;
+    
+    if (photoTool === 'line' && lineStart) {
+      const coords = mouseHoverGrid;
+      if (coords) {
+        setPhotoDrawingGrid(current => {
+          const grid = current.map(row => [...row]);
+          drawLineOnGrid(grid, lineStart.x, lineStart.y, coords.x, coords.y, true);
+          return grid;
+        });
+      }
+    }
+    setIsDrawing(false);
+    setLineStart(null);
+  };
+
   // Graph equation preview (memoised so it only re-evaluates when inputs change)
   const graphPreview = useMemo(() => {
     if (graphicType !== 'graph') return null;
@@ -181,6 +618,25 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
       case 'customShape':
         preview = generateCustomShape(customSize, customSides, customAngle, customFilled);
         break;
+      case 'photo': {
+        const rows = photoDrawingGrid.length;
+        const cols = rows > 0 ? photoDrawingGrid[0].length : 0;
+        const cellsW = Math.ceil(cols / 2);
+        const cellsH = Math.ceil(rows / 3);
+        const canvas = new GraphicCanvas(cellsW, cellsH);
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            if (photoDrawingGrid[y] && photoDrawingGrid[y][x]) {
+              canvas.setPoint(x, y);
+            }
+          }
+        }
+        preview = {
+          brf: canvas.renderToBRF(),
+          summary: `Photo Overlay Drawing (${photoWidthCells} cells × ${photoHeightCells} lines)`
+        };
+        break;
+      }
       case 'raisedPrintText':
         if (printFont) {
           preview = generateRaisedPrintTextGraphic(printFont, printText, printFontSize, printTextFilled, printLetterType);
@@ -222,6 +678,7 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   'manipulatives',
                   'customShape',
                   'shapeInventory',
+                  'photo',
                   'raisedPrintText',
                   'graph',
                   'chart'
@@ -234,6 +691,8 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   label = 'Shape Inventory';
                 } else if (type === 'graph') {
                   label = 'Graphs';
+                } else if (type === 'photo') {
+                  label = 'Photo';
                 }
                 return (
                   <button
@@ -346,6 +805,353 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
                   </div>
                 </div>
               )}
+            </div>
+          ) : graphicType === 'photo' ? (
+            <div style={{ flex: 1, padding: '1rem', display: 'flex', gap: '1.5rem', overflowY: 'auto' }}>
+              {/* Left Column: Controls & Canvas */}
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: 0 }}>
+                {/* Control Bar: Image Upload & Opacity */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.9rem' }}>Select Photo:</label>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handlePhotoUpload} 
+                      style={{ fontSize: '0.8rem', width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.9rem' }}>Photo Opacity: {(photoOpacity * 100).toFixed(0)}%</label>
+                    <input 
+                      type="range" 
+                      min={0} 
+                      max={1} 
+                      step={0.05} 
+                      value={photoOpacity} 
+                      onChange={e => setPhotoOpacity(parseFloat(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Scale & Offsets */}
+                {photoImage && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)', marginTop: '-0.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>Image Scale: {photoScale}%</label>
+                      <input 
+                        type="range" 
+                        min={10} 
+                        max={300} 
+                        value={photoScale} 
+                        onChange={e => setPhotoScale(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>X Offset: {photoOffsetX}px</label>
+                      <input 
+                        type="range" 
+                        min={-400} 
+                        max={400} 
+                        value={photoOffsetX} 
+                        onChange={e => setPhotoOffsetX(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.8rem' }}>Y Offset: {photoOffsetY}px</label>
+                      <input 
+                        type="range" 
+                        min={-400} 
+                        max={400} 
+                        value={photoOffsetY} 
+                        onChange={e => setPhotoOffsetY(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Tool Selector Bar */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Drawing Tool:</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {(['pencil', 'eraser', 'line', 'stamp'] as const).map(tool => (
+                        <button
+                          key={tool}
+                          type="button"
+                          className={`toolbar-btn ${photoTool === tool ? 'toolbar-btn--active' : ''}`}
+                          onClick={() => {
+                            setPhotoTool(tool);
+                            setLineStart(null);
+                          }}
+                          style={{ padding: '4px 8px', fontSize: '0.8rem', textTransform: 'capitalize' }}
+                        >
+                          {tool}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {(photoTool === 'pencil' || photoTool === 'eraser' || photoTool === 'line') && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '100px' }}>
+                      <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Brush Size: {photoBrushSize}</span>
+                      <input 
+                        type="range" 
+                        min={1} 
+                        max={5} 
+                        value={photoBrushSize} 
+                        onChange={e => setPhotoBrushSize(parseInt(e.target.value, 10))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  )}
+
+                  {photoTool === 'stamp' && (
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Shape:</span>
+                        <select
+                          value={photoStampShape}
+                          onChange={e => setPhotoStampShape(e.target.value as InventoryShapeKind)}
+                          style={{ padding: '2px 4px', fontSize: '0.8rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}
+                        >
+                          <option value="actingMask">Acting Mask</option>
+                          <option value="apple">Apple</option>
+                          <option value="axe">Axe</option>
+                          <option value="beach">Beach</option>
+                          <option value="bed">Bed</option>
+                          <option value="birdHouse">Bird House</option>
+                          <option value="bowling">Bowling</option>
+                          <option value="candle">Candle</option>
+                          <option value="cat">Cat</option>
+                          <option value="circle">Circle</option>
+                          <option value="cloud">Cloud</option>
+                          <option value="cloudLightning">Cloud with Lightning Bolt</option>
+                          <option value="moon">Crescent Moon</option>
+                          <option value="cross">Cross</option>
+                          <option value="dog">Dog</option>
+                          <option value="flower">Flower</option>
+                          <option value="heart">Heart</option>
+                          <option value="hiking">Hiking</option>
+                          <option value="house">House</option>
+                          <option value="iceSkates">Ice Skating Skates</option>
+                          <option value="lightning">Lightning Bolt</option>
+                          <option value="movieProjector">Movie Projector</option>
+                          <option value="mustache">Mustache</option>
+                          <option value="paintbrush">Paintbrush</option>
+                          <option value="star">Star (5-Pointed)</option>
+                          <option value="vampireFangs">Vampire Fangs</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>Size:</span>
+                        <input 
+                          type="number" 
+                          min={2} 
+                          max={30} 
+                          value={photoStampSize} 
+                          onChange={e => setPhotoStampSize(parseInt(e.target.value, 10))}
+                          style={{ width: '50px', padding: '2px 4px', fontSize: '0.8rem' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={photoStampFilled} 
+                          onChange={e => setPhotoStampFilled(e.target.checked)}
+                          id="stamp-filled-check"
+                        />
+                        <label htmlFor="stamp-filled-check" style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>Filled</label>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', marginLeft: 'auto' }}>
+                    <button 
+                      type="button" 
+                      className="toolbar-btn" 
+                      onClick={() => setGridVisible(v => !v)}
+                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                    >
+                      {gridVisible ? 'Hide Grid' : 'Show Grid'}
+                    </button>
+                    <button 
+                      type="button" 
+                      className="toolbar-btn" 
+                      onClick={handleClearCanvas}
+                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                    >
+                      Clear
+                    </button>
+                    <button 
+                      type="button" 
+                      className="toolbar-btn" 
+                      onClick={handleInvertCanvas}
+                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                    >
+                      Invert
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stamp Cross Parameters if Cross is selected */}
+                {photoTool === 'stamp' && photoStampShape === 'cross' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', border: '1px solid var(--border-color)', padding: '0.75rem', borderRadius: '6px', background: 'var(--bg-card)', marginTop: '-0.5rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Horiz Length:</label>
+                      <input 
+                        type="number" 
+                        min={2} 
+                        value={photoStampCrossParams.lengthHorizontal} 
+                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, lengthHorizontal: parseInt(e.target.value, 10) || 10 }))}
+                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Vert Thick:</label>
+                      <input 
+                        type="number" 
+                        min={1} 
+                        value={photoStampCrossParams.thicknessVertical} 
+                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessVertical: parseInt(e.target.value, 10) || 2 }))}
+                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Horiz Thick:</label>
+                      <input 
+                        type="number" 
+                        min={1} 
+                        value={photoStampCrossParams.thicknessHorizontal} 
+                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, thicknessHorizontal: parseInt(e.target.value, 10) || 2 }))}
+                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px', fontSize: '0.75rem' }}>Height Ratio:</label>
+                      <input 
+                        type="number" 
+                        step={0.05} 
+                        min={0.1} 
+                        max={0.9} 
+                        value={photoStampCrossParams.heightRatio} 
+                        onChange={e => setPhotoStampCrossParams(p => ({ ...p, heightRatio: parseFloat(e.target.value) || 0.35 }))}
+                        style={{ width: '100%', padding: '2px 4px', fontSize: '0.8rem' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Grid Size Settings & Info */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border-color)', padding: '0.5rem 0.75rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label>
+                      Width (cells):{' '}
+                      <input 
+                        type="number" 
+                        min={10} 
+                        max={60} 
+                        value={photoWidthCells} 
+                        onChange={e => setPhotoWidthCells(parseInt(e.target.value, 10) || 40)}
+                        style={{ width: '45px', padding: '2px 4px' }}
+                      />
+                    </label>
+                    <label>
+                      Height (lines):{' '}
+                      <input 
+                        type="number" 
+                        min={5} 
+                        max={40} 
+                        value={photoHeightCells} 
+                        onChange={e => setPhotoHeightCells(parseInt(e.target.value, 10) || 20)}
+                        style={{ width: '45px', padding: '2px 4px' }}
+                      />
+                    </label>
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    Default layout size: {defaultCellsPerRow} cells × {defaultLinesPerPage} lines
+                  </div>
+                </div>
+
+                {/* Drawing Canvas Container */}
+                <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '400px', border: '1px solid var(--border-color)', borderRadius: '6px', background: '#333', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                  {photoImage && (
+                    <img 
+                      src={photoImage} 
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        opacity: photoOpacity,
+                        transform: `translate(${photoOffsetX}px, ${photoOffsetY}px) scale(${photoScale / 100})`,
+                        pointerEvents: 'none',
+                        transformOrigin: 'center center',
+                      }}
+                      alt="Overlay guide"
+                    />
+                  )}
+                  <canvas 
+                    ref={canvasRef}
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      cursor: photoTool === 'stamp' ? 'crosshair' : 'pencil',
+                      display: 'block'
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Right Column: Preview */}
+              <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0 }}>
+                <h4 style={{ margin: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Braille Preview</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{photoWidthCells * 2} × {photoHeightCells * 3} dots</span>
+                </h4>
+                <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto', borderRadius: '6px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                  <div style={{ fontFamily: 'sans-serif', marginBottom: '1rem', fontWeight: 'bold', fontSize: '0.9rem' }}>{preview.summary}</div>
+                  <div
+                    className="brf-pages-container"
+                    style={{
+                      '--braille-cell-height': '16px',
+                      '--braille-cell-width': '10px',
+                      '--braille-cell-gap': '4px',
+                      '--braille-dot-size-active': '3.5px',
+                      '--braille-dot-size-inactive': '1.0px',
+                      '--braille-line-gap': '6px',
+                      overflow: 'visible',
+                      maxHeight: 'none',
+                    } as React.CSSProperties}
+                  >
+                    {asciiToUnicodeBraille(preview.brf).split('\n').map((line, lineIdx) => (
+                      <div key={lineIdx} className="brf-page-line" style={{ whiteSpace: 'nowrap' }}>
+                        {[...line].map((ch, chIdx) => (
+                          <BrailleCell key={chIdx} char={ch} showEmptyDots={true} />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
@@ -634,4 +1440,77 @@ export function GraphicGeneratorModal({ mathCode, onMathCodeChange, onInsert, on
       </div>
     </div>
   );
+}
+
+function stampShapeOnGrid(
+  grid: boolean[][],
+  cx: number,
+  cy: number,
+  shape: InventoryShapeKind,
+  size: number,
+  filled: boolean,
+  crossParams: {
+    lengthHorizontal: number;
+    thicknessVertical: number;
+    thicknessHorizontal: number;
+    heightRatio: number;
+  }
+): boolean[][] {
+  const rows = grid.length;
+  const cols = rows > 0 ? grid[0].length : 0;
+  
+  const cellsW = Math.ceil(cols / 2);
+  const cellsH = Math.ceil(rows / 3);
+  
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  
+  switch (shape) {
+    case 'actingMask': canvas.drawActingMask(cx, cy, size, filled); break;
+    case 'apple': canvas.drawApple(cx, cy, size, filled); break;
+    case 'axe': canvas.drawAxe(cx, cy, size, filled); break;
+    case 'beach': canvas.drawBeach(cx, cy, size, filled); break;
+    case 'bed': canvas.drawBed(cx, cy, size, filled); break;
+    case 'birdHouse': canvas.drawBirdHouse(cx, cy, size, filled); break;
+    case 'bowling': canvas.drawBowling(cx, cy, size, filled); break;
+    case 'candle': canvas.drawCandle(cx, cy, size, filled); break;
+    case 'cat': canvas.drawCat(cx, cy, size, filled); break;
+    case 'circle': canvas.drawCircle(cx, cy, size, filled); break;
+    case 'cloud': canvas.drawCloud(cx, cy, size, filled); break;
+    case 'cloudLightning': canvas.drawCloudLightning(cx, cy, size, filled); break;
+    case 'moon': canvas.drawCrescentMoon(cx, cy, size, filled); break;
+    case 'cross':
+      canvas.drawCross(
+        cx,
+        cy,
+        size,
+        crossParams.lengthHorizontal,
+        crossParams.thicknessVertical,
+        crossParams.thicknessHorizontal,
+        crossParams.heightRatio,
+        filled
+      );
+      break;
+    case 'dog': canvas.drawDog(cx, cy, size, filled); break;
+    case 'flower': canvas.drawFlower(cx, cy, size, filled); break;
+    case 'heart': canvas.drawHeart(cx, cy, size, filled); break;
+    case 'hiking': canvas.drawHiking(cx, cy, size, filled); break;
+    case 'house': canvas.drawHouse(cx, cy, size, filled); break;
+    case 'iceSkates': canvas.drawIceSkates(cx, cy, size, filled); break;
+    case 'lightning': canvas.drawLightningBolt(cx, cy, size, filled); break;
+    case 'movieProjector': canvas.drawMovieProjector(cx, cy, size, filled); break;
+    case 'mustache': canvas.drawMustache(cx, cy, size, filled); break;
+    case 'paintbrush': canvas.drawPaintbrush(cx, cy, size, filled); break;
+    case 'star': canvas.drawStar(cx, cy, size, filled); break;
+    case 'vampireFangs': canvas.drawVampireFangs(cx, cy, size, filled); break;
+  }
+
+  const newGrid = grid.map(row => [...row]);
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      if (canvas.data[y] && canvas.data[y][x]) {
+        newGrid[y][x] = true;
+      }
+    }
+  }
+  return newGrid;
 }

@@ -11,6 +11,7 @@ import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { BrailleCell } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
+import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
@@ -125,6 +126,7 @@ export default function App() {
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
+  const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
@@ -898,36 +900,16 @@ Accuracy: _____________ %
                   🔤 Alphabet Exercises
                 </button>
 
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                  <button
-                    className="toolbar-btn"
-                    onClick={handleDownloadGradingPrintLayoutText}
-                    disabled={!inputText.trim() || isPerkinsMode}
-                    title="Download print layout (.rtf) matching the braille wrapping with grading metrics prepended."
-                    aria-label="Download grading print layout text file"
-                  >
-                    Download Grading Print Layout
-                  </button>
-                  <label 
-                    className="settings-field" 
-                    style={{ 
-                      gap: '0.3rem', 
-                      padding: '0.2rem 0.4rem', 
-                      fontSize: '0.78rem', 
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={gradingSheetOnAllPages}
-                      onChange={(e) => setGradingSheetOnAllPages(e.target.checked)}
-                      style={{ cursor: 'pointer', margin: 0 }}
-                    />
-                    <span>On all pages</span>
-                  </label>
-                </div>
+                <button
+                  className={`toolbar-btn${showGradingPrintLayoutDialog ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowGradingPrintLayoutDialog(true)}
+                  disabled={!inputText.trim() || isPerkinsMode}
+                  title="Download print layout (.rtf) with grading metrics; choose whether the grading header appears on all pages."
+                  aria-label="Download grading print layout text file"
+                  aria-expanded={showGradingPrintLayoutDialog}
+                >
+                  Download Grading Print Layout
+                </button>
 
                 <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
                   UEB Math is standard and $$math$$ is Nemeth.
@@ -1521,6 +1503,8 @@ Accuracy: _____________ %
         <GraphicGeneratorModal
           mathCode={mathCode}
           onMathCodeChange={setMathCode}
+          defaultCellsPerRow={pageSettings.cellsPerRow}
+          defaultLinesPerPage={pageSettings.linesPerPage}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowGraphicsEditor(false);
@@ -1551,6 +1535,16 @@ Accuracy: _____________ %
           buildBase={stlBuildBase}
           disabled={!translatedText || isPerkinsMode}
           printText={inputText}
+        />
+      )}
+
+      {showGradingPrintLayoutDialog && (
+        <GradingPrintLayoutDialog
+          onClose={() => setShowGradingPrintLayoutDialog(false)}
+          onDownload={handleDownloadGradingPrintLayoutText}
+          gradingSheetOnAllPages={gradingSheetOnAllPages}
+          onGradingSheetOnAllPagesChange={setGradingSheetOnAllPages}
+          disabled={!inputText.trim() || isPerkinsMode}
         />
       )}
 
