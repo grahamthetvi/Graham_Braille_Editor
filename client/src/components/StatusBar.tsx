@@ -45,7 +45,7 @@ export function StatusBar({
           aria-label="Bridge update available"
           style={{ backgroundColor: '#d03f00', color: '#fff', textDecoration: 'none' }}
         >
-          ⚠ Bridge Update Required
+          Bridge Update Required
         </a>
       ) : (
         <span

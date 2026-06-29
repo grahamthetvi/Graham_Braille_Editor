@@ -231,7 +231,7 @@ export function PrintPanel({
         </div>
         {isWindows() || isMac() ? (
           <div style={{ ...style, color: '#0369a1' }}>
-            ℹ️ <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.
+            <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.
           </div>
         ) : null}
 

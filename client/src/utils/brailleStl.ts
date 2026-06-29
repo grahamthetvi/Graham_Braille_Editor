@@ -270,7 +270,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
   const logoPhysicalH = logoRgba ? logoH * logoPxToMm : 0;
   const reservedLogoX = logoRgba ? logoPhysicalW + LOGO_SIDE_CLEARANCE_MM : 0;
 
-  const brailleContentMaxX = margin + reservedLogoX + lastCol * inter + intra + r;
+  const brailleContentMaxX = margin + lastCol * inter + intra + r;
   const brailleContentMaxY = margin + Math.max(0, numLines - 1) * linePitch + cellFootprintY;
 
   let brailleBaseYOffset = 0;
@@ -358,7 +358,7 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
     for (let col = 0; col < chars.length; col++) {
       const ch = chars[col];
       const dots = extractDots(ch);
-      const baseX = margin + reservedLogoX + col * inter;
+      const baseX = margin + col * inter;
       const baseY = margin + row * linePitch + brailleBaseYOffset;
 
       for (let d = 0; d < 8; d++) {
@@ -386,6 +386,36 @@ export function buildBrailleStlBinary(options: BuildBrailleStlOptions): ArrayBuf
 
   addSolidBoxTriangles(tris, x0, y0, z0, x1, y1, z1);
   assertTriangleBudget(tris, reliefSettings);
+
+  // Rotate +90 degrees around X-axis so the sign is oriented upright.
+  // x' = x
+  // y' = -z
+  // z' = y
+  // Normals: nx' = nx, ny' = -nz, nz' = ny
+  const triCount = Math.floor(tris.length / 12);
+  for (let t = 0; t < triCount; t++) {
+    const base = t * 12;
+
+    const ny = tris[base + 1];
+    const nz = tris[base + 2];
+    tris[base + 1] = -nz;
+    tris[base + 2] = ny;
+
+    const ay = tris[base + 4];
+    const az = tris[base + 5];
+    tris[base + 4] = -az;
+    tris[base + 5] = ay;
+
+    const by = tris[base + 7];
+    const bz = tris[base + 8];
+    tris[base + 7] = -bz;
+    tris[base + 8] = by;
+
+    const cy = tris[base + 10];
+    const cz = tris[base + 11];
+    tris[base + 10] = -cz;
+    tris[base + 11] = cy;
+  }
 
   return encodeBinaryStl(tris);
 }

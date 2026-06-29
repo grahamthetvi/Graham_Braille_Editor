@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useBraille, type MathCode } from '../hooks/useBraille';
+import { asciiToUnicodeBraille } from '../utils/braille';
 import {
   defaultStlFilename,
   maxLogoEdgePxForReliefQuality,
@@ -20,6 +22,8 @@ type StlExportDialogProps = {
   unicodePages: string[];
   disabled?: boolean;
   printText?: string;
+  selectedTable: string;
+  mathCode: MathCode;
 };
 
 type Pending = {
@@ -41,12 +45,32 @@ export function StlExportDialog({
   unicodePages,
   disabled,
   printText,
+  selectedTable,
+  mathCode,
 }: StlExportDialogProps) {
   const titleId = useId();
   const workerRef = useRef<Worker | null>(null);
   const nextIdRef = useRef(1);
   const pendingRef = useRef<Map<number, Pending>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [textSource, setTextSource] = useState<'custom' | 'editor'>('custom');
+  const [customText, setCustomText] = useState(() => {
+    if (!printText) return '';
+    const trimmed = printText.trim();
+    if (trimmed.includes('\n') || trimmed.length > 60) {
+      return '';
+    }
+    return trimmed;
+  });
+
+  const { translate: translateStl, translatedText: translatedStlText, isLoading: isTranslating } = useBraille();
+
+  useEffect(() => {
+    if (textSource === 'custom') {
+      translateStl(customText, selectedTable, mathCode);
+    }
+  }, [customText, selectedTable, mathCode, translateStl, textSource]);
 
   const [scope, setScope] = useState<'one' | 'all'>('one');
   const [page1, setPage1] = useState(1);
@@ -226,8 +250,12 @@ export function StlExportDialog({
 
   const handleExport = async () => {
     setError('');
-    if (disabled || pageCount < 1 || unicodePages.length === 0) {
+    if (textSource === 'editor' && (disabled || pageCount < 1 || unicodePages.length === 0)) {
       setError('Nothing to export. Translate text and check layout first.');
+      return;
+    }
+    if (textSource === 'custom' && !customText.trim()) {
+      setError('Please enter the custom door sign text.');
       return;
     }
     setBusy(true);
@@ -235,15 +263,11 @@ export function StlExportDialog({
       const logoPxToMm =
         logoRaster && logoRaster.width > 0 ? logoTargetWidthMm / logoRaster.width : undefined;
 
-      if (scope === 'one') {
-        const idx = Math.min(Math.max(1, page1), pageCount) - 1;
-        const pageText = unicodePages[idx] ?? '';
-        const unicodeLines = pageText.split('\n');
-
-        let printTextLine: string | undefined;
-        if (unicodeLines.length === 1 && printText) {
-          printTextLine = printText.replace(/\s+/g, ' ').trim();
-        }
+      if (textSource === 'custom') {
+        const asciiBraille = translatedStlText || '';
+        const unicodeBraille = asciiToUnicodeBraille(asciiBraille);
+        const unicodeLines = unicodeBraille.split('\n');
+        const printTextLine = customText.trim().replace(/\s+/g, ' ');
 
         const buffer = await runBuildInWorker({
           ...buildBase,
@@ -253,14 +277,18 @@ export function StlExportDialog({
           printTextHeightMm,
           ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
         });
-        triggerDownload(buffer, defaultStlFilename(idx + 1));
+        triggerDownload(buffer, defaultStlFilename());
       } else {
-        for (let i = 0; i < unicodePages.length; i++) {
-          const unicodeLines = unicodePages[i].split('\n');
+        if (scope === 'one') {
+          const idx = Math.min(Math.max(1, page1), pageCount) - 1;
+          const pageText = unicodePages[idx] ?? '';
+          const unicodeLines = pageText.split('\n');
+
           let printTextLine: string | undefined;
           if (unicodeLines.length === 1 && printText) {
             printTextLine = printText.replace(/\s+/g, ' ').trim();
           }
+
           const buffer = await runBuildInWorker({
             ...buildBase,
             unicodeLines,
@@ -269,8 +297,25 @@ export function StlExportDialog({
             printTextHeightMm,
             ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
           });
-          triggerDownload(buffer, defaultStlFilename(i + 1));
-          await new Promise(r => setTimeout(r, 150));
+          triggerDownload(buffer, defaultStlFilename(idx + 1));
+        } else {
+          for (let i = 0; i < unicodePages.length; i++) {
+            const unicodeLines = unicodePages[i].split('\n');
+            let printTextLine: string | undefined;
+            if (unicodeLines.length === 1 && printText) {
+              printTextLine = printText.replace(/\s+/g, ' ').trim();
+            }
+            const buffer = await runBuildInWorker({
+              ...buildBase,
+              unicodeLines,
+              printTextLine,
+              reliefQuality,
+              printTextHeightMm,
+              ...(logoRaster ? { logo: logoRaster, logoPxToMm } : {}),
+            });
+            triggerDownload(buffer, defaultStlFilename(i + 1));
+            await new Promise(r => setTimeout(r, 150));
+          }
         }
       }
       onClose();
@@ -297,7 +342,7 @@ export function StlExportDialog({
         onClick={e => e.stopPropagation()}
       >
         <header className="stl-export-header">
-          <h2 id={titleId}>Export 3D (STL)</h2>
+          <h2 id={titleId}>3D Door Sign (STL)</h2>
           <button type="button" className="stl-export-close" onClick={() => !busy && !logoBusy && onClose()} aria-label="Close">
             ✕
           </button>
@@ -306,7 +351,7 @@ export function StlExportDialog({
         <div className="stl-export-body">
           <p className="stl-export-hint">
             Uses BANA midpoint dimensions (mm): dot diameter, height, intra-cell, inter-cell, and line spacing.
-            STL coordinates are millimeters (Z up from the plate). When exporting exactly one line of text, an ADA-style large print label is generated to the right of any optional logo, using Open Sans outline triangulation (not pixel slabs). Verify scale and orientation in your slicer.
+            The STL is exported standing upright (Z axis is the sign height, Y is the thickness) for optimal 3D print quality. When exporting exactly one line of text, an ADA-style large print label is generated above the braille (or to the right of any optional logo). Because standing a thin plate upright can be unstable during printing, we highly recommend enabling a brim or raft in your slicer.
           </p>
 
           <fieldset className="stl-export-field stl-export-logo-field">
@@ -409,41 +454,86 @@ export function StlExportDialog({
           </fieldset>
 
           <fieldset className="stl-export-field">
-            <legend>Scope</legend>
+            <legend>Sign Text Source</legend>
             <label className="stl-export-radio">
               <input
                 type="radio"
-                name="stl-scope"
-                checked={scope === 'one'}
-                onChange={() => setScope('one')}
+                name="stl-text-source"
+                checked={textSource === 'custom'}
+                onChange={() => setTextSource('custom')}
                 disabled={busy}
               />
-              Single page
+              Use custom text
             </label>
             <label className="stl-export-radio">
               <input
                 type="radio"
-                name="stl-scope"
-                checked={scope === 'all'}
-                onChange={() => setScope('all')}
+                name="stl-text-source"
+                checked={textSource === 'editor'}
+                onChange={() => setTextSource('editor')}
                 disabled={busy}
               />
-              All pages (one STL per page)
+              Use text from Editor
             </label>
           </fieldset>
 
-          {scope === 'one' && (
+          {textSource === 'custom' ? (
             <label className="stl-export-field">
-              Page (1–{pageCount})
+              Custom Door Sign Text
               <input
-                type="number"
-                min={1}
-                max={Math.max(1, pageCount)}
-                value={page1}
-                onChange={e => setPage1(parseInt(e.target.value, 10) || 1)}
+                type="text"
+                value={customText}
+                onChange={e => setCustomText(e.target.value)}
+                placeholder="e.g. ROOM 101"
                 disabled={busy}
+                style={{ width: '100%', maxWidth: 'none', boxSizing: 'border-box', marginTop: '0.35rem', padding: '0.4rem' }}
               />
+              {isTranslating && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.2rem' }}>
+                  Translating to Braille...
+                </span>
+              )}
             </label>
+          ) : (
+            <>
+              <fieldset className="stl-export-field">
+                <legend>Scope</legend>
+                <label className="stl-export-radio">
+                  <input
+                    type="radio"
+                    name="stl-scope"
+                    checked={scope === 'one'}
+                    onChange={() => setScope('one')}
+                    disabled={busy}
+                  />
+                  Single page
+                </label>
+                <label className="stl-export-radio">
+                  <input
+                    type="radio"
+                    name="stl-scope"
+                    checked={scope === 'all'}
+                    onChange={() => setScope('all')}
+                    disabled={busy}
+                  />
+                  All pages (one STL per page)
+                </label>
+              </fieldset>
+
+              {scope === 'one' && (
+                <label className="stl-export-field">
+                  Page (1–{pageCount})
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.max(1, pageCount)}
+                    value={page1}
+                    onChange={e => setPage1(parseInt(e.target.value, 10) || 1)}
+                    disabled={busy}
+                  />
+                </label>
+              )}
+            </>
           )}
 
           {error ? (
@@ -460,7 +550,12 @@ export function StlExportDialog({
               type="button"
               className="toolbar-btn toolbar-btn--primary"
               onClick={() => void handleExport()}
-              disabled={busy || logoBusy || disabled || pageCount < 1}
+              disabled={
+                busy ||
+                logoBusy ||
+                (textSource === 'editor' && (disabled || pageCount < 1)) ||
+                (textSource === 'custom' && (!customText.trim() || isTranslating))
+              }
             >
               {busy ? 'Generating…' : 'Download STL'}
             </button>

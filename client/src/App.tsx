@@ -775,23 +775,13 @@ Accuracy: _____________ %
                 </button>
 
                 <button
-                  className="toolbar-btn"
-                  onClick={() => setShowStlExportDialog(true)}
-                  disabled={!translatedText || isPerkinsMode}
-                  title="Export the paginated Braille preview as a 3D STL (BANA midpoint dot spacing, millimeters) for 3D printing."
-                  aria-label="Export Braille layout as STL for 3D printing"
-                >
-                  Export STL
-                </button>
-
-                <button
                   className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowPrint(s => !s)}
                   disabled={isPerkinsMode}
                   aria-expanded={showPrint}
                   title="Toggle Print to Embosser panel"
                 >
-                  🖨 Print
+                  Print
                 </button>
               </div>
             )}
@@ -805,7 +795,7 @@ Accuracy: _____________ %
                   aria-controls="page-settings-panel"
                   title="Configure page layout (cells per row, lines per page)"
                 >
-                  ⚙ Layout Settings
+                  Layout Settings
                 </button>
 
                 <button
@@ -877,7 +867,7 @@ Accuracy: _____________ %
                   aria-expanded={isPerkinsMode}
                   title="Toggle Perkins Brailler Translator layout"
                 >
-                  🎹 Perkins Viewer
+                  Perkins Viewer
                 </button>
 
                 <button
@@ -897,7 +887,17 @@ Accuracy: _____________ %
                   title="Insert alphabet and simple words exercises"
                   aria-label="Alphabet & Words Generator"
                 >
-                  🔤 Alphabet Exercises
+                  Alphabet Exercises
+                </button>
+
+                <button
+                  className="toolbar-btn"
+                  onClick={() => setShowStlExportDialog(true)}
+                  disabled={isPerkinsMode}
+                  title="Export the paginated Braille preview as a 3D STL door sign (BANA midpoint dot spacing, millimeters) for 3D printing."
+                  aria-label="Export Braille layout as STL for 3D printing"
+                >
+                  Door Sign (STL)
                 </button>
 
                 <button
@@ -977,7 +977,7 @@ Accuracy: _____________ %
                   title="Support Graham Braille Editor"
                   aria-label="Tip me on Buy Me a Coffee"
                 >
-                  ☕ Tip Me
+                  Tip Me
                 </a>
 
                 <span className="toolbar-version" style={{ marginLeft: 'auto', alignSelf: 'center', paddingRight: '1rem', fontSize: '0.8rem', opacity: 0.6 }}>
@@ -1021,7 +1021,7 @@ Accuracy: _____________ %
               title="Insert page break / Form Feed (Cmd+Enter / Ctrl+Enter)"
               aria-label="Insert page break"
             >
-              📄 Page Break
+              Page Break
             </button>
           </div>
           
@@ -1535,6 +1535,8 @@ Accuracy: _____________ %
           buildBase={stlBuildBase}
           disabled={!translatedText || isPerkinsMode}
           printText={inputText}
+          selectedTable={selectedTable}
+          mathCode={mathCode}
         />
       )}
 

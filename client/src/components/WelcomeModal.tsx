@@ -59,11 +59,10 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 1. Page Layout */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">⚙</div>
             <div>
               <h3>Page Layout — Presets, Cells &amp; Lines</h3>
               <p>
-                Click <strong>⚙ Layout Settings</strong> under the <strong>View &amp; Layout</strong> tab to open page
+                Click <strong>Layout Settings</strong> under the <strong>View &amp; Layout</strong> tab to open page
                 settings. Use quick presets: <strong>8.5×11in</strong> (US Letter,{' '}
                 <strong>32 × 25</strong> cells) or <strong>11×11.5in</strong> (wide
                 tractor paper, <strong>40 × 25</strong>), or choose <strong>Custom</strong>{' '}
@@ -80,7 +79,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                 (8.5×11 preset or 32 × 25). Single-sheet alignment varies by model; if you
                 dial in a value that works for your paper and want to share it, email{' '}
                 <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a>.
-                When you use <strong>🖨 Print</strong> with a ViewPlus driver, a short
+                When you use <strong>Print</strong> with a ViewPlus driver, a short
                 reminder appears there too.
               </p>
             </div>
@@ -88,19 +87,18 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 2. Embossing & Printing */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">🖨</div>
             <div className="welcome-bridge-content">
               <h3>Seamless Embossing (WebUSB &amp; Bridge)</h3>
               <p>
                 The app includes <strong>embosser drivers</strong> for Enabling Technologies, Index, ViewPlus, Braillo, and others—pick the model that matches your device when you print.
                 <strong> ChromeOS</strong> users can use WebUSB to send braille directly from the browser.
-                <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>⚙ Layout Settings</strong> (see above).
+                <strong> Windows/macOS/Linux</strong> users run the small <strong>Graham Bridge</strong> app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under <strong>Layout Settings</strong> (see above).
                 The bridge listens only on <strong>127.0.0.1:8080</strong> and accepts browser traffic from official Graham Braille Editor sites (and local dev), so random websites cannot send print jobs to it.
               </p>
 
               <div className="install-grid">
                 <div className="install-card">
-                  <h4>🪟 Windows Bridge</h4>
+                  <h4>Windows Bridge</h4>
                   <ol>
                     <li>Download &amp; extract the zip</li>
                     <li>Move <code>.exe</code> to a safe folder</li>
@@ -108,7 +106,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                   </ol>
                 </div>
                 <div className="install-card">
-                  <h4>🍎 macOS Bridge</h4>
+                  <h4>macOS Bridge</h4>
                   <ol>
                     <li>Drag <code>.app</code> to Applications</li>
                     <li>Right-click &rarr; <strong>Open</strong> first time</li>
@@ -116,7 +114,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                   </ol>
                 </div>
                 <div className="install-card">
-                  <h4>🐧 Linux Bridge</h4>
+                  <h4>Linux Bridge</h4>
                   <ol>
                     <li>
                       <strong>ZIP:</strong> move <code>graham-bridge-linux-amd64</code> to{' '}
@@ -134,7 +132,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
               <div className="welcome-footer-links">
                 <a href="https://github.com/grahamthetvi/Graham_Braille_Editor/releases" target="_blank" rel="noopener noreferrer" className="welcome-btn-secondary">
-                  📥 Download Desktop Bridge
+                  Download Desktop Bridge
                 </a>
               </div>
             </div>
@@ -142,7 +140,6 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 3. Math / LaTeX */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">∑</div>
             <div>
               <h3>Math Translation — LaTeX to Braille</h3>
               <p>
@@ -169,7 +166,6 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 4. Downloading & Autosave */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">💾</div>
             <div>
               <h3>Downloading &amp; Autosave</h3>
               <p>
@@ -183,18 +179,16 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 5. Perkins Viewer */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">🎹</div>
             <div>
               <h3>Perkins Viewer</h3>
               <p>
-                Click <strong>🎹 Perkins Viewer</strong> under the <strong>View &amp; Layout</strong> tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document.
+                Click <strong>Perkins Viewer</strong> under the <strong>Tools</strong> tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document.
               </p>
             </div>
           </section>
 
           {/* 6. Large-Print (Jumbo) Braille */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">🔎</div>
             <div>
               <h3>Large-Print (Jumbo) Braille</h3>
               <p>
@@ -205,7 +199,6 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
 
           {/* 7. Tactile Graphics & 3D Printing */}
           <section className="welcome-section">
-            <div className="welcome-section-icon" aria-hidden="true">📊</div>
             <div>
               <h3>Tactile Graphics &amp; 3D Printing</h3>
               <p>
@@ -222,7 +215,7 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                 <li><strong>Dot Pattern Preview:</strong> The editor displays canvas shapes as physical Braille dot grids in real-time.</li>
               </ul>
               <p style={{ marginTop: '0.5rem' }}>
-                Additionally, click <strong>Export STL</strong> under the <strong>File</strong> tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing.
+                Additionally, click <strong>Door Sign (STL)</strong> under the <strong>Tools</strong> tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing.
               </p>
             </div>
           </section>

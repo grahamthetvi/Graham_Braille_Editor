@@ -151,4 +151,39 @@ describe('buildBrailleStlBinary', () => {
     expect(triVector).toBeGreaterThan(40);
     expect(triVector).toBeLessThan(900);
   });
+
+  it('orients the sign upright (Z representing height, Y representing thickness)', () => {
+    const buf = buildBrailleStlBinary({
+      unicodeLines: ['\u2801'],
+      dimensions: defaultBanaBrailleDimensionsMm(),
+      plateThicknessMm: 1.5,
+      plateBorderMm: 1,
+      cylinderSegments: 8,
+    });
+    const dv = new DataView(buf);
+    const triCount = dv.getUint32(80, true);
+    
+    let maxZ = -Infinity;
+    let minZ = Infinity;
+    let maxY = -Infinity;
+    let minY = Infinity;
+
+    for (let t = 0; t < triCount; t++) {
+      const base = 84 + t * 50;
+      for (const vertexOffset of [12, 24, 36]) {
+        const y = dv.getFloat32(base + vertexOffset + 4, true);
+        const z = dv.getFloat32(base + vertexOffset + 8, true);
+        if (y > maxY) maxY = y;
+        if (y < minY) minY = y;
+        if (z > maxZ) maxZ = z;
+        if (z < minZ) minZ = z;
+      }
+    }
+
+    // In upright orientation:
+    // Z spans the height of the sign (which is > 5mm)
+    // Y spans the thickness of the sign (plateThickness + dotHeight, which is small, ~2.5mm)
+    expect(maxZ - minZ).toBeGreaterThan(5);
+    expect(maxY - minY).toBeLessThan(3);
+  });
 });
