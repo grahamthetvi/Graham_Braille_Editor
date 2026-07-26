@@ -164,7 +164,7 @@ Access the full-featured canvas editor by clicking **Graphics** under the **Tool
   - **Real-Time Braille Preview**: The graphics editor modal uses actual `<BrailleCell>` components for rendering, giving you an exact real-time look of the physical embossed output.
 
 ### 3. MP3 Audio Export
-Under the **File** tab, open the **Download BRF** menu (▾) for print layout and MP3 export. Choose a TTS engine and click **Export MP3**. Speech is synthesized entirely in the browser (no bridge required):
+Under the **File** tab, choose a TTS engine and click **Download MP3**. Speech is synthesized entirely in the browser (no bridge required):
 
 | Engine | Notes |
 |--------|--------|

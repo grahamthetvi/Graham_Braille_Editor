@@ -1,10 +1,9 @@
 import { KittenTTS } from 'kitten-tts-js';
-import { ensureOnnxWasmConfigured } from './onnxWasm';
 import { concatFloat32 } from './wav';
 import type { PcmAudio, TtsProgressCallback } from './types';
 
-/** Smallest Kitten model supported by kitten-tts-js (~25 MB first download). */
-const KITTEN_MODEL = 'KittenML/kitten-tts-nano-0.8';
+/** Browser-friendly Nano model (WASM; WebGPU optional). */
+const KITTEN_MODEL = 'onnx-community/KittenTTS-Nano-v0.8-ONNX';
 const KITTEN_VOICE = 'Luna';
 
 let kittenPromise: Promise<KittenTTS> | null = null;
@@ -12,8 +11,15 @@ let kittenPromise: Promise<KittenTTS> | null = null;
 async function getKitten(onProgress?: TtsProgressCallback): Promise<KittenTTS> {
   if (!kittenPromise) {
     onProgress?.({ phase: 'loading', messageKey: 'app.file.downloadMp3.status.loadingKitten' });
-    await ensureOnnxWasmConfigured();
-    kittenPromise = KittenTTS.from_pretrained(KITTEN_MODEL).catch(err => {
+    // runtime/wasm options exist at runtime; published .d.ts only lists dtype/cacheDir
+    const load = KittenTTS.from_pretrained as (
+      modelId?: string,
+      opts?: Record<string, unknown>,
+    ) => Promise<KittenTTS>;
+    kittenPromise = load(KITTEN_MODEL, {
+      runtime: 'cpu',
+      wasmSimd: true,
+    }).catch(err => {
       kittenPromise = null;
       throw err;
     });
