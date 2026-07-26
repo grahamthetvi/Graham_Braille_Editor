@@ -879,7 +879,7 @@ export function GraphicGeneratorModal({
           ) : graphicType === 'photo' ? (
             <div style={{ flex: 1, padding: '1rem', display: 'flex', gap: '1.5rem', overflow: 'hidden', minHeight: 0 }}>
               {/* Left Column: Controls & Canvas */}
-              <div style={{ flex: 1.6, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
                 
                 {/* Condensed Control Grid */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', border: '1px solid var(--border-color)', padding: '0.5rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.8rem', flexShrink: 0 }}>
@@ -1143,7 +1143,7 @@ export function GraphicGeneratorModal({
               </div>
 
               {/* Right Column: Preview */}
-              <div style={{ flex: 0.7, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
+              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
                 <h4 style={{ margin: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Braille Preview</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{photoWidthCells * 2} × {photoHeightCells * 3} dots</span>
@@ -1153,12 +1153,12 @@ export function GraphicGeneratorModal({
                   <div
                     className="brf-pages-container"
                     style={{
-                      '--braille-cell-height': '16px',
-                      '--braille-cell-width': '10px',
-                      '--braille-cell-gap': '4px',
-                      '--braille-dot-size-active': '3.5px',
-                      '--braille-dot-size-inactive': '1.0px',
-                      '--braille-line-gap': '6px',
+                      '--braille-cell-height': '28px',
+                      '--braille-cell-width': '18px',
+                      '--braille-cell-gap': '6px',
+                      '--braille-dot-size-active': '6px',
+                      '--braille-dot-size-inactive': '1.6px',
+                      '--braille-line-gap': '10px',
                       overflow: 'visible',
                       maxHeight: 'none',
                     } as React.CSSProperties}
