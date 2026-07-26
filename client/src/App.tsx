@@ -26,6 +26,15 @@ import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
 import { startBridgeStatusPolling } from './services/bridge-client';
+import {
+  synthesizeMp3InBrowser,
+  TTS_ENGINE_IDS,
+  TTS_ENGINE_STORAGE_KEY,
+  DEFAULT_TTS_ENGINE,
+  TtsExportError,
+  isTtsEngineId,
+  type TtsEngineId,
+} from './services/tts';
 import { useBraille, type MathCode } from './hooks/useBraille';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
@@ -38,6 +47,7 @@ import {
   defaultBrfDownloadFilename,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
+  defaultMp3DownloadFilename,
   formatPlainTextForPrintDownload,
   buildPlainTextToMatchBrailleWrap,
   convertToRtf,
@@ -60,6 +70,7 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
  *   • Download button exports the formatted BRF file (CRLF + form feeds).
+ *   • Download MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
@@ -171,6 +182,17 @@ export default function App() {
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
   const [bridgeUpdateAvailable, setBridgeUpdateAvailable] = useState(false);
+  const [ttsEngine, setTtsEngine] = useState<TtsEngineId>(() => {
+    try {
+      const v = localStorage.getItem(TTS_ENGINE_STORAGE_KEY);
+      return v && isTtsEngineId(v) ? v : DEFAULT_TTS_ENGINE;
+    } catch {
+      return DEFAULT_TTS_ENGINE;
+    }
+  });
+  const [mp3Exporting, setMp3Exporting] = useState(false);
+  const [mp3ExportStatus, setMp3ExportStatus] = useState<string | null>(null);
+  const [mp3ExportError, setMp3ExportError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState(() => {
     try {
       const v = localStorage.getItem('graham-braille-selected-table');
@@ -482,6 +504,50 @@ export default function App() {
     markExported(sessionId).catch(err => {
       console.error('Failed to mark session as exported', err);
     });
+  }
+
+  async function handleDownloadMp3() {
+    const text = inputText.trim();
+    if (!text || mp3Exporting) return;
+    setMp3ExportError(null);
+    setMp3ExportStatus(t('app.file.downloadMp3.status.starting'));
+    setMp3Exporting(true);
+    try {
+      const blob = await synthesizeMp3InBrowser(inputText, ttsEngine, progress => {
+        setMp3ExportStatus(t(progress.messageKey, progress.messageParams));
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = defaultMp3DownloadFilename();
+      a.click();
+      URL.revokeObjectURL(url);
+      markExported(sessionId).catch(err => {
+        console.error('Failed to mark session as exported', err);
+      });
+      setMp3ExportStatus(null);
+    } catch (err) {
+      const msg =
+        err instanceof TtsExportError
+          ? t(err.i18nKey, err.i18nParams)
+          : err instanceof Error
+            ? err.message
+            : String(err);
+      setMp3ExportError(msg);
+      setMp3ExportStatus(null);
+      console.error('MP3 export failed', err);
+    } finally {
+      setMp3Exporting(false);
+    }
+  }
+
+  function handleTtsEngineChange(engine: TtsEngineId) {
+    setTtsEngine(engine);
+    try {
+      localStorage.setItem(TTS_ENGINE_STORAGE_KEY, engine);
+    } catch {
+      /* ignore */
+    }
   }
 
   function handleDownloadPrintLayoutText() {
@@ -831,6 +897,34 @@ Accuracy: _____________ %
                   {t('app.file.downloadPrintLayout.label')}
                 </button>
 
+                <select
+                  className="table-select"
+                  value={ttsEngine}
+                  onChange={e => handleTtsEngineChange(e.target.value as TtsEngineId)}
+                  disabled={isPerkinsMode || mp3Exporting}
+                  title={t(`tts.${ttsEngine}.description`)}
+                  aria-label={t('app.file.tts.selectAriaLabel')}
+                >
+                  {TTS_ENGINE_IDS.map(engineId => (
+                    <option key={engineId} value={engineId} title={t(`tts.${engineId}.description`)}>
+                      {t(`tts.${engineId}.label`)}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  className="toolbar-btn"
+                  onClick={() => { void handleDownloadMp3(); }}
+                  disabled={!inputText.trim() || isPerkinsMode || mp3Exporting}
+                  title={t('app.file.downloadMp3.title')}
+                  aria-label={t('app.file.downloadMp3.ariaLabel')}
+                  aria-busy={mp3Exporting}
+                >
+                  {mp3Exporting
+                    ? (mp3ExportStatus || t('app.file.downloadMp3.exportingLabel'))
+                    : t('app.file.downloadMp3.label')}
+                </button>
+
                 <button
                   className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowPrint(s => !s)}
@@ -840,6 +934,16 @@ Accuracy: _____________ %
                 >
                   {t('app.file.print.label')}
                 </button>
+                {mp3ExportError && (
+                  <span
+                    className="toolbar-error"
+                    role="alert"
+                    title={mp3ExportError}
+                    style={{ marginLeft: '0.5rem', color: 'var(--danger, #c62828)', fontSize: '0.85rem', maxWidth: '28rem' }}
+                  >
+                    {t('app.file.downloadMp3.errorPrefix', { error: mp3ExportError })}
+                  </span>
+                )}
               </div>
             )}
 

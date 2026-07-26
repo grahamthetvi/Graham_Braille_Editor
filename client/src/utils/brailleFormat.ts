@@ -756,6 +756,13 @@ export function defaultGradingPrintLayoutFilename(): string {
   return `grading-print-layout-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.rtf`;
 }
 
+/** Default name for Festival MP3 audio export. */
+export function defaultMp3DownloadFilename(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `speech-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.mp3`;
+}
+
 /**
  * Converts a plain text string to Rich Text Format (RTF) using Courier New.
  * Escapes special characters like backslashes and curly braces, and converts

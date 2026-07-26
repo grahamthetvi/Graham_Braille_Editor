@@ -15,6 +15,8 @@ export default defineConfig({
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,ctb,txt}'],
+        // Large on-demand TTS runtimes — fetched only when exporting MP3.
+        globIgnores: ['**/ort-*.wasm', '**/espeak-ng-*.wasm'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
       manifest: {
@@ -40,8 +42,10 @@ export default defineConfig({
 
   optimizeDeps: {
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
-    exclude: ['monaco-editor'],
+    // ONNX / TTS packages are large and load on demand for MP3 export.
+    exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng'],
   },
+  assetsInclude: ['**/*.wasm'],
   build: {
     rollupOptions: {
       output: {
