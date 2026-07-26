@@ -34,10 +34,6 @@
         "ariaLabel": "Descargar archivo de texto con el diseño de impresión",
         "title": "Descargar texto plano (.txt) con los mismos saltos de línea que el editor de texto; cada línea coincide con una fila braille para que pueda imprimir o abrir en Word y alinear con el diseño grabado."
       },
-      "downloadMenu": {
-        "ariaLabel": "Más opciones de descarga",
-        "title": "Más opciones de descarga (diseño de impresión, audio MP3)"
-      },
       "tts": {
         "selectAriaLabel": "Motor de texto a voz para la exportación a MP3"
       },
@@ -68,6 +64,11 @@
       "print": {
         "label": "Imprimir",
         "title": "Mostrar/ocultar el panel Imprimir en la impresora braille"
+      },
+      "export": {
+        "label": "Exportar",
+        "ariaLabel": "Mostrar u ocultar opciones de exportación",
+        "title": "Exportar BRF, diseño de impresión o audio MP3"
       }
     },
     "view": {
@@ -288,15 +289,21 @@
   "tts": {
     "kitten": {
       "label": "Kitten (predeterminado)",
-      "description": "Voz neuronal ligera (~25–60 MB en la primera descarga)"
+      "size": "~25 MB",
+      "speed": "Velocidad de exportación equilibrada",
+      "description": "Voz neuronal ligera. Buena opción predeterminada para la mayoría de documentos."
     },
     "espeak": {
       "label": "eSpeak NG",
-      "description": "Voz robótica muy pequeña; carga más rápida"
+      "size": "~2 MB",
+      "speed": "Exportación más rápida",
+      "description": "Voz robótica pequeña. Ideal para una lectura rápida de borrador."
     },
     "piper": {
       "label": "Piper",
-      "description": "Voz neuronal de mayor calidad (descarga más grande)"
+      "size": "~60 MB",
+      "speed": "Primera exportación más lenta",
+      "description": "Voz neuronal de mayor calidad. Descarga más grande en el primer uso."
     }
   },
   "welcome": {
@@ -1063,6 +1070,28 @@
       "axis": "$${{axisParts}}.$$",
       "valuesHeading": "Valores (x, y):",
       "valueRow": "  $${{x}}: {{y}}$$"
+    }
+  },
+  "exportPanel": {
+    "regionAriaLabel": "Opciones de exportación",
+    "heading": "Exportar",
+    "subheading": "Elija un formato para el documento actual.",
+    "actions": {
+      "brf": "BRF",
+      "brfHint": "Braille listo para gofrar",
+      "printLayout": "Diseño de impresión",
+      "printLayoutHint": "Texto plano alineado con las líneas braille",
+      "audio": "Audio (MP3)",
+      "audioHint": "Elija una voz y descargue"
+    },
+    "audio": {
+      "title": "Exportar audio (MP3)",
+      "lead": "Elija un motor de voz. Las únicas diferencias prácticas son la velocidad de exportación y el tamaño del modelo en el primer uso; después, los modelos quedan en caché en el navegador.",
+      "engineLegend": "Motor de voz",
+      "note": "Todos los motores se ejecutan por completo en el navegador. No se necesita puente ni cuenta.",
+      "exportButton": "Descargar MP3",
+      "cancel": "Cancelar",
+      "closeAriaLabel": "Cerrar exportación de audio"
     }
   }
 }
