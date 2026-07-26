@@ -34,11 +34,16 @@
         "ariaLabel": "下载打印布局文本文件",
         "title": "下载与文本编辑器中换行方式相同的纯文本（.txt）——每一行对应一行盲文，方便打印或在 Word 中打开并与压印布局对齐。"
       },
+      "downloadMenu": {
+        "ariaLabel": "更多下载选项",
+        "title": "更多下载选项（打印布局、MP3 音频）"
+      },
       "tts": {
         "selectAriaLabel": "用于 MP3 导出的文本转语音引擎"
       },
       "downloadMp3": {
         "label": "下载 MP3",
+        "action": "导出 MP3",
         "exportingLabel": "正在导出 MP3…",
         "ariaLabel": "下载 MP3 音频",
         "title": "使用所选的浏览器文本转语音引擎（Kitten、eSpeak NG 或 Piper）下载编辑器文本的 MP3。首次使用可能需要下载语音模型。",

@@ -34,11 +34,16 @@
         "ariaLabel": "Textdatei mit Drucklayout herunterladen",
         "title": "Klartext (.txt) mit denselben Zeilenumbrüchen wie der Text-Editor herunterladen — jede Zeile entspricht einer Braille-Zeile, sodass Sie drucken oder in Word öffnen und mit dem geprägten Layout abgleichen können."
       },
+      "downloadMenu": {
+        "ariaLabel": "Weitere Download-Optionen",
+        "title": "Weitere Download-Optionen (Drucklayout, MP3-Audio)"
+      },
       "tts": {
         "selectAriaLabel": "Text-zu-Sprache-Engine für den MP3-Export"
       },
       "downloadMp3": {
         "label": "MP3 herunterladen",
+        "action": "MP3 exportieren",
         "exportingLabel": "MP3 wird exportiert…",
         "ariaLabel": "MP3-Audio herunterladen",
         "title": "MP3 des Editor-Textes mit der ausgewählten Browser-TTS-Engine (Kitten, eSpeak NG oder Piper) herunterladen. Beim ersten Gebrauch wird ggf. ein Sprachmodell heruntergeladen.",

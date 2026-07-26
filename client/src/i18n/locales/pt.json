@@ -34,11 +34,16 @@
         "ariaLabel": "Baixar arquivo de texto do layout de impressão",
         "title": "Baixar texto simples (.txt) com as mesmas quebras de linha do editor de texto — cada linha corresponde a uma linha em braille, para que você possa imprimir ou abrir no Word e alinhar com o layout em relevo."
       },
+      "downloadMenu": {
+        "ariaLabel": "Mais opções de download",
+        "title": "Mais opções de download (layout de impressão, áudio MP3)"
+      },
       "tts": {
         "selectAriaLabel": "Motor de conversão de texto em fala para exportação em MP3"
       },
       "downloadMp3": {
         "label": "Baixar MP3",
+        "action": "Exportar MP3",
         "exportingLabel": "Exportando MP3…",
         "ariaLabel": "Baixar áudio MP3",
         "title": "Baixar MP3 do texto do editor usando o motor de TTS do navegador selecionado (Kitten, eSpeak NG ou Piper). O primeiro uso pode baixar um modelo de voz.",
