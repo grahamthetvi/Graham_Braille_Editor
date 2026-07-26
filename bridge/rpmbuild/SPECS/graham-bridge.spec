@@ -1,5 +1,5 @@
 Name:           graham-bridge
-Version:        3.4.1
+Version:        3.5.0
 Release:        1%{?dist}
 Summary:        Graham Braille Editor Bridge
 License:        MIT
@@ -45,6 +45,9 @@ install -D -p -m 644 tray_icon.png $RPM_BUILD_ROOT/%{_datadir}/icons/hicolor/128
 %{_datadir}/icons/hicolor/128x128/apps/graham-bridge.png
 
 %changelog
+* Sun Jul 26 2026 Graham The TVI - 3.5.0-1
+- Update to version 3.5.0; Shared Bridge docs cover Pi or existing embosser PC
+
 * Thu Jun 18 2026 Graham The TVI - 3.4.1-1
 - Update to version 3.4.1
 

@@ -345,13 +345,14 @@
         },
         "downloadButton": "Télécharger la passerelle de bureau",
         "sharedPi": {
-          "heading": "Passerelle partagée / Raspberry Pi",
+          "heading": "Passerelle partagée (Pi ou ordinateur)",
           "steps": [
-            "Sur le Pi (Raspberry Pi OS Desktop) : installez la passerelle linux-arm64, branchez l’embosseuse, ouvrez Bridge → Paramètres → Partager sur ce réseau → choisissez un nom → notez le code et l’adresse IP du Pi",
-            "Sur le PC enseignant : installez Bridge → Paramètres → Se connecter à une passerelle partagée → saisissez l’IP du Pi et le code",
+            "Option A — Raspberry Pi dédié : installez la passerelle linux-arm64 sous Raspberry Pi OS Desktop, configurez l’embosseuse dans CUPS, puis Bridge → Paramètres → Partager sur ce réseau → choisissez un nom → notez le code et l’adresse IP du Pi",
+            "Option B — PC existant relié à l’embosseuse (Windows/macOS/Linux) : sur cette machine, Bridge → Paramètres → Partager sur ce réseau → choisissez un nom → notez le code et l’IP de ce PC",
+            "Sur chaque PC enseignant : installez Bridge → Paramètres → Se connecter à une passerelle partagée → saisissez l’IP de l’hôte et le code",
             "Dans l’éditeur, imprimez comme d’habitude et choisissez l’embosseuse partagée dans la liste"
           ],
-          "itNote": "IT : les appareils doivent pouvoir communiquer sur le LAN (désactiver l’isolation client ou utiliser un VLAN d’impression). Réservez une IP/DNS statique pour le Pi. Autorisez le port TCP 8081 vers le Pi."
+          "itNote": "IT : les appareils doivent pouvoir communiquer sur le LAN (désactiver l’isolation client ou utiliser un VLAN d’impression). Réservez une IP/DNS statique pour l’hôte de partage. Autorisez le port TCP 8081 vers l’hôte. Sur un hôte Windows : autorisez le TCP 8081 entrant dans le pare-feu Windows Defender (ou demandez à l’IT) si l’appairage échoue."
         }
       },
       "math": {

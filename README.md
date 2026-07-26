@@ -19,7 +19,7 @@ Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/rel
 - `graham-bridge-macos.zip` (for macOS Intel & Apple Silicon)
 - `graham-bridge-linux.zip` (generic Linux amd64: extract and run the binary)
 - `graham-bridge-linux-arm64.zip` (Raspberry Pi / aarch64 Linux: extract and run `graham-bridge-linux-arm64`)
-- `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below — e.g. `graham-bridge-3.3.0-linux-fedora.x86_64.rpm`)
+- `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below — e.g. `graham-bridge-3.5.0-linux-fedora.x86_64.rpm`)
 
 ---
 
@@ -81,34 +81,43 @@ If you prefer to set up files manually:
 1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-<version>-linux-fedora.x86_64.rpm`** for the tag you want (built in CI on Ubuntu with `rpmbuild`; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
 2. Install (replace the filename with the one you downloaded):
    ```bash
-   sudo dnf install ./graham-bridge-3.3.0-linux-fedora.x86_64.rpm
+   sudo dnf install ./graham-bridge-3.5.0-linux-fedora.x86_64.rpm
    ```
 3. Launch **Graham Braille Editor Bridge** from the application menu, or run `graham-bridge` from a terminal.
 
-### 🥧 Shared Bridge on Raspberry Pi
+### Shared Bridge (dedicated Pi or existing embosser PC)
 
-Use a dedicated Pi (including **Pi Zero 2W**) next to an embosser so teachers can print from their own machines on the same network.
+Share mode lets one Bridge host an embosser on the LAN so teachers print from their own machines. The hosted HTTPS editor only talks to a **local** Bridge on `127.0.0.1:8080`; that Bridge can relay to a share host on **TCP 8081**.
 
-**Requirements**
-- Raspberry Pi OS **Desktop** (systray needs a desktop session)
+**Option A: Dedicated Raspberry Pi**
+- Raspberry Pi OS **Desktop** (systray needs a desktop session), including **Pi Zero 2W**
 - USB (or OS-recognized) embosser set up in CUPS / system printers
-- Download **`graham-bridge-linux-arm64`** from [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) (also works on other aarch64 Linux boards)
-
-**On the Pi (share host)**
-1. Install and launch Graham Bridge.
-2. Tray → **Open Settings** → choose **Share on this network** → set a display name → **Save share settings**.
+- Download **`graham-bridge-linux-arm64.zip`** from [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) (also works on other aarch64 Linux boards)
+1. Install and launch Graham Bridge on the Pi.
+2. Tray → **Open Settings** → **Share on this network** → set a display name → **Save share settings**.
 3. Note the **6-digit share code** and the Pi’s IP address (or DNS name).
-4. Ask IT to: reserve a static IP/DNS for the Pi; allow device-to-device traffic (disable client isolation or use a print VLAN); allow **TCP 8081** to the Pi from teacher machines.
 
-**On the teacher PC**
-1. Install Graham Bridge locally (still required — the hosted HTTPS editor only talks to `127.0.0.1:8080`).
-2. Tray → **Open Settings** → **Connect to a shared Bridge** → enter the Pi’s host/IP and share code → **Pair**.
+**Option B: Existing Windows / macOS / Linux embosser PC**
+Use any desktop that already has the embosser connected and recognized by the OS print spooler — same Share flow as on a Pi.
+1. Install and launch Graham Bridge on that PC (Windows / macOS / Linux build from Releases).
+2. Tray → **Open Settings** → **Share on this network** → set a display name → **Save share settings**.
+3. Note the **6-digit share code** and that PC’s IP address (or DNS name).
+4. **Windows:** if pairing fails, allow inbound **TCP 8081** in Windows Defender Firewall (or ask IT).
+
+**On each teacher PC**
+1. Install Graham Bridge locally (still required — the editor only reaches `127.0.0.1:8080`).
+2. Tray → **Open Settings** → **Connect to a shared Bridge** → enter the share host’s IP/DNS and share code → **Pair**.
 3. In the editor Print panel, choose the shared embosser (shown as `Name / printer`).
 
+**IT / network**
+- Reserve a static IP or DNS name for the share host.
+- Allow device-to-device traffic (disable client isolation or use a print VLAN).
+- Allow **TCP 8081** from teacher machines to the share host.
+
 **Troubleshooting**
-- Cannot pair: ping the Pi; confirm Share is on; confirm TCP 8081 is open; verify the code.
-- Wrong code: regenerate the code on the Pi (teachers must pair again).
-- Printer missing: ensure CUPS lists the embosser on the Pi; refresh printers in the editor after pairing.
+- Cannot pair: ping the share host; confirm Share is on; confirm TCP 8081 is open; verify the code. On Windows hosts, check the firewall rule above.
+- Wrong code: regenerate the code on the share host (teachers must pair again).
+- Printer missing: ensure the OS/CUPS lists the embosser on the share host; refresh printers in the editor after pairing.
 
 ---
 

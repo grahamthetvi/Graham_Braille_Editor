@@ -369,13 +369,14 @@
           ]
         },
         "sharedPi": {
-          "heading": "Shared Bridge / Raspberry Pi",
+          "heading": "Shared Bridge (Pi or desktop)",
           "steps": [
-            "On the Pi (Raspberry Pi OS Desktop): install the linux-arm64 Bridge, plug in the embosser, open Bridge → Settings → Share on this network → set a name → note the code and the Pi’s IP address",
-            "On the teacher PC: install Bridge → Settings → Connect to a shared Bridge → enter the Pi’s IP and code",
+            "Option A — Dedicated Raspberry Pi: install the linux-arm64 Bridge on Raspberry Pi OS Desktop, set up the embosser in CUPS, then Bridge → Settings → Share on this network → set a name → note the code and the Pi’s IP",
+            "Option B — Existing embosser PC (Windows/macOS/Linux): on the machine already connected to the embosser, open Bridge → Settings → Share on this network → set a name → note the code and that PC’s IP",
+            "On each teacher PC: install Bridge → Settings → Connect to a shared Bridge → enter the share host’s IP and code",
             "In the editor, print as usual and choose the shared embosser in the printer list"
           ],
-          "itNote": "IT: devices must be allowed to talk on the LAN (disable client isolation or use a print VLAN). Reserve a static IP or DNS name for the Pi. Allow TCP port 8081 to the Pi."
+          "itNote": "IT: devices must be allowed to talk on the LAN (disable client isolation or use a print VLAN). Reserve a static IP or DNS name for the share host. Allow TCP port 8081 to the host. On Windows share hosts, allow inbound TCP 8081 in Windows Defender Firewall (or ask IT) if pairing fails."
         },
         "downloadButton": "Download Desktop Bridge"
       },

@@ -20,8 +20,10 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 	<string>com.grahamthetvi.grahambridge</string>
 	<key>CFBundleName</key>
 	<string>Graham Bridge</string>
+	<key>CFBundleShortVersionString</key>
+	<string>3.5.0</string>
 	<key>CFBundleVersion</key>
-	<string>3.4.1</string>
+	<string>3.5.0</string>
 	<key>LSUIElement</key>
 	<true/>
 </dict>

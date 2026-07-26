@@ -345,13 +345,14 @@
         },
         "downloadButton": "Desktop-Bridge herunterladen",
         "sharedPi": {
-          "heading": "Geteilte Bridge / Raspberry Pi",
+          "heading": "Geteilte Bridge (Pi oder Desktop)",
           "steps": [
-            "Am Pi (Raspberry Pi OS Desktop): linux-arm64-Bridge installieren, Brailledrucker anschließen, Bridge → Einstellungen → Im Netzwerk freigeben → Namen festlegen → Code und IP des Pi notieren",
-            "Am Lehrer-PC: Bridge installieren → Einstellungen → Mit geteilter Bridge verbinden → IP und Code des Pi eingeben",
+            "Option A — Dedizierter Raspberry Pi: linux-arm64-Bridge unter Raspberry Pi OS Desktop installieren, Brailledrucker in CUPS einrichten, dann Bridge → Einstellungen → Im Netzwerk freigeben → Namen festlegen → Code und IP des Pi notieren",
+            "Option B — Vorhandener Emboss-PC (Windows/macOS/Linux): auf dem Rechner mit angeschlossenem Brailledrucker Bridge → Einstellungen → Im Netzwerk freigeben → Namen festlegen → Code und IP dieses PCs notieren",
+            "Auf jedem Lehrer-PC: Bridge installieren → Einstellungen → Mit geteilter Bridge verbinden → IP des Share-Hosts und Code eingeben",
             "Im Editor wie gewohnt drucken und den geteilten Brailledrucker in der Liste wählen"
           ],
-          "itNote": "IT: Geräte müssen sich im LAN erreichen können (Client-Isolation aus oder Druck-VLAN). Statische IP/DNS für den Pi reservieren. TCP-Port 8081 zum Pi erlauben."
+          "itNote": "IT: Geräte müssen sich im LAN erreichen können (Client-Isolation aus oder Druck-VLAN). Statische IP/DNS für den Share-Host reservieren. TCP-Port 8081 zum Host erlauben. Auf Windows-Share-Hosts: eingehenden TCP 8081 in der Windows Defender Firewall erlauben (oder IT fragen), wenn die Kopplung fehlschlägt."
         }
       },
       "math": {

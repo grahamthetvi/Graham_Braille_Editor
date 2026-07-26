@@ -345,13 +345,14 @@
         },
         "downloadButton": "下载桌面版 Bridge",
         "sharedPi": {
-          "heading": "共享 Bridge / Raspberry Pi",
+          "heading": "共享 Bridge（树莓派或电脑）",
           "steps": [
-            "在树莓派上（Raspberry Pi OS Desktop）：安装 linux-arm64 版 Bridge，连接点显机，打开 Bridge → 设置 → 在此网络上共享 → 设置名称 → 记下共享码和树莓派的 IP 地址",
-            "在教师电脑上：安装 Bridge → 设置 → 连接到共享 Bridge → 输入树莓派的 IP 和共享码",
+            "方案 A — 专用树莓派：在 Raspberry Pi OS Desktop 上安装 linux-arm64 版 Bridge，在 CUPS 中配置点显机，然后 Bridge → 设置 → 在此网络上共享 → 设置名称 → 记下共享码和树莓派的 IP",
+            "方案 B — 已连接点显机的现有电脑（Windows/macOS/Linux）：在该电脑上打开 Bridge → 设置 → 在此网络上共享 → 设置名称 → 记下共享码和该电脑的 IP",
+            "在每台教师电脑上：安装 Bridge → 设置 → 连接到共享 Bridge → 输入共享主机的 IP 和共享码",
             "在编辑器中照常打印，并在打印机列表中选择共享的点显机"
           ],
-          "itNote": "IT：设备必须能在局域网互通（关闭客户端隔离或使用打印 VLAN）。为树莓派预留静态 IP/DNS。允许到树莓派的 TCP 8081 端口。"
+          "itNote": "IT：设备必须能在局域网互通（关闭客户端隔离或使用打印 VLAN）。为共享主机预留静态 IP/DNS。允许到该主机的 TCP 8081 端口。Windows 共享主机：若配对失败，请在 Windows Defender 防火墙中允许入站 TCP 8081（或咨询 IT）。"
         }
       },
       "math": {

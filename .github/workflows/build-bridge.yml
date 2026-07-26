@@ -175,8 +175,9 @@ jobs:
             | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
 
             ### What's New
-            - **Share mode:** Pair Bridges on the LAN (Pi embosser host + teacher PC) with a share code; editor still uses local Bridge on `127.0.0.1:8080`
-            - **linux-arm64** build for Raspberry Pi
+            - **Share mode:** Pair Bridges on the LAN with a share code. Share host can be a dedicated Raspberry Pi **or** any Windows/macOS/Linux PC already connected to an embosser; teacher PCs still use a local Bridge on `127.0.0.1:8080` that relays to the host on TCP 8081
+            - **Windows share hosts:** allow inbound TCP 8081 in Windows Defender Firewall (or ask IT) if pairing fails
+            - **linux-arm64** build for Raspberry Pi / aarch64
             - **v3.3.0:** Debug dashboard themes (dark / light / high contrast) match Graham Braille Editor; macOS bundle version aligned
             - **RPM:** Fedora/RHEL-family `dnf` install; RPM package name remains `graham-bridge`
             - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button

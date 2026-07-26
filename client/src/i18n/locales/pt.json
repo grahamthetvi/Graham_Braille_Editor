@@ -345,13 +345,14 @@
         },
         "downloadButton": "Baixar Bridge para Desktop",
         "sharedPi": {
-          "heading": "Bridge partilhada / Raspberry Pi",
+          "heading": "Bridge partilhada (Pi ou computador)",
           "steps": [
-            "No Pi (Raspberry Pi OS Desktop): instale o Bridge linux-arm64, ligue a embossadora, abra Bridge → Definições → Partilhar nesta rede → defina um nome → anote o código e o IP do Pi",
-            "No PC do professor: instale o Bridge → Definições → Ligar a uma Bridge partilhada → introduza o IP do Pi e o código",
+            "Opção A — Raspberry Pi dedicado: instale o Bridge linux-arm64 no Raspberry Pi OS Desktop, configure a embossadora no CUPS, depois Bridge → Definições → Partilhar nesta rede → defina um nome → anote o código e o IP do Pi",
+            "Opção B — PC existente com embossadora (Windows/macOS/Linux): nessa máquina, Bridge → Definições → Partilhar nesta rede → defina um nome → anote o código e o IP desse PC",
+            "Em cada PC do professor: instale o Bridge → Definições → Ligar a uma Bridge partilhada → introduza o IP do anfitrião e o código",
             "No editor, imprima como habitualmente e escolha a embossadora partilhada na lista"
           ],
-          "itNote": "TI: os dispositivos devem poder comunicar na LAN (desative o isolamento de clientes ou use uma VLAN de impressão). Reserve um IP/DNS estático para o Pi. Permita a porta TCP 8081 para o Pi."
+          "itNote": "TI: os dispositivos devem poder comunicar na LAN (desative o isolamento de clientes ou use uma VLAN de impressão). Reserve um IP/DNS estático para o anfitrião de partilha. Permita a porta TCP 8081 para o anfitrião. Em anfitriões Windows: permita TCP 8081 de entrada no Firewall do Windows Defender (ou peça à TI) se o emparelhamento falhar."
         }
       },
       "math": {

@@ -42,9 +42,9 @@ via WebAssembly — no server-side translation component is required.
              │  HTTP POST /print (optional)
              ▼
 ┌────────────────────────┐
-│  Go bridge binary      │
-│  (localhost:8080)      │
-│  Raw print → embosser  │
+│  Go bridge binary      │         optional Share relay
+│  (127.0.0.1:8080)      │ ────────────────────────────▶ peer Bridge :8081
+│  Raw print → embosser  │     (Pi or embosser desktop)
 └────────────────────────┘
 ```
 
@@ -155,6 +155,9 @@ A small Go binary (`bridge/`) listens on `localhost:8080` and exposes:
 |---|---|---|
 | `/status` | GET | Health-check; polled every 5 s by the app |
 | `/print`  | POST | Receive `{ printer, data: base64-BRF }` → raw print |
+| `/settings` | GET | Tray Settings UI (Share / Connect) |
+
+Optional **Share mode** adds a second listener on `0.0.0.0:8081` for Bridge-to-Bridge pairing and authenticated print jobs (share code → token). The hosted editor still talks only to `127.0.0.1:8080`; a local Bridge relays to a share host (dedicated Pi or any Windows/macOS/Linux embosser PC).
 
 The bridge is **entirely optional** — all braille translation works without it.
 It is only needed for sending BRF to a physical braille embosser.
