@@ -108,7 +108,7 @@ func peerStatusHandler(w http.ResponseWriter, r *http.Request) {
 		"status":  "ok",
 		"app":     "graham-bridge",
 		"name":    c.ShareName,
-		"version": "3.5.0",
+		"version": Version,
 		"build":   BuildNumber,
 	})
 }

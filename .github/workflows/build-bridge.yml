@@ -15,6 +15,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Resolve version
+      id: ver
+      shell: bash
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          R='${{ github.ref_name }}'
+          echo "semver=${R#v}" >> "$GITHUB_OUTPUT"
+        else
+          echo "semver=dev" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
@@ -29,14 +40,31 @@ jobs:
 
     - name: Build Bridge (Linux amd64)
       if: runner.os == 'Linux'
+      env:
+        VERSION: ${{ steps.ver.outputs.semver }}
       run: |
         cd bridge
-        go build -ldflags="-X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-amd64 .
-        zip -r graham-bridge-linux.zip graham-bridge-linux-amd64 graham-bridge.desktop
+        go build -ldflags="-X main.Version=${VERSION} -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-amd64 .
+        cp ../install.sh ./install.sh
+        chmod +x install.sh
+        printf '%s\n' \
+          'Graham Bridge — Linux amd64' \
+          '' \
+          'Recommended (no root):' \
+          '  ./install.sh' \
+          '  # installs to ~/.local/bin and ~/.local/share/applications' \
+          '' \
+          'System-wide:' \
+          '  ./install.sh --system' \
+          '' \
+          'Updates: tray menu → Check for updates / Update available.' \
+          'ChromeOS: use WebUSB in the editor — Bridge is not needed.' \
+          > INSTALL.txt
+        zip -r graham-bridge-linux.zip graham-bridge-linux-amd64 graham-bridge.desktop tray_icon.png install.sh INSTALL.txt
         chmod +x build-rpm.sh
-        ./build-rpm.sh
+        VERSION="${VERSION}" ./build-rpm.sh
         cp rpmbuild/RPMS/x86_64/*.rpm ./
-        ls -la ./*.rpm
+        ls -la ./*.rpm ./*.zip
 
     - name: Setup MSYS2 (Windows)
       if: runner.os == 'Windows'
@@ -48,13 +76,33 @@ jobs:
 
     - name: Build Bridge (Windows)
       if: runner.os == 'Windows'
-      run: |
-        cd bridge
-        go build -ldflags="-H windowsgui -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-windows.exe .
-        Compress-Archive -Path graham-bridge-windows.exe -DestinationPath graham-bridge-windows.zip
+      shell: pwsh
       env:
         CGO_ENABLED: 1
         CC: C:\msys64\ucrt64\bin\gcc.exe
+        VERSION: ${{ steps.ver.outputs.semver }}
+      run: |
+        cd bridge
+        go build -ldflags="-H windowsgui -X main.Version=$env:VERSION -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-windows.exe .
+        Compress-Archive -Path graham-bridge-windows.exe -DestinationPath graham-bridge-windows.zip
+
+    - name: Install Inno Setup
+      if: runner.os == 'Windows'
+      run: choco install innosetup -y --no-progress
+
+    - name: Build Windows setup.exe
+      if: runner.os == 'Windows'
+      env:
+        VERSION: ${{ steps.ver.outputs.semver }}
+      shell: pwsh
+      run: |
+        cd bridge
+        $iss = Get-Content -Raw packaging\graham-bridge.iss
+        $iss = $iss -replace '#define MyAppVersion ".*"','#define MyAppVersion "' + $env:VERSION + '"'
+        Set-Content -Path packaging\graham-bridge.iss -Value $iss -NoNewline
+        & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\graham-bridge.iss
+        Move-Item -Force packaging\Output\graham-bridge-windows-setup.exe .\graham-bridge-windows-setup.exe
+        Get-ChildItem graham-bridge-windows*.exe, graham-bridge-windows.zip
 
     - name: Build Bridge (macOS)
       if: runner.os == 'macOS'
@@ -66,6 +114,7 @@ jobs:
       env:
         CGO_ENABLED: 1
         GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        VERSION: ${{ steps.ver.outputs.semver }}
 
     - name: Upload Artifact (Linux)
       if: runner.os == 'Linux'
@@ -81,7 +130,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: bridge-windows
-        path: bridge/graham-bridge-windows.zip
+        path: |
+          bridge/graham-bridge-windows.zip
+          bridge/graham-bridge-windows-setup.exe
 
     - name: Upload Artifact (macOS)
       if: runner.os == 'macOS'
@@ -95,6 +146,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Resolve version
+      id: ver
+      shell: bash
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          R='${{ github.ref_name }}'
+          echo "semver=${R#v}" >> "$GITHUB_OUTPUT"
+        else
+          echo "semver=dev" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
@@ -107,10 +169,27 @@ jobs:
         sudo apt-get install -y gcc libgtk-3-dev libayatana-appindicator3-dev
 
     - name: Build Bridge (Linux arm64)
+      env:
+        VERSION: ${{ steps.ver.outputs.semver }}
       run: |
         cd bridge
-        go build -ldflags="-X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-arm64 .
-        zip -r graham-bridge-linux-arm64.zip graham-bridge-linux-arm64 graham-bridge.desktop
+        go build -ldflags="-X main.Version=${VERSION} -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-arm64 .
+        cp ../install.sh ./install.sh
+        chmod +x install.sh
+        printf '%s\n' \
+          'Graham Bridge — Linux arm64 / Raspberry Pi' \
+          '' \
+          'Recommended (no root):' \
+          '  ./install.sh' \
+          '  # installs to ~/.local/bin and ~/.local/share/applications' \
+          '' \
+          'System-wide:' \
+          '  ./install.sh --system' \
+          '' \
+          'Updates: tray menu → Check for updates / Update available.' \
+          'Requires Raspberry Pi OS Desktop (systray).' \
+          > INSTALL.txt
+        zip -r graham-bridge-linux-arm64.zip graham-bridge-linux-arm64 graham-bridge.desktop tray_icon.png install.sh INSTALL.txt
         ls -la ./*.zip
 
     - name: Upload Artifact (Linux arm64)
@@ -168,18 +247,23 @@ jobs:
             ### Downloads
             | Platform | File |
             |---|---|
-            | 🪟 Windows | `graham-bridge-windows.zip` → run `graham-bridge-windows.exe` |
-            | 🐧 Linux amd64 (ZIP) | `graham-bridge-linux.zip` → run `graham-bridge-linux-amd64` + install `.desktop` |
-            | 🥧 Linux arm64 / Raspberry Pi (ZIP) | `graham-bridge-linux-arm64.zip` → run `graham-bridge-linux-arm64` + install `.desktop` |
-            | 🐧 Linux (Fedora RPM) | `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` → `sudo dnf install ./graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` |
-            | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
+            | Windows (recommended) | `graham-bridge-windows-setup.exe` — no admin; installs under LocalAppData and can start at login |
+            | Windows (ZIP) | `graham-bridge-windows.zip` → run `graham-bridge-windows.exe` |
+            | Linux amd64 (ZIP) | `graham-bridge-linux.zip` → `./install.sh` (user install) or `./install.sh --system` |
+            | Linux arm64 / Raspberry Pi (ZIP) | `graham-bridge-linux-arm64.zip` → same install script |
+            | Linux (Fedora RPM) | `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` → `sudo dnf install ./…rpm` |
+            | macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
+
+            ### Updates
+            Tray menu → **Check for updates** / **Update available — install now** downloads the matching release asset, replaces the install, and restarts Bridge.
 
             ### What's New
             - **Share mode:** Pair Bridges on the LAN with a share code. Share host can be a dedicated Raspberry Pi **or** any Windows/macOS/Linux PC already connected to an embosser; teacher PCs still use a local Bridge on `127.0.0.1:8080` that relays to the host on TCP 8081
             - **Windows share hosts:** allow inbound TCP 8081 in Windows Defender Firewall (or ask IT) if pairing fails
+            - **Auto-update** on Windows and Linux (tray-driven download + replace)
             - **linux-arm64** build for Raspberry Pi / aarch64
-            - **v3.3.0:** Debug dashboard themes (dark / light / high contrast) match Graham Braille Editor; macOS bundle version aligned
             - **RPM:** Fedora/RHEL-family `dnf` install; RPM package name remains `graham-bridge`
-            - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button
+            - Debug dashboard at `http://localhost:8080/debug`
             - Settings at `http://localhost:8080/settings` — Share mode and Connect to a shared Bridge
+            - ChromeOS: use WebUSB in the editor — Bridge is not needed
           files: out/*

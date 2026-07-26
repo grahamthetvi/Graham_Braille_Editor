@@ -24,12 +24,16 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"sync"
 	"time"
 
 	"fyne.io/systray"
 )
 
 const listenAddr = "127.0.0.1:8080"
+
+// Version is the release semver (no leading "v"), set at build time via ldflags.
+var Version = "dev"
 
 // BuildNumber is the GitHub Actions run number, set at build time.
 var BuildNumber = "dev"
@@ -111,7 +115,7 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{
 		"status":       "ok",
 		"app":          "graham-bridge",
-		"version":      "3.5.0",
+		"version":      Version,
 		"build":        BuildNumber,
 		"shareEnabled": c.ShareEnabled,
 	}
@@ -267,7 +271,43 @@ func onReady() {
 	mSettings := systray.AddMenuItem("Open Settings", "Share mode and connect to a shared Bridge")
 	mDebug := systray.AddMenuItem("Open Debug Page", "View print logs and test the embosser")
 	mOpen := systray.AddMenuItem("Open Graham Bridge Editor", "Launch the web app")
+	systray.AddSeparator()
+	mUpdate := systray.AddMenuItem("Check for updates", "Download and install the latest Graham Bridge")
+	mUpdateStatus := systray.AddMenuItem("Updates: idle", "")
+	mUpdateStatus.Disable()
+	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the bridge")
+
+	setUpdateStatus := func(msg string) {
+		mUpdateStatus.SetTitle(msg)
+	}
+
+	pendingUpdate := (*updateInfo)(nil)
+	var pendingMu sync.Mutex
+
+	refreshUpdateMenu := func(info *updateInfo) {
+		pendingMu.Lock()
+		pendingUpdate = info
+		pendingMu.Unlock()
+		if info == nil {
+			mUpdate.SetTitle("Check for updates")
+			setUpdateStatus("Up to date (v" + Version + ")")
+			return
+		}
+		mUpdate.SetTitle("Update available — install now")
+		setUpdateStatus("v" + info.LatestVersion + " ready")
+	}
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		info, err := checkForUpdate(false)
+		if err != nil {
+			log.Printf("startup update check: %v", err)
+			setUpdateStatus("Update check failed")
+			return
+		}
+		refreshUpdateMenu(info)
+	}()
 
 	go func() {
 		for {
@@ -278,6 +318,47 @@ func onReady() {
 				openBrowser("http://" + listenAddr + "/debug")
 			case <-mOpen.ClickedCh:
 				openBrowser("https://grahambrailleeditor.com/")
+			case <-mUpdate.ClickedCh:
+				pendingMu.Lock()
+				info := pendingUpdate
+				pendingMu.Unlock()
+				if info != nil {
+					setUpdateStatus("Downloading v" + info.LatestVersion + "…")
+					mUpdate.Disable()
+					go func(u *updateInfo) {
+						defer mUpdate.Enable()
+						if err := applyUpdate(u); err != nil {
+							log.Printf("update apply failed: %v", err)
+							setUpdateStatus("Update failed — see log")
+							return
+						}
+						setUpdateStatus("Update installed — restarting…")
+					}(info)
+					continue
+				}
+				mUpdate.Disable()
+				go func() {
+					defer mUpdate.Enable()
+					setUpdateStatus("Checking for updates…")
+					info, err := checkForUpdate(true)
+					if err != nil {
+						log.Printf("update check failed: %v", err)
+						setUpdateStatus("Update check failed — see log")
+						return
+					}
+					refreshUpdateMenu(info)
+					if info == nil {
+						return
+					}
+					// Offer install on next click; also auto-apply when user clicked check and one is available
+					setUpdateStatus("Downloading v" + info.LatestVersion + "…")
+					if err := applyUpdate(info); err != nil {
+						log.Printf("update apply failed: %v", err)
+						setUpdateStatus("Update failed — see log")
+						return
+					}
+					setUpdateStatus("Update installed — restarting…")
+				}()
 			case <-mQuit.ClickedCh:
 				systray.Quit()
 			}

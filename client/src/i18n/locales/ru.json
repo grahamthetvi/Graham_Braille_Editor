@@ -723,8 +723,8 @@
   "statusBar": {
     "ariaLabel": "Статус приложения",
     "bridgeUpdateRequired": {
-      "label": "Требуется обновление Bridge",
-      "title": "Доступно обновление безопасности для Graham Bridge",
+      "label": "Доступно обновление Bridge",
+      "title": "Доступна новая версия Graham Bridge — в меню трея: Обновление доступно — установить сейчас",
       "ariaLabel": "Доступно обновление bridge"
     },
     "webUsbReady": {

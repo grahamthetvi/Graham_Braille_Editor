@@ -4,6 +4,12 @@ node_modules/
 # Build outputs
 client/dist/
 bridge/dist/
+bridge/Output/
+bridge/packaging/Output/
+bridge/graham-bridge-linux*.zip
+bridge/graham-bridge-windows*
+bridge/graham-bridge-macos.zip
+bridge/*.rpm
 
 # Vite
 client/.vite/

@@ -4,6 +4,7 @@ set -e
 APP_NAME="Graham Bridge.app"
 CONTENTS_DIR="$APP_NAME/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
+VERSION="${VERSION:-dev}"
 
 echo "Creating macOS App Bundle..."
 mkdir -p "$MACOS_DIR"
@@ -21,9 +22,9 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 	<key>CFBundleName</key>
 	<string>Graham Bridge</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.5.0</string>
+	<string>${VERSION}</string>
 	<key>CFBundleVersion</key>
-	<string>3.5.0</string>
+	<string>${VERSION}</string>
 	<key>LSUIElement</key>
 	<true/>
 </dict>
@@ -31,7 +32,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 EOF
 
 echo "Building Universal macOS Binary..."
-GO_LDFLAGS="-X main.BuildNumber=${GITHUB_RUN_NUMBER:-dev}"
+GO_LDFLAGS="-X main.Version=${VERSION} -X main.BuildNumber=${GITHUB_RUN_NUMBER:-dev}"
 CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -ldflags="$GO_LDFLAGS" -o graham-bridge-amd64 .
 CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -ldflags="$GO_LDFLAGS" -o graham-bridge-arm64 .
 

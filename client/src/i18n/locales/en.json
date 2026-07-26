@@ -757,8 +757,8 @@
   "statusBar": {
     "ariaLabel": "Application status",
     "bridgeUpdateRequired": {
-      "label": "Bridge Update Required",
-      "title": "Security Update Available for Graham Bridge",
+      "label": "Bridge update available",
+      "title": "A newer Graham Bridge is available — use the Bridge tray menu: Update available — install now",
       "ariaLabel": "Bridge update available"
     },
     "webUsbReady": {

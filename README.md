@@ -15,75 +15,71 @@ The Bridge app is pre-compiled for Windows, macOS, and Linux. You do **not** nee
 
 ### 📥 1. Download the Bridge
 Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases)** tab on GitHub and download the build for your operating system:
-- `graham-bridge-windows.zip` (for Windows)
+- `graham-bridge-windows-setup.exe` (**recommended** for Windows — no admin)
+- `graham-bridge-windows.zip` (bare Windows exe for IT who prefer a portable binary)
 - `graham-bridge-macos.zip` (for macOS Intel & Apple Silicon)
-- `graham-bridge-linux.zip` (generic Linux amd64: extract and run the binary)
-- `graham-bridge-linux-arm64.zip` (Raspberry Pi / aarch64 Linux: extract and run `graham-bridge-linux-arm64`)
-- `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below — e.g. `graham-bridge-3.5.0-linux-fedora.x86_64.rpm`)
+- `graham-bridge-linux.zip` (Linux amd64: includes `install.sh`)
+- `graham-bridge-linux-arm64.zip` (Raspberry Pi / aarch64: includes `install.sh`)
+- `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux — e.g. `graham-bridge-3.5.0-linux-fedora.x86_64.rpm`)
+
+ChromeOS users should **not** install Bridge — print with WebUSB from the editor.
 
 ---
 
-### 🪟 Windows Setup (Easiest)
+### 🪟 Windows Setup (Recommended)
 
-1. Extract the downloaded `graham-bridge-windows.zip` file.
-2. Move the extracted `graham-bridge-windows.exe` file to a safe location (e.g., `C:\Program Files\graham\`).
-3. Double-click the `.exe` file to run it. A Graham Braille Editor icon will appear in your System Tray (near the clock).
-4. **Run on Boot (Recommended):** 
-   - Press `Win + R`, type `shell:startup`, and press Enter.
-   - Right-click and drag the `graham-bridge-windows.exe` into the Startup folder, and select "Create shortcuts here". The bridge will now silently start in the background when the user logs in.
+1. Download **`graham-bridge-windows-setup.exe`** from [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases).
+2. Run the installer (no administrator password required). It installs under `%LOCALAPPDATA%\Programs\GrahamBridge\` and can start Graham Bridge when you log in.
+3. A Graham Bridge icon appears in the system tray (near the clock).
+
+**Updates:** tray → **Check for updates** / **Update available — install now** downloads the new build, replaces the install, and restarts Bridge.
+
+**ZIP alternative:** extract `graham-bridge-windows.zip` and run `graham-bridge-windows.exe`. Prefer the setup installer so auto-update can replace the file without admin rights (avoid `C:\Program Files` unless IT manages upgrades).
 
 ---
 
 ### 🍎 macOS Setup (Intel & Apple Silicon)
 
 1. Extract the downloaded `graham-bridge-macos.zip` file.
-2. You will see an application bundle named `Graham Braille Editor Bridge.app`.
-3. Drag `Graham Braille Editor Bridge.app` into your `/Applications` folder.
-4. **First Time Launch:** Because this app is an open-source tool, you must right-click `Graham Braille Editor Bridge.app` and select **Open**. You may be prompted to confirm opening an app from an "unidentified developer".
+2. You will see an application bundle named `Graham Bridge.app`.
+3. Drag `Graham Bridge.app` into your `/Applications` folder.
+4. **First Time Launch:** Because this app is an open-source tool, you must right-click `Graham Bridge.app` and select **Open**. You may be prompted to confirm opening an app from an "unidentified developer".
 5. **Run on Boot (Recommended):**
    - Go to **System Settings > General > Login Items**.
-   - Click the `+` button and select the `Graham Braille Editor Bridge.app` from your Applications folder.
+   - Click the `+` button and select the `Graham Bridge.app` from your Applications folder.
 
 ---
 
-### 🐧 Linux Setup (Recommended: Automated Installer)
+### 🐧 Linux Setup (ZIP — recommended for auto-update)
 
-For generic Linux distributions, you can use the automated installer script to check for environment compatibility, install system dependencies (GTK3, libappindicator, and CUPS client), and configure launcher shortcuts automatically:
+Release ZIPs include the binary, `.desktop` file, `tray_icon.png`, and **`install.sh`**.
 
-1. Extract the downloaded `graham-bridge-linux.zip` file (which contains the binary, desktop configuration, and assets).
-2. Run the installer script from the extracted directory:
+1. Extract `graham-bridge-linux.zip` or `graham-bridge-linux-arm64.zip`.
+2. From the extracted directory:
    ```bash
    ./install.sh
    ```
-   *(Note: The script will automatically request sudo permissions to install required system packages and copy the binary to `/usr/local/bin`.)*
-
-### 🐧 Linux Manual Setup (Ubuntu/Debian/ChromeOS — ZIP)
-
-If you prefer to set up files manually:
-
-1. Extract the downloaded `graham-bridge-linux.zip` file.
-2. The zip contains the executable binary `graham-bridge-linux-amd64` and a desktop shortcut `graham-bridge.desktop`.
-3. Move the binary to a global location, for example:
+   This installs to **`~/.local/bin/graham-bridge`** and a user applications shortcut (**no root**). That path is writable so tray auto-update can replace the binary.
+3. Optional system-wide install (requires root; updates may need elevation):
    ```bash
-   sudo mv graham-bridge-linux-amd64 /usr/local/bin/graham-bridge
+   ./install.sh --system
    ```
-4. Edit the `Exec=` line in the `graham-bridge.desktop` file to point to `/usr/local/bin/graham-bridge` (or keep `Exec=graham-bridge` if that binary is on your `PATH`).
-5. Install the desktop shortcut so it appears in the app launcher:
-   ```bash
-   mkdir -p ~/.local/share/applications
-   mv graham-bridge.desktop ~/.local/share/applications/
-   ```
-6. You can now launch "Graham Braille Editor Bridge" from your application menu!
+4. Launch **Graham Bridge** from the application menu, or run `graham-bridge`.
+
+**Updates:** tray → **Check for updates** / **Update available — install now**.
+
+Ensure GTK3, a tray indicator library, and CUPS client tools are available on the system (the `--system` installer can install those packages).
 
 ### 🎩 Linux Setup (Fedora / RPM)
 
-
-1. From the same [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) page, download **`graham-bridge-<version>-linux-fedora.x86_64.rpm`** for the tag you want (built in CI on Ubuntu with `rpmbuild`; suitable for Fedora and other `dnf`-based systems with compatible dependencies).
-2. Install (replace the filename with the one you downloaded):
+1. From [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases), download **`graham-bridge-<version>-linux-fedora.x86_64.rpm`**.
+2. Install:
    ```bash
    sudo dnf install ./graham-bridge-3.5.0-linux-fedora.x86_64.rpm
    ```
-3. Launch **Graham Braille Editor Bridge** from the application menu, or run `graham-bridge` from a terminal.
+3. Launch **Graham Bridge** from the application menu, or run `graham-bridge`.
+
+**Updates:** tray auto-update downloads the new RPM and runs an elevated `dnf install` (polkit/`pkexec`), then restarts Bridge. You can also upgrade manually with `dnf install` on a newer RPM.
 
 ### Shared Bridge (dedicated Pi or existing embosser PC)
 
@@ -124,7 +120,8 @@ Use any desktop that already has the embosser connected and recognized by the OS
 ## ⚙️ How It Works
 
 Once running, the bridge operates silently in the background and places an icon in your system tray. 
-- Right-clicking the tray icon allows you to check its status, open **Settings** (Share / Connect), open the Graham Braille Editor, open the debug page, or quit.
+- Right-clicking the tray icon allows you to check its status, open **Settings** (Share / Connect), **Check for updates**, open the Graham Braille Editor, open the debug page, or quit.
+- **Updates (Windows & Linux):** tray → **Check for updates** / **Update available — install now** downloads the matching GitHub Release asset, replaces the install, and restarts Bridge. Prefer the Windows setup.exe or Linux `./install.sh` (user) so updates do not need admin.
 - The editor-facing HTTP server listens only on **`127.0.0.1:8080`**. Web pages cannot reach LAN addresses directly from the hosted HTTPS site; local Bridge relays to a shared Bridge when configured.
 - **Optional Share mode:** when enabled, a second listener on **`0.0.0.0:8081`** accepts Bridge-to-Bridge pairing and print jobs authenticated with the share token (obtained via the share code). This is not the browser CORS API.
 - **Browser security (CORS):** Cross-origin requests on port 8080 must come from allowed Graham Braille Editor origins (the official GitHub Pages site, **grahambrailleeditor.com**, local dev servers such as Vite on port 5173, and the bridge’s own pages on port 8080). Other `Origin` values receive **403 Forbidden**. Same-origin and tools without an `Origin` header (such as `curl`) are still allowed for local troubleshooting.

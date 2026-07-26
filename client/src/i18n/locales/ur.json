@@ -723,8 +723,8 @@
   "statusBar": {
     "ariaLabel": "ایپلیکیشن کی حالت",
     "bridgeUpdateRequired": {
-      "label": "برج اپ ڈیٹ درکار ہے",
-      "title": "Graham Bridge کے لیے سیکیورٹی اپ ڈیٹ دستیاب ہے",
+      "label": "برج اپ ڈیٹ دستیاب ہے",
+      "title": "Graham Bridge کا نیا ورژن دستیاب ہے — ٹرے مینو استعمال کریں: اپ ڈیٹ دستیاب — ابھی انسٹال کریں",
       "ariaLabel": "برج اپ ڈیٹ دستیاب ہے"
     },
     "webUsbReady": {
