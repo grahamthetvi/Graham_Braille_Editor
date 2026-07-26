@@ -896,34 +896,6 @@ Accuracy: _____________ %
                   {t('app.file.export.label')}
                 </button>
 
-                <select
-                  className="table-select"
-                  value={ttsEngine}
-                  onChange={e => handleTtsEngineChange(e.target.value as TtsEngineId)}
-                  disabled={isPerkinsMode || mp3Exporting}
-                  title={t(`tts.${ttsEngine}.description`)}
-                  aria-label={t('app.file.tts.selectAriaLabel')}
-                >
-                  {TTS_ENGINE_IDS.map(engineId => (
-                    <option key={engineId} value={engineId} title={t(`tts.${engineId}.description`)}>
-                      {t(`tts.${engineId}.label`)}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  className="toolbar-btn"
-                  onClick={() => { void handleDownloadMp3(); }}
-                  disabled={!inputText.trim() || isPerkinsMode || mp3Exporting}
-                  title={t('app.file.downloadMp3.title')}
-                  aria-label={t('app.file.downloadMp3.ariaLabel')}
-                  aria-busy={mp3Exporting}
-                >
-                  {mp3Exporting
-                    ? (mp3ExportStatus || t('app.file.downloadMp3.exportingLabel'))
-                    : t('app.file.downloadMp3.label')}
-                </button>
-
                 <button
                   className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
                   onClick={() => {
@@ -936,16 +908,6 @@ Accuracy: _____________ %
                 >
                   {t('app.file.print.label')}
                 </button>
-                {mp3ExportError && (
-                  <span
-                    className="toolbar-error"
-                    role="alert"
-                    title={mp3ExportError}
-                    style={{ marginLeft: '0.5rem', color: 'var(--danger, #c62828)', fontSize: '0.85rem', maxWidth: '28rem' }}
-                  >
-                    {t('app.file.downloadMp3.errorPrefix', { error: mp3ExportError })}
-                  </span>
-                )}
               </div>
             )}
 
