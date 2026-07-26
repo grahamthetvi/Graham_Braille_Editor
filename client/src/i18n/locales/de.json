@@ -34,10 +34,6 @@
         "ariaLabel": "Textdatei mit Drucklayout herunterladen",
         "title": "Klartext (.txt) mit denselben Zeilenumbrüchen wie der Text-Editor herunterladen — jede Zeile entspricht einer Braille-Zeile, sodass Sie drucken oder in Word öffnen und mit dem geprägten Layout abgleichen können."
       },
-      "downloadMenu": {
-        "ariaLabel": "Weitere Download-Optionen",
-        "title": "Weitere Download-Optionen (Drucklayout, MP3-Audio)"
-      },
       "tts": {
         "selectAriaLabel": "Text-zu-Sprache-Engine für den MP3-Export"
       },
@@ -68,6 +64,11 @@
       "print": {
         "label": "Drucken",
         "title": "Bedienfeld „Auf Braillegerät drucken“ ein-/ausblenden"
+      },
+      "export": {
+        "label": "Export",
+        "ariaLabel": "Exportoptionen ein-/ausblenden",
+        "title": "BRF, Drucklayout oder MP3-Audio exportieren"
       }
     },
     "view": {
@@ -288,15 +289,21 @@
   "tts": {
     "kitten": {
       "label": "Kitten (Standard)",
-      "description": "Leichte neuronale Stimme (~25–60 MB beim ersten Download)"
+      "size": "~25 MB",
+      "speed": "Ausgewogene Exportgeschwindigkeit",
+      "description": "Leichte neuronale Stimme. Gute Standardwahl für die meisten Dokumente."
     },
     "espeak": {
       "label": "eSpeak NG",
-      "description": "Sehr kleine robotische Stimme; schnellstes Laden"
+      "size": "~2 MB",
+      "speed": "Schnellster Export",
+      "description": "Kleine robotische Stimme. Ideal für schnelles Vorlesen eines Entwurfs."
     },
     "piper": {
       "label": "Piper",
-      "description": "Hochwertigere neuronale Stimme (größerer Download)"
+      "size": "~60 MB",
+      "speed": "Langsamerer erster Export",
+      "description": "Hochwertigere neuronale Stimme. Größerer Download beim ersten Gebrauch."
     }
   },
   "welcome": {
@@ -1063,6 +1070,28 @@
       "axis": "$${{axisParts}}.$$",
       "valuesHeading": "Werte (x, y):",
       "valueRow": "  $${{x}}: {{y}}$$"
+    }
+  },
+  "exportPanel": {
+    "regionAriaLabel": "Exportoptionen",
+    "heading": "Export",
+    "subheading": "Wählen Sie ein Format für das aktuelle Dokument.",
+    "actions": {
+      "brf": "BRF",
+      "brfHint": "Braille bereit zum Prägen",
+      "printLayout": "Drucklayout",
+      "printLayoutHint": "Klartext passend zu den Braille-Zeilen",
+      "audio": "Audio (MP3)",
+      "audioHint": "Stimme wählen, dann herunterladen"
+    },
+    "audio": {
+      "title": "Audio exportieren (MP3)",
+      "lead": "Wählen Sie eine Sprach-Engine. Die praktischen Unterschiede sind nur Exportgeschwindigkeit und Modellgröße beim ersten Gebrauch—danach bleiben Modelle im Browser zwischengespeichert.",
+      "engineLegend": "Sprach-Engine",
+      "note": "Alle Engines laufen vollständig im Browser. Keine Bridge und kein Konto nötig.",
+      "exportButton": "MP3 herunterladen",
+      "cancel": "Abbrechen",
+      "closeAriaLabel": "Audio-Export schließen"
     }
   }
 }

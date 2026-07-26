@@ -34,10 +34,6 @@
         "ariaLabel": "下载打印布局文本文件",
         "title": "下载与文本编辑器中换行方式相同的纯文本（.txt）——每一行对应一行盲文，方便打印或在 Word 中打开并与压印布局对齐。"
       },
-      "downloadMenu": {
-        "ariaLabel": "更多下载选项",
-        "title": "更多下载选项（打印布局、MP3 音频）"
-      },
       "tts": {
         "selectAriaLabel": "用于 MP3 导出的文本转语音引擎"
       },
@@ -68,6 +64,11 @@
       "print": {
         "label": "打印",
         "title": "切换打印到点显机面板"
+      },
+      "export": {
+        "label": "导出",
+        "ariaLabel": "切换导出选项",
+        "title": "导出 BRF、打印布局或 MP3 音频"
       }
     },
     "view": {
@@ -288,15 +289,21 @@
   "tts": {
     "kitten": {
       "label": "Kitten（默认）",
-      "description": "轻量级神经网络语音（首次下载约 25–60 MB）"
+      "size": "~25 MB",
+      "speed": "均衡的导出速度",
+      "description": "轻量级神经语音。适合大多数文档的默认选择。"
     },
     "espeak": {
       "label": "eSpeak NG",
-      "description": "体积非常小的机械语音；加载最快"
+      "size": "~2 MB",
+      "speed": "最快导出",
+      "description": "小型机器语音。适合快速试听草稿。"
     },
     "piper": {
       "label": "Piper",
-      "description": "更高质量的神经网络语音（下载体积较大）"
+      "size": "~60 MB",
+      "speed": "首次导出较慢",
+      "description": "更高质量的神经语音。首次使用下载更大。"
     }
   },
   "welcome": {
@@ -1063,6 +1070,28 @@
       "axis": "$${{axisParts}}。$$",
       "valuesHeading": "数值（x, y）：",
       "valueRow": "  $${{x}}：{{y}}$$"
+    }
+  },
+  "exportPanel": {
+    "regionAriaLabel": "导出选项",
+    "heading": "导出",
+    "subheading": "为当前文档选择一种格式。",
+    "actions": {
+      "brf": "BRF",
+      "brfHint": "可用于压印的盲文",
+      "printLayout": "打印布局",
+      "printLayoutHint": "与盲文行对齐的纯文本",
+      "audio": "音频（MP3）",
+      "audioHint": "选择语音后下载"
+    },
+    "audio": {
+      "title": "导出音频（MP3）",
+      "lead": "选择语音引擎。实际差异主要是导出速度和首次使用时的模型大小——之后模型会缓存在浏览器中。",
+      "engineLegend": "语音引擎",
+      "note": "所有引擎均在浏览器本地运行，无需 Bridge 或账户。",
+      "exportButton": "下载 MP3",
+      "cancel": "取消",
+      "closeAriaLabel": "关闭音频导出"
     }
   }
 }

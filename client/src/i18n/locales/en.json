@@ -34,9 +34,10 @@
         "ariaLabel": "Download print layout text file",
         "title": "Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
       },
-      "downloadMenu": {
-        "ariaLabel": "More download options",
-        "title": "More download options (print layout, MP3 audio)"
+      "export": {
+        "label": "Export",
+        "ariaLabel": "Toggle export options",
+        "title": "Export BRF, print layout, or MP3 audio"
       },
       "tts": {
         "selectAriaLabel": "Text-to-speech engine for MP3 export"
@@ -46,7 +47,7 @@
         "action": "Export MP3",
         "exportingLabel": "Exporting MP3…",
         "ariaLabel": "Download MP3 audio",
-        "title": "Download MP3 of the editor text using the selected browser TTS engine (Kitten, eSpeak NG, or Piper). First use may download a voice model.",
+        "title": "Download MP3 of the editor text using a browser TTS engine. First use may download a voice model.",
         "status": {
           "starting": "Starting…",
           "loadingKitten": "Loading Kitten TTS model…",
@@ -286,18 +287,47 @@
     }
   },
 
+  "exportPanel": {
+    "regionAriaLabel": "Export options",
+    "heading": "Export",
+    "subheading": "Choose a format for the current document.",
+    "actions": {
+      "brf": "BRF",
+      "brfHint": "Braille ready for embossing",
+      "printLayout": "Print layout",
+      "printLayoutHint": "Plain text matched to braille lines",
+      "audio": "Audio (MP3)",
+      "audioHint": "Choose a voice, then download"
+    },
+    "audio": {
+      "title": "Export audio (MP3)",
+      "lead": "Pick a voice engine. The only practical differences are export speed and how large the model is on first use—after that, models stay cached in your browser.",
+      "engineLegend": "Voice engine",
+      "note": "All engines run entirely in your browser. No bridge or account is required.",
+      "exportButton": "Download MP3",
+      "cancel": "Cancel",
+      "closeAriaLabel": "Close audio export"
+    }
+  },
+
   "tts": {
     "kitten": {
       "label": "Kitten (default)",
-      "description": "Lightweight neural voice (~25–60 MB first download)"
+      "size": "~25 MB",
+      "speed": "Balanced export speed",
+      "description": "Lightweight neural voice. Good default for most documents."
     },
     "espeak": {
       "label": "eSpeak NG",
-      "description": "Very small robotic voice; fastest load"
+      "size": "~2 MB",
+      "speed": "Fastest export",
+      "description": "Small robotic voice. Best when you need a quick draft read-aloud."
     },
     "piper": {
       "label": "Piper",
-      "description": "Higher-quality neural voice (larger download)"
+      "size": "~60 MB",
+      "speed": "Slower first export",
+      "description": "Higher-quality neural voice. Larger download on first use."
     }
   },
 

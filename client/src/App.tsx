@@ -15,6 +15,8 @@ import {
 import { Editor, type EditorHandle } from './components/Editor';
 import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
 import { PrintPanel } from './components/PrintPanel';
+import { ExportPanel } from './components/ExportPanel';
+import { AudioExportDialog } from './components/AudioExportDialog';
 import { StatusBar } from './components/StatusBar';
 import { WelcomeModal } from './components/WelcomeModal';
 import { StlExportDialog } from './components/StlExportDialog';
@@ -28,7 +30,6 @@ import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog'
 import { startBridgeStatusPolling } from './services/bridge-client';
 import {
   synthesizeMp3InBrowser,
-  TTS_ENGINE_IDS,
   TTS_ENGINE_STORAGE_KEY,
   DEFAULT_TTS_ENGINE,
   TtsExportError,
@@ -69,8 +70,8 @@ import './App.css';
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
- *   • Download button exports the formatted BRF file (CRLF + form feeds).
- *   • Download MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
+ *   • Export expands a bar (like Print) for BRF, print layout, and MP3 audio.
+ *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
@@ -347,6 +348,8 @@ export default function App() {
     localStorage.setItem('graham-braille-inactive-dot-size', String(inactiveDotSize));
   }, [inactiveDotSize]);
   const [showPrint, setShowPrint] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showAudioExport, setShowAudioExport] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
   const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
@@ -526,6 +529,7 @@ export default function App() {
         console.error('Failed to mark session as exported', err);
       });
       setMp3ExportStatus(null);
+      setShowAudioExport(false);
     } catch (err) {
       const msg =
         err instanceof TtsExportError
@@ -877,75 +881,20 @@ Accuracy: _____________ %
                     : t('app.file.drafts.label')}
                 </button>
 
-                <div className="download-menu-wrap">
-                  <button
-                    className="toolbar-btn toolbar-btn--primary"
-                    onClick={handleDownloadBrf}
-                    disabled={!translatedText || isPerkinsMode}
-                    title={t('app.file.downloadBrf.title')}
-                    aria-label={t('app.file.downloadBrf.ariaLabel')}
-                  >
-                    {t('app.file.downloadBrf.label')}
-                  </button>
-
-                  <details className="download-menu">
-                    <summary
-                      className="toolbar-btn toolbar-btn--primary download-menu-trigger"
-                      aria-label={t('app.file.downloadMenu.ariaLabel')}
-                      title={t('app.file.downloadMenu.title')}
-                    >
-                      ▾
-                    </summary>
-                    <div className="download-menu-panel" role="menu">
-                      <button
-                        type="button"
-                        className="download-menu-item"
-                        role="menuitem"
-                        onClick={handleDownloadPrintLayoutText}
-                        disabled={!inputText.trim() || isPerkinsMode}
-                        title={t('app.file.downloadPrintLayout.title')}
-                      >
-                        {t('app.file.downloadPrintLayout.label')}
-                      </button>
-
-                      <div className="download-menu-section" role="group" aria-label={t('app.file.downloadMp3.ariaLabel')}>
-                        <span className="download-menu-label">{t('app.file.downloadMp3.label')}</span>
-                        <select
-                          className="table-select download-menu-select"
-                          value={ttsEngine}
-                          onChange={e => handleTtsEngineChange(e.target.value as TtsEngineId)}
-                          disabled={isPerkinsMode || mp3Exporting}
-                          title={t(`tts.${ttsEngine}.description`)}
-                          aria-label={t('app.file.tts.selectAriaLabel')}
-                        >
-                          {TTS_ENGINE_IDS.map(engineId => (
-                            <option key={engineId} value={engineId} title={t(`tts.${engineId}.description`)}>
-                              {t(`tts.${engineId}.label`)}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          className="download-menu-item"
-                          role="menuitem"
-                          onClick={() => { void handleDownloadMp3(); }}
-                          disabled={!inputText.trim() || isPerkinsMode || mp3Exporting}
-                          title={t('app.file.downloadMp3.title')}
-                          aria-busy={mp3Exporting}
-                        >
-                          {mp3Exporting
-                            ? (mp3ExportStatus || t('app.file.downloadMp3.exportingLabel'))
-                            : t('app.file.downloadMp3.action')}
-                        </button>
-                        {mp3ExportError && (
-                          <span className="download-menu-error" role="alert" title={mp3ExportError}>
-                            {t('app.file.downloadMp3.errorPrefix', { error: mp3ExportError })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </details>
-                </div>
+                <button
+                  className={`toolbar-btn toolbar-btn--primary${showExport ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => {
+                    setShowExport(s => !s);
+                    setShowPrint(false);
+                  }}
+                  disabled={isPerkinsMode}
+                  aria-expanded={showExport}
+                  aria-controls="export-panel"
+                  title={t('app.file.export.title')}
+                  aria-label={t('app.file.export.ariaLabel')}
+                >
+                  {t('app.file.export.label')}
+                </button>
 
                 <select
                   className="table-select"
@@ -977,7 +926,10 @@ Accuracy: _____________ %
 
                 <button
                   className={`toolbar-btn${showPrint ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowPrint(s => !s)}
+                  onClick={() => {
+                    setShowPrint(s => !s);
+                    setShowExport(false);
+                  }}
                   disabled={isPerkinsMode}
                   aria-expanded={showPrint}
                   title={t('app.file.print.title')}
@@ -1237,7 +1189,22 @@ Accuracy: _____________ %
           </div>
         </div>
 
-        {/* Compact print bar — full-width row below the toolbar */}
+        {/* Compact export / print bars — full-width rows below the toolbar */}
+        {showExport && (
+          <div className="header-print-bar" id="export-panel">
+            <ExportPanel
+              onDownloadBrf={handleDownloadBrf}
+              onDownloadPrintLayout={handleDownloadPrintLayoutText}
+              onOpenAudio={() => setShowAudioExport(true)}
+              canDownloadBrf={Boolean(translatedText)}
+              canDownloadPrintLayout={Boolean(inputText.trim())}
+              canExportAudio={Boolean(inputText.trim())}
+              mp3Exporting={mp3Exporting}
+              mp3ExportStatus={mp3ExportStatus}
+              disabled={isPerkinsMode}
+            />
+          </div>
+        )}
         {showPrint && (
           <div className="header-print-bar">
             <PrintPanel
@@ -1792,6 +1759,25 @@ Accuracy: _____________ %
           printText={inputText}
           selectedTable={selectedTable}
           mathCode={mathCode}
+        />
+      )}
+
+      {showAudioExport && (
+        <AudioExportDialog
+          open={showAudioExport}
+          onClose={() => {
+            if (!mp3Exporting) {
+              setShowAudioExport(false);
+              setMp3ExportError(null);
+            }
+          }}
+          engine={ttsEngine}
+          onEngineChange={handleTtsEngineChange}
+          onExport={() => { void handleDownloadMp3(); }}
+          exporting={mp3Exporting}
+          exportStatus={mp3ExportStatus}
+          exportError={mp3ExportError}
+          canExport={Boolean(inputText.trim()) && !isPerkinsMode}
         />
       )}
 
