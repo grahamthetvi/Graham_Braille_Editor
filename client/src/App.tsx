@@ -11,6 +11,7 @@ import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import { BrailleCell } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
+import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import { useBraille, type MathCode } from './hooks/useBraille';
@@ -125,6 +126,7 @@ export default function App() {
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
+  const [showMusicBrailleGuide, setShowMusicBrailleGuide] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
@@ -891,6 +893,17 @@ Accuracy: _____________ %
                 </button>
 
                 <button
+                  className={`toolbar-btn${showMusicBrailleGuide ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowMusicBrailleGuide(true)}
+                  disabled={isPerkinsMode}
+                  title="Recommended workflow for Music Braille using MuseScore and Sao Mai Braille"
+                  aria-label="Open Music Braille recommendation guide"
+                  aria-expanded={showMusicBrailleGuide}
+                >
+                  Music Braille
+                </button>
+
+                <button
                   className="toolbar-btn"
                   onClick={() => setShowStlExportDialog(true)}
                   disabled={isPerkinsMode}
@@ -958,6 +971,16 @@ Accuracy: _____________ %
                   title="Open the User Guide"
                 >
                   User Guide
+                </button>
+
+                <button
+                  className="toolbar-btn guide-btn"
+                  onClick={() => setShowMusicBrailleGuide(true)}
+                  aria-label="Open Music Braille recommendation guide"
+                  title="Recommended MuseScore and Sao Mai Braille workflow for Music Braille"
+                  aria-expanded={showMusicBrailleGuide}
+                >
+                  Music Braille Guide
                 </button>
 
                 <button
@@ -1520,6 +1543,17 @@ Accuracy: _____________ %
             setShowAlphabetGenerator(false);
           }}
           onClose={() => setShowAlphabetGenerator(false)}
+        />
+      )}
+
+      {showMusicBrailleGuide && (
+        <MusicBrailleGuideModal
+          onInsertIntoEditor={(text) => {
+            editorRef.current?.insertTextAtCursor(text);
+            setShowMusicBrailleGuide(false);
+            setActiveTab('file');
+          }}
+          onClose={() => setShowMusicBrailleGuide(false)}
         />
       )}
 
