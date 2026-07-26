@@ -103,8 +103,9 @@ tr:last-child td{border-bottom:none}
 </head>
 <body>
 <header>
-  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard</h1>
+  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard <small style="font-size:0.75rem;opacity:0.6;font-weight:normal;margin-left:0.5rem">v{{VERSION}} · build {{BUILD_NUMBER}}</small></h1>
   <span class="header-spacer" aria-hidden="true"></span>
+  <a class="theme-btn" href="/settings">Settings</a>
   <button type="button" class="theme-btn" id="theme-btn">Dark</button>
   <span class="badge connecting" id="badge">CONNECTING</span>
 </header>
@@ -191,7 +192,7 @@ es.onopen = () => {
   set('#badge','LIVE',['connecting','offline'],[]);
   set('#dot','',['connecting','offline'],[]);
   document.getElementById('status-txt').textContent =
-    'Connected — listening for print jobs on port 8080';
+    'v{{VERSION}} (build {{BUILD_NUMBER}}) — connected on port 8080';
 };
 es.onerror = () => {
   set('#badge','OFFLINE',[],['offline']);

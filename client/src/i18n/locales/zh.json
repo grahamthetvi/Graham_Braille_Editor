@@ -696,7 +696,11 @@
         "title": "打开桥接调试仪表板",
         "label": "调试"
       },
-      "sent": "✓ 已发送"
+      "sent": "✓ 已发送",
+      "settings": {
+        "title": "打开 Bridge 设置（共享 / 连接）",
+        "label": "设置"
+      }
     },
     "full": {
       "webUsbHeading": "WebUSB 压印",
@@ -717,7 +721,9 @@
       "debugDashboard": "调试仪表板",
       "sentSuccess": "已成功发送到点显机。",
       "errorPrefix": "错误：{{error}}",
-      "sharedHint": "在 Bridge 设置中配对后，共享点显机会出现在列表中（从系统托盘打开设置）。"
+      "sharedHint": "在 Bridge 设置中配对后，共享点显机会出现在列表中 — 使用下方“设置”按钮或系统托盘。",
+      "bridgeSettings": "Bridge 设置",
+      "bridgeSettingsTitle": "打开 Bridge 设置（共享 / 连接）"
     }
   },
   "statusBar": {

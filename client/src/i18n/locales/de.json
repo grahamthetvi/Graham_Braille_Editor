@@ -696,6 +696,10 @@
         "title": "Bridge-Debug-Dashboard öffnen",
         "label": "Debug"
       },
+      "settings": {
+        "title": "Bridge-Einstellungen öffnen (Freigabe / Verbinden)",
+        "label": "Einstellungen"
+      },
       "sent": "✓ Gesendet"
     },
     "full": {
@@ -715,9 +719,11 @@
       "print": "Drucken",
       "printBoundaryTest": "Randtest drucken",
       "debugDashboard": "Debug-Dashboard",
+      "bridgeSettings": "Bridge-Einstellungen",
+      "bridgeSettingsTitle": "Bridge-Einstellungen öffnen (Freigabe / Verbinden)",
       "sentSuccess": "Erfolgreich an den Brailledrucker gesendet.",
       "errorPrefix": "Fehler: {{error}}",
-      "sharedHint": "Geteilte Brailledrucker erscheinen, nachdem Sie in den Bridge-Einstellungen gekoppelt haben (Einstellungen über das Tray-Symbol öffnen)."
+      "sharedHint": "Geteilte Brailledrucker erscheinen nach dem Koppeln in den Bridge-Einstellungen — Schaltfläche Einstellungen unten oder Tray-Symbol."
     }
   },
   "statusBar": {

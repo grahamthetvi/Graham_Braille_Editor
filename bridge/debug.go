@@ -120,7 +120,8 @@ func hexDump(data []byte) string {
 // handleDebugPage serves the standalone HTML debug UI.
 func handleDebugPage(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := strings.ReplaceAll(debugHTML, "{{BUILD_NUMBER}}", BuildNumber)
+	html := strings.ReplaceAll(debugHTML, "{{VERSION}}", Version)
+	html = strings.ReplaceAll(html, "{{BUILD_NUMBER}}", BuildNumber)
 	fmt.Fprint(w, html)
 }
 
@@ -285,7 +286,7 @@ header{background:var(--bg-surface);border-bottom:1px solid var(--border);paddin
 .header-spacer{flex:1;min-width:8px}
 header h1{font-size:1.05rem;font-weight:700}
 header h1 span{color:var(--accent)}
-.theme-btn{background:var(--bg-overlay);border:1px solid var(--border);color:var(--text-primary);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:600}
+.theme-btn{background:var(--bg-overlay);border:1px solid var(--border);color:var(--text-primary);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.75rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center}
 .theme-btn:hover{border-color:var(--accent);color:var(--accent)}
 .theme-btn:focus-visible{outline:var(--focus-ring-width) solid var(--focus-ring);outline-offset:2px}
 .badge{font-size:.7rem;background:var(--success);color:var(--bg);padding:2px 8px;border-radius:999px;font-weight:700;transition:background .3s,color .3s}
@@ -324,8 +325,9 @@ tr:last-child td{border-bottom:none}
 </head>
 <body>
 <header>
-  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard <small style="font-size:0.75rem;opacity:0.6;font-weight:normal;margin-left:0.5rem">Build: {{BUILD_NUMBER}}</small></h1>
+  <h1>🖨 <span>Graham</span> Bridge — Debug Dashboard <small style="font-size:0.75rem;opacity:0.6;font-weight:normal;margin-left:0.5rem">v{{VERSION}} · build {{BUILD_NUMBER}}</small></h1>
   <span class="header-spacer" aria-hidden="true"></span>
+  <a class="theme-btn" href="/settings">Settings</a>
   <button type="button" class="theme-btn" id="theme-btn">Dark</button>
   <span class="badge connecting" id="badge">CONNECTING</span>
 </header>
@@ -412,7 +414,7 @@ es.onopen = () => {
   set('#badge','LIVE',['connecting','offline'],[]);
   set('#dot','',['connecting','offline'],[]);
   document.getElementById('status-txt').textContent =
-    'Connected — listening for print jobs on port 8080';
+    'v{{VERSION}} (build {{BUILD_NUMBER}}) — connected on port 8080';
 };
 es.onerror = () => {
   set('#badge','OFFLINE',[],['offline']);

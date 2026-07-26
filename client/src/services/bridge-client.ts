@@ -8,6 +8,8 @@
  */
 
 const BRIDGE_BASE = 'http://127.0.0.1:8080';
+export const BRIDGE_DEBUG_URL = `${BRIDGE_BASE}/debug`;
+export const BRIDGE_SETTINGS_URL = `${BRIDGE_BASE}/settings`;
 const BASE_POLL_INTERVAL_MS = 5_000;
 const BACKOFF_POLL_INTERVAL_MS = 30_000;
 const MAX_FAST_FAILURES = 3;

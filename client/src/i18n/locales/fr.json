@@ -696,7 +696,11 @@
         "title": "Ouvrir le tableau de bord de débogage de la passerelle",
         "label": "Débogage"
       },
-      "sent": "✓ Envoyé"
+      "sent": "✓ Envoyé",
+      "settings": {
+        "title": "Ouvrir les paramètres Bridge (Partage / Connexion)",
+        "label": "Paramètres"
+      }
     },
     "full": {
       "webUsbHeading": "Embossage WebUSB",
@@ -717,7 +721,9 @@
       "debugDashboard": "Tableau de bord de débogage",
       "sentSuccess": "Envoyé à l'embosseuse avec succès.",
       "errorPrefix": "Erreur : {{error}}",
-      "sharedHint": "Les embosseuses partagées apparaissent après l’appairage dans les paramètres de Bridge (Ouvrir les paramètres depuis la barre d’état système)."
+      "sharedHint": "Les embosseuses partagées apparaissent après l’appairage dans les paramètres Bridge — bouton Paramètres ci-dessous ou barre d’état système.",
+      "bridgeSettings": "Paramètres Bridge",
+      "bridgeSettingsTitle": "Ouvrir les paramètres Bridge (Partage / Connexion)"
     }
   },
   "statusBar": {

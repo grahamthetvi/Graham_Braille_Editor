@@ -729,13 +729,17 @@
         "title": "Open Bridge Debug Dashboard",
         "label": "Debug"
       },
+      "settings": {
+        "title": "Open Bridge Settings (Share / Connect to a shared Bridge)",
+        "label": "Settings"
+      },
       "sent": "✓ Sent"
     },
     "full": {
       "webUsbHeading": "WebUSB Embossing",
       "heading": "Print to Embosser",
       "bridgeNotConnected": "Bridge not connected. Download and run the bridge binary to enable printing.",
-      "sharedHint": "Shared embossers appear after you pair in Bridge Settings (Open Settings from the Bridge tray).",
+      "sharedHint": "Shared embossers appear after you pair in Bridge Settings — use the Settings button below or the Bridge tray.",
       "selectSecurely": "Select your embosser securely directly from the browser window prompt.",
       "selectPrinter": "Select Printer",
       "noPrintersFound": "No printers found on computer",
@@ -748,6 +752,8 @@
       "selectEmbosserAndPrint": "Select Embosser & Print",
       "print": "Print",
       "printBoundaryTest": "Print Boundary Test",
+      "bridgeSettings": "Bridge Settings",
+      "bridgeSettingsTitle": "Open Bridge Settings (Share / Connect to a shared Bridge)",
       "debugDashboard": "Debug Dashboard",
       "sentSuccess": "Sent to embosser successfully.",
       "errorPrefix": "Error: {{error}}"

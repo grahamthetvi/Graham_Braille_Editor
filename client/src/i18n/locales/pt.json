@@ -696,7 +696,11 @@
         "title": "Abrir Painel de Depuração do Bridge",
         "label": "Depurar"
       },
-      "sent": "✓ Enviado"
+      "sent": "✓ Enviado",
+      "settings": {
+        "title": "Abrir definições da Bridge (Partilhar / Ligar)",
+        "label": "Definições"
+      }
     },
     "full": {
       "webUsbHeading": "Impressão em Braille via WebUSB",
@@ -717,7 +721,9 @@
       "debugDashboard": "Painel de Depuração",
       "sentSuccess": "Enviado para a impressora braille com sucesso.",
       "errorPrefix": "Erro: {{error}}",
-      "sharedHint": "As embossadoras partilhadas aparecem depois de emparelhar nas Definições da Bridge (Abrir Definições a partir do ícone na bandeja)."
+      "sharedHint": "As embossadoras partilhadas aparecem depois de emparelhar nas definições da Bridge — botão Definições abaixo ou ícone na bandeja.",
+      "bridgeSettings": "Definições da Bridge",
+      "bridgeSettingsTitle": "Abrir definições da Bridge (Partilhar / Ligar)"
     }
   },
   "statusBar": {

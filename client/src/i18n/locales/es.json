@@ -696,6 +696,10 @@
         "title": "Abrir el panel de depuración del Bridge",
         "label": "Depuración"
       },
+      "settings": {
+        "title": "Abrir configuración de Bridge (Compartir / Conectar)",
+        "label": "Configuración"
+      },
       "sent": "✓ Enviado"
     },
     "full": {
@@ -715,9 +719,11 @@
       "print": "Imprimir",
       "printBoundaryTest": "Imprimir prueba de límites",
       "debugDashboard": "Panel de depuración",
+      "bridgeSettings": "Configuración de Bridge",
+      "bridgeSettingsTitle": "Abrir configuración de Bridge (Compartir / Conectar)",
       "sentSuccess": "Enviado correctamente a la impresora braille.",
       "errorPrefix": "Error: {{error}}",
-      "sharedHint": "Las embosadoras compartidas aparecen después de emparejar en Configuración de Bridge (Abrir configuración desde la bandeja del sistema)."
+      "sharedHint": "Las embosadoras compartidas aparecen después de emparejar en Configuración de Bridge — use el botón Configuración abajo o la bandeja del sistema."
     }
   },
   "statusBar": {

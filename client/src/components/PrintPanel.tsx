@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { printBrf, getPrinters, type PrintTarget } from '../services/bridge-client';
+import { printBrf, getPrinters, BRIDGE_DEBUG_URL, BRIDGE_SETTINGS_URL, type PrintTarget } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isMac, isWindows } from '../utils/os';
@@ -326,14 +326,24 @@ export function PrintPanel({
           {t('print.compact.boundaryTest.label')}
         </button>
         {bridgeConnected && !useWebUSB && (
-          <button
-            className="toolbar-btn"
-            onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
-            title={t('print.compact.debug.title')}
-            style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
-          >
-            {t('print.compact.debug.label')}
-          </button>
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={() => window.open(BRIDGE_SETTINGS_URL, '_blank')}
+              title={t('print.compact.settings.title')}
+              style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
+            >
+              {t('print.compact.settings.label')}
+            </button>
+            <button
+              className="toolbar-btn"
+              onClick={() => window.open(BRIDGE_DEBUG_URL, '_blank')}
+              title={t('print.compact.debug.title')}
+              style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
+            >
+              {t('print.compact.debug.label')}
+            </button>
+          </>
         )}
         {renderViewPlusNotice()}
         {status === 'success' && (
@@ -451,12 +461,21 @@ export function PrintPanel({
         </button>
         
         {bridgeConnected && !useWebUSB && (
-          <button
-            onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
-            style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
-          >
-            {t('print.full.debugDashboard')}
-          </button>
+          <>
+            <button
+              onClick={() => window.open(BRIDGE_SETTINGS_URL, '_blank')}
+              title={t('print.full.bridgeSettingsTitle')}
+              style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+            >
+              {t('print.full.bridgeSettings')}
+            </button>
+            <button
+              onClick={() => window.open(BRIDGE_DEBUG_URL, '_blank')}
+              style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+            >
+              {t('print.full.debugDashboard')}
+            </button>
+          </>
         )}
       </div>
 
