@@ -34,11 +34,16 @@
         "ariaLabel": "Download print layout text file",
         "title": "Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
       },
+      "downloadMenu": {
+        "ariaLabel": "More download options",
+        "title": "More download options (print layout, MP3 audio)"
+      },
       "tts": {
         "selectAriaLabel": "Text-to-speech engine for MP3 export"
       },
       "downloadMp3": {
         "label": "Download MP3",
+        "action": "Export MP3",
         "exportingLabel": "Exporting MP3…",
         "ariaLabel": "Download MP3 audio",
         "title": "Download MP3 of the editor text using the selected browser TTS engine (Kitten, eSpeak NG, or Piper). First use may download a voice model.",

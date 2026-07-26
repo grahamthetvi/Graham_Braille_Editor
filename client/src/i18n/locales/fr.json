@@ -34,11 +34,16 @@
         "ariaLabel": "Télécharger le fichier texte de mise en page d'impression",
         "title": "Télécharger le texte brut (.txt) avec les mêmes sauts de ligne que l'éditeur de texte — chaque ligne correspond à une rangée braille afin de pouvoir imprimer ou ouvrir dans Word et aligner avec la mise en page embossée."
       },
+      "downloadMenu": {
+        "ariaLabel": "Plus d'options de téléchargement",
+        "title": "Plus d'options de téléchargement (mise en page d'impression, audio MP3)"
+      },
       "tts": {
         "selectAriaLabel": "Moteur de synthèse vocale pour l'export MP3"
       },
       "downloadMp3": {
         "label": "Télécharger le MP3",
+        "action": "Exporter le MP3",
         "exportingLabel": "Exportation du MP3…",
         "ariaLabel": "Télécharger l'audio MP3",
         "title": "Télécharger un MP3 du texte de l'éditeur à l'aide du moteur TTS du navigateur sélectionné (Kitten, eSpeak NG ou Piper). La première utilisation peut télécharger un modèle vocal.",

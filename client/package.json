@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
-    "postinstall": "node scripts/setup-liblouis.js",
+    "postinstall": "node scripts/setup-liblouis.js && node scripts/setup-onnx-wasm.js",
     "setup:liblouis": "node scripts/setup-liblouis.js"
   },
   "dependencies": {

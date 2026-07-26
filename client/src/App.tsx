@@ -877,25 +877,75 @@ Accuracy: _____________ %
                     : t('app.file.drafts.label')}
                 </button>
 
-                <button
-                  className="toolbar-btn toolbar-btn--primary"
-                  onClick={handleDownloadBrf}
-                  disabled={!translatedText || isPerkinsMode}
-                  title={t('app.file.downloadBrf.title')}
-                  aria-label={t('app.file.downloadBrf.ariaLabel')}
-                >
-                  {t('app.file.downloadBrf.label')}
-                </button>
+                <div className="download-menu-wrap">
+                  <button
+                    className="toolbar-btn toolbar-btn--primary"
+                    onClick={handleDownloadBrf}
+                    disabled={!translatedText || isPerkinsMode}
+                    title={t('app.file.downloadBrf.title')}
+                    aria-label={t('app.file.downloadBrf.ariaLabel')}
+                  >
+                    {t('app.file.downloadBrf.label')}
+                  </button>
 
-                <button
-                  className="toolbar-btn"
-                  onClick={handleDownloadPrintLayoutText}
-                  disabled={!inputText.trim() || isPerkinsMode}
-                  title={t('app.file.downloadPrintLayout.title')}
-                  aria-label={t('app.file.downloadPrintLayout.ariaLabel')}
-                >
-                  {t('app.file.downloadPrintLayout.label')}
-                </button>
+                  <details className="download-menu">
+                    <summary
+                      className="toolbar-btn toolbar-btn--primary download-menu-trigger"
+                      aria-label={t('app.file.downloadMenu.ariaLabel')}
+                      title={t('app.file.downloadMenu.title')}
+                    >
+                      ▾
+                    </summary>
+                    <div className="download-menu-panel" role="menu">
+                      <button
+                        type="button"
+                        className="download-menu-item"
+                        role="menuitem"
+                        onClick={handleDownloadPrintLayoutText}
+                        disabled={!inputText.trim() || isPerkinsMode}
+                        title={t('app.file.downloadPrintLayout.title')}
+                      >
+                        {t('app.file.downloadPrintLayout.label')}
+                      </button>
+
+                      <div className="download-menu-section" role="group" aria-label={t('app.file.downloadMp3.ariaLabel')}>
+                        <span className="download-menu-label">{t('app.file.downloadMp3.label')}</span>
+                        <select
+                          className="table-select download-menu-select"
+                          value={ttsEngine}
+                          onChange={e => handleTtsEngineChange(e.target.value as TtsEngineId)}
+                          disabled={isPerkinsMode || mp3Exporting}
+                          title={t(`tts.${ttsEngine}.description`)}
+                          aria-label={t('app.file.tts.selectAriaLabel')}
+                        >
+                          {TTS_ENGINE_IDS.map(engineId => (
+                            <option key={engineId} value={engineId} title={t(`tts.${engineId}.description`)}>
+                              {t(`tts.${engineId}.label`)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="download-menu-item"
+                          role="menuitem"
+                          onClick={() => { void handleDownloadMp3(); }}
+                          disabled={!inputText.trim() || isPerkinsMode || mp3Exporting}
+                          title={t('app.file.downloadMp3.title')}
+                          aria-busy={mp3Exporting}
+                        >
+                          {mp3Exporting
+                            ? (mp3ExportStatus || t('app.file.downloadMp3.exportingLabel'))
+                            : t('app.file.downloadMp3.action')}
+                        </button>
+                        {mp3ExportError && (
+                          <span className="download-menu-error" role="alert" title={mp3ExportError}>
+                            {t('app.file.downloadMp3.errorPrefix', { error: mp3ExportError })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </details>
+                </div>
 
                 <select
                   className="table-select"
