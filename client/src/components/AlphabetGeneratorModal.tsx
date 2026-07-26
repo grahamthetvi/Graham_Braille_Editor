@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AlphabetGeneratorModalProps {
   onInsert: (text: string) => void;
@@ -40,6 +41,7 @@ const SEPARATORS: Record<SeparatorType, string> = {
 };
 
 export function AlphabetGeneratorModal({ onInsert, onClose }: AlphabetGeneratorModalProps) {
+  const { t } = useTranslation();
   const [listType, setListType] = useState<WordListType>('cvc');
   const [casing, setCasing] = useState<CasingType>('lowercase');
   const [separator, setSeparator] = useState<SeparatorType>('hyphen');
@@ -98,86 +100,86 @@ export function AlphabetGeneratorModal({ onInsert, onClose }: AlphabetGeneratorM
   };
 
   return (
-    <div className="welcome-overlay" onClick={onClose} aria-label="Alphabet Generator">
+    <div className="welcome-overlay" onClick={onClose} aria-label={t('alphabetGenerator.ariaLabel')}>
       <div 
         className="welcome-modal alphabet-gen-modal" 
         onClick={e => e.stopPropagation()} 
         style={{ maxWidth: '800px', width: '100%', display: 'flex', flexDirection: 'column' }}
       >
         <header className="welcome-header">
-          <h2>Alphabet & Words Generator</h2>
-          <button className="welcome-close" onClick={onClose} aria-label="Close">✕</button>
+          <h2>{t('alphabetGenerator.title')}</h2>
+          <button className="welcome-close" onClick={onClose} aria-label={t('alphabetGenerator.close')}>✕</button>
         </header>
 
         <div className="alphabet-gen-content" style={{ display: 'flex', gap: '1.5rem', padding: '1.5rem', flex: 1, minHeight: '380px', overflowY: 'auto' }}>
           {/* Controls section */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
             <div>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>Word List Type</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>{t('alphabetGenerator.wordListType.label')}</label>
               <div className="gen-option-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <label className="gen-radio-label">
                   <input type="radio" name="listType" checked={listType === 'cvc'} onChange={() => setListType('cvc')} />
-                  <span>Simplest CVC Words (e.g. <code>a - ant</code>)</span>
+                  <span>{t('alphabetGenerator.wordListType.simplestCvc')}</span>
                 </label>
                 <label className="gen-radio-label">
                   <input type="radio" name="listType" checked={listType === 'standard'} onChange={() => setListType('standard')} />
-                  <span>Standard Common Nouns (e.g. <code>a - apple</code>)</span>
+                  <span>{t('alphabetGenerator.wordListType.standardCommon')}</span>
                 </label>
                 <label className="gen-radio-label">
                   <input type="radio" name="listType" checked={listType === 'animals'} onChange={() => setListType('animals')} />
-                  <span>Animals (e.g. <code>a - alligator</code>)</span>
+                  <span>{t('alphabetGenerator.wordListType.animals')}</span>
                 </label>
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>Letter Casing</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>{t('alphabetGenerator.letterCasing.label')}</label>
               <select 
                 value={casing} 
                 onChange={e => setCasing(e.target.value as CasingType)}
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
               >
-                <option value="lowercase">Lowercase (a - apple)</option>
-                <option value="uppercase">Uppercase (A - APPLE)</option>
-                <option value="titlecase">Capitalized (A - Apple)</option>
-                <option value="both">Both Cases (Aa - apple)</option>
-                <option value="bothSpaced">Spaced Both Cases (A a - apple)</option>
+                <option value="lowercase">{t('alphabetGenerator.letterCasing.lowercase')}</option>
+                <option value="uppercase">{t('alphabetGenerator.letterCasing.uppercase')}</option>
+                <option value="titlecase">{t('alphabetGenerator.letterCasing.capitalized')}</option>
+                <option value="both">{t('alphabetGenerator.letterCasing.bothCases')}</option>
+                <option value="bothSpaced">{t('alphabetGenerator.letterCasing.spacedBothCases')}</option>
               </select>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>Delimiter Separator</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>{t('alphabetGenerator.delimiter.label')}</label>
               <select 
                 value={separator} 
                 onChange={e => setSeparator(e.target.value as SeparatorType)}
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
               >
-                <option value="hyphen">Hyphen ( - )</option>
-                <option value="colon">Colon (: )</option>
-                <option value="equals">Equals ( = )</option>
-                <option value="arrow">Arrow ( → )</option>
-                <option value="spaces">Spaces (   )</option>
+                <option value="hyphen">{t('alphabetGenerator.delimiter.hyphen')}</option>
+                <option value="colon">{t('alphabetGenerator.delimiter.colon')}</option>
+                <option value="equals">{t('alphabetGenerator.delimiter.equals')}</option>
+                <option value="arrow">{t('alphabetGenerator.delimiter.arrow')}</option>
+                <option value="spaces">{t('alphabetGenerator.delimiter.spaces')}</option>
               </select>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>Downwards Page Breaks</label>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>{t('alphabetGenerator.pageBreaks.label')}</label>
               <select 
                 value={pagination} 
                 onChange={e => setPagination(e.target.value as PaginationType)}
                 style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}
               >
-                <option value="none">Continuous list (no page breaks)</option>
-                <option value="1">Page break after every letter (1 per page)</option>
-                <option value="5">Page break every 5 letters</option>
-                <option value="10">Page break every 10 letters</option>
+                <option value="none">{t('alphabetGenerator.pageBreaks.none')}</option>
+                <option value="1">{t('alphabetGenerator.pageBreaks.everyLetter')}</option>
+                <option value="5">{t('alphabetGenerator.pageBreaks.every5')}</option>
+                <option value="10">{t('alphabetGenerator.pageBreaks.every10')}</option>
               </select>
             </div>
           </div>
 
           {/* Preview section */}
           <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', minHeight: '300px' }}>
-            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>Live Preview</label>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem', fontSize: '0.9rem' }}>{t('alphabetGenerator.livePreview')}</label>
             <div 
               style={{ 
                 flex: 1, 
@@ -211,7 +213,7 @@ export function AlphabetGeneratorModal({ onInsert, onClose }: AlphabetGeneratorM
                         userSelect: 'none'
                       }}
                     >
-                      --- PAGE BREAK ---
+                      {t('alphabetGenerator.pageBreakMarker')}
                     </div>
                   );
                 }
@@ -222,13 +224,13 @@ export function AlphabetGeneratorModal({ onInsert, onClose }: AlphabetGeneratorM
         </div>
 
         <footer className="welcome-footer" style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-          <button className="welcome-btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="welcome-btn-secondary" onClick={onClose}>{t('alphabetGenerator.cancel')}</button>
           <button 
             ref={primaryBtnRef}
             className="welcome-btn-primary" 
             onClick={handleInsertText}
           >
-            Insert Exercises
+            {t('alphabetGenerator.insert')}
           </button>
         </footer>
       </div>

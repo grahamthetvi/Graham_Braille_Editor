@@ -30,7 +30,7 @@ body {
   flex-direction: column;
   min-height: 0;
   max-width: 100%;
-  text-align: left;
+  text-align: start;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
@@ -299,7 +299,7 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
+  border-inline-start: 1px solid var(--border);
   overflow: hidden;
 }
 
@@ -446,8 +446,8 @@ body {
 }
 
 .paragraph-matrix-rowhead {
-  text-align: right;
-  padding-right: 0.2rem;
+  text-align: end;
+  padding-inline-end: 0.2rem;
 }
 
 .paragraph-matrix-cell {
@@ -486,7 +486,7 @@ body {
 }
 
 .paragraph-format-quick-label {
-  margin-right: 0.15rem;
+  margin-inline-end: 0.15rem;
 }
 
 .paragraph-format-quick .toolbar-btn {
@@ -566,7 +566,7 @@ body {
 .progress-label {
   position: absolute;
   top: 8px;
-  right: 0;
+  inset-inline-end: 0;
   font-size: 0.68rem;
   color: var(--text-secondary);
 }
@@ -619,7 +619,8 @@ body {
 .brf-page {
   background: transparent;
   box-shadow: none;
-  padding: 0 1rem 0 3.5rem;
+  padding: 0 1rem;
+  padding-inline-start: 3.5rem;
   width: max-content;
   min-width: 100%;
   max-width: none;
@@ -631,8 +632,7 @@ body {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 2rem;
-  right: 2rem;
+  inset-inline: 2rem;
   border-bottom: 3px solid var(--border);
   opacity: 0.8;
   pointer-events: none;
@@ -641,10 +641,10 @@ body {
 .brf-page-number {
   position: absolute;
   top: 0;
-  right: 1rem;
+  inset-inline-end: 1rem;
   font-family: system-ui, sans-serif;
   font-size: 0.75rem;
-  text-align: right;
+  text-align: end;
   color: var(--text-secondary);
   user-select: none;
   opacity: 0.5;
@@ -975,8 +975,12 @@ body {
   margin-top: 0.6rem !important;
   padding: 0.6rem 0.8rem;
   background: var(--bg-overlay);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 0 4px 4px 0;
+}
+
+[dir='rtl'] .welcome-tip {
+  border-radius: 4px 0 0 4px;
 }
 
 .welcome-footer {
@@ -1176,7 +1180,7 @@ body {
 
 .install-card ol {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-inline-start: 1.25rem;
   font-size: 0.75rem;
   color: var(--text-secondary);
   line-height: 1.4;
@@ -1484,11 +1488,18 @@ label.stl-export-field {
   align-items: center;
   width: var(--braille-cell-width, 14px);
   height: var(--braille-cell-height, 22px);
-  margin-right: var(--braille-cell-gap, 8px);
+  margin-inline-end: var(--braille-cell-gap, 8px);
   flex-shrink: 0;
   box-sizing: border-box;
   transition: background-color 0.2s, transform 0.2s;
   cursor: help;
+}
+
+/* Braille preview stays LTR so cell order and dots are not mirrored in RTL UI locales. */
+.brf-preview,
+.brf-pages-container {
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 .braille-cell:hover {

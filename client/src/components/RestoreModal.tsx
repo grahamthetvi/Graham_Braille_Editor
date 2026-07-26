@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SessionMetadata } from '../services/sessionStore';
 
 interface RestoreModalProps {
@@ -10,6 +11,7 @@ interface RestoreModalProps {
 }
 
 export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll, onClose }: RestoreModalProps) {
+  const { t } = useTranslation();
   const primaryBtnRef = useRef<HTMLButtonElement>(null);
 
   // Focus the primary button when opened
@@ -20,7 +22,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
   return (
     <div
       className="welcome-overlay"
-      aria-label="Drafts"
+      aria-label={t('restore.ariaLabel')}
       onClick={onClose}
     >
       <div
@@ -32,11 +34,11 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
         style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
       >
         <header className="welcome-header">
-          <h2 id="restore-title">Drafts (Last 30 Days)</h2>
+          <h2 id="restore-title">{t('restore.title')}</h2>
           <button
             className="welcome-close"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('restore.closeAriaLabel')}
           >
             ✕
           </button>
@@ -44,10 +46,10 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
 
         <div className="welcome-body" style={{ padding: '1rem 2rem', overflowY: 'auto' }}>
           {sessions.length === 0 ? (
-            <p>No unsaved drafts found.</p>
+            <p>{t('restore.empty')}</p>
           ) : (
             <>
-              <p>These documents were autosaved recently. Active drafts and exported files are preserved here.</p>
+              <p>{t('restore.description')}</p>
               <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {sessions.map(session => (
                   <div
@@ -65,7 +67,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                          Last edited: {new Date(session.updatedAt).toLocaleString()}
+                          {t('restore.lastEditedPrefix')}{new Date(session.updatedAt).toLocaleString()}
                         </span>
                         {session.isExported ? (
                           <span style={{
@@ -79,7 +81,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
-                            Exported
+                            {t('restore.exported')}
                           </span>
                         ) : (
                           <span style={{
@@ -93,7 +95,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em'
                           }}>
-                            Active Draft
+                            {t('restore.activeDraft')}
                           </span>
                         )}
                       </div>
@@ -103,19 +105,19 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                           onClick={() => onDiscardItem(session.id)}
                           style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: 'transparent' }}
                         >
-                          Discard
+                          {t('restore.discard')}
                         </button>
                         <button 
                           className="welcome-btn-primary" 
                           onClick={() => { onRestore(session.id); onClose(); }}
                           style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}
                         >
-                          Restore
+                          {t('restore.restoreButton')}
                         </button>
                       </div>
                     </div>
                     <div style={{ fontFamily: 'monospace', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      {session.preview || <em>Empty document</em>}
+                      {session.preview || <em>{t('restore.emptyDocument')}</em>}
                     </div>
                   </div>
                 ))}
@@ -129,7 +131,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
             <button
               className="welcome-btn-secondary"
               onClick={() => {
-                if (window.confirm("Are you sure you want to discard all drafts?")) {
+                if (window.confirm(t('restore.confirmDiscardAll'))) {
                   onDiscardAll();
                 }
               }}
@@ -138,7 +140,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
                 color: 'var(--text-primary)',
               }}
             >
-              Discard All
+              {t('restore.discardAll')}
             </button>
           )}
           <button
@@ -146,7 +148,7 @@ export function RestoreModal({ sessions, onRestore, onDiscardItem, onDiscardAll,
             className="welcome-btn-primary"
             onClick={onClose}
           >
-            Close
+            {t('restore.closeButton')}
           </button>
         </footer>
       </div>

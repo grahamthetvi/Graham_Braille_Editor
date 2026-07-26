@@ -68,13 +68,19 @@ The Editor component debounces calls to `onTextChange` by **500 ms** so rapid
 keystrokes don't spam the worker.
 
 ### 2. Table Selection
-The header toolbar exposes a `<select>` with grouped `<optgroup>` elements
-sourced from `src/utils/tableRegistry.ts`.  The registry maps human-readable
-names to liblouis table filenames (e.g. `en-ueb-g2.ctb`).  Every table
-available in `public/tables/` is covered across 12 language groups.
+The **Languages & Codes** tab exposes a Table `<select>` with grouped `<optgroup>`
+elements sourced from `src/utils/tableRegistry.ts`, plus a UI **Language** select
+and an **Auto-pair** toggle (`src/i18n/locales.ts`).  The registry maps
+human-readable names to liblouis table filenames (e.g. `en-ueb-g2.ctb`), including
+Spanish (`es-g1.ctb`).
 
-When the selection changes, the hook re-translates the current text with the
-new table.
+When Auto-pair is enabled, changing the UI language also selects that locale’s
+default braille table.  When the table selection changes, the hook re-translates
+the current text with the new table.
+
+UI strings are loaded via `i18next` / `react-i18next` from
+`src/i18n/locales/*.json`.  Document `lang` and `dir` follow the selected locale
+(RTL for Arabic and Urdu).
 
 ### 3. Web Worker (braille.worker.ts)
 
@@ -171,8 +177,9 @@ Graham_Braille_Editor/
 │   ├── scripts/
 │   │   └── setup-liblouis.js    ← copies WASM + tables from node_modules
 │   └── src/
-│       ├── App.tsx              ← root component (toolbar, layout)
+│       ├── App.tsx              ← root component (toolbar, layout, locale)
 │       ├── App.css
+│       ├── i18n/                ← i18next catalogs + UI locale registry
 │       ├── components/
 │       │   ├── Editor.tsx       ← Monaco Editor wrapper (500 ms debounce)
 │       │   ├── PrintPanel.tsx   ← embosser print UI

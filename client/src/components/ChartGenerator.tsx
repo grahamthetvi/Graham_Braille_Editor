@@ -1,16 +1,12 @@
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from 'react';
-import {
-    generateChartBrf,
-    buildChartSummaryPlainText,
-    buildChartSummaryNemethPlainText,
-} from '../utils/chartBraille';
+import { useTranslation } from 'react-i18next';
+import { generateChartBrf } from '../utils/chartBraille';
 import {
     type ChartKind,
     type ChartSpec,
+    type ChartValidationResult,
     CHART_LIMITS,
-    validateChartSpec,
     parseCsvRows,
-    parseCommaSeparatedNumbers,
 } from '../types/chart';
 import type { MathCode } from '../hooks/useBraille';
 
@@ -23,7 +19,10 @@ interface ChartGeneratorProps {
     inline?: boolean;
 }
 
-const STEPS = ['Data', 'Chart type and grid', 'Labels', 'Review'] as const;
+type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+/** Step keys used to look up `chart.steps.*` for display text at render time. */
+const STEP_KEYS = ['data', 'chartTypeAndGrid', 'labels', 'review'] as const;
 
 /** When delimiter-based pairing fails: first two numbers per line (e.g. tab- or space-separated). */
 function tryPairsFromNumericTokens(lines: string[]): { x: number; y: number }[] | null {
@@ -38,6 +37,143 @@ function tryPairsFromNumericTokens(lines: string[]): { x: number; y: number }[] 
         pairs.push({ x, y });
     }
     return pairs;
+}
+
+/**
+ * Locale-aware mirror of `parseCommaSeparatedNumbers` (types/chart.ts); reimplemented here so
+ * the "Invalid number" message is translated instead of using the utility's fixed English text.
+ */
+function parseCommaSeparatedNumbersT(s: string, t: TFn): { numbers: number[]; errors: string[] } {
+    const trimmed = s.trim();
+    if (!trimmed) return { numbers: [], errors: [] };
+    const parts = trimmed.split(',').map((p) => p.trim());
+    const numbers: number[] = [];
+    const errors: string[] = [];
+    for (const part of parts) {
+        if (part === '') continue;
+        const n = parseFloat(part);
+        if (!Number.isFinite(n)) {
+            errors.push(t('chart.messages.invalidNumber', { value: part }));
+        } else {
+            numbers.push(n);
+        }
+    }
+    return { numbers, errors };
+}
+
+/**
+ * Locale-aware mirror of `validateChartSpec` (types/chart.ts). `CHART_LIMITS` values are baked
+ * into the `en.json` strings as literal numbers (they are fixed constants), so no interpolation
+ * is needed for the range messages.
+ */
+function validateChartSpecT(spec: ChartSpec, t: TFn): ChartValidationResult {
+    const errors: string[] = [];
+
+    if (!spec.values.length) {
+        errors.push(t('chart.messages.addAtLeastOnePoint'));
+    } else if (spec.values.length > CHART_LIMITS.maxPoints) {
+        errors.push(t('chart.messages.tooManyPoints'));
+    }
+
+    if (spec.values.length !== spec.xValues.length) {
+        errors.push(t('chart.messages.xyCountMismatch'));
+    }
+
+    spec.values.forEach((v, i) => {
+        if (!Number.isFinite(v)) {
+            errors.push(t('chart.messages.invalidYAt', { index: i + 1 }));
+        }
+    });
+
+    spec.xValues.forEach((v, i) => {
+        if (!Number.isFinite(v)) {
+            errors.push(t('chart.messages.invalidXAt', { index: i + 1 }));
+        }
+    });
+
+    const inRange = (n: number, min: number, max: number) => Number.isFinite(n) && n >= min && n <= max;
+    if (!inRange(spec.cellsWidth, CHART_LIMITS.cellsWidth.min, CHART_LIMITS.cellsWidth.max)) {
+        errors.push(t('chart.messages.widthRange'));
+    }
+    if (!inRange(spec.cellsHeight, CHART_LIMITS.cellsHeight.min, CHART_LIMITS.cellsHeight.max)) {
+        errors.push(t('chart.messages.heightRange'));
+    }
+
+    return { ok: errors.length === 0, errors };
+}
+
+/** Locale-aware mirror of `buildChartSummaryPlainText` (utils/chartBraille.ts). */
+function buildChartSummaryPlainTextT(spec: ChartSpec, t: TFn): string {
+    const v = spec.values;
+    if (v.length === 0) return '';
+
+    const kindLabel = t(spec.kind === 'line' ? 'chart.summary.lineChart' : 'chart.summary.barChart');
+    const lines: string[] = [];
+
+    const title = spec.title?.trim();
+    lines.push(
+        title
+            ? t(spec.kind === 'line' ? 'chart.summary.lineChartTitled' : 'chart.summary.barChartTitled', { title })
+            : kindLabel
+    );
+    lines.push(t('chart.summary.grid', { width: spec.cellsWidth, height: spec.cellsHeight, count: v.length }));
+
+    const min = Math.min(...v);
+    const max = Math.max(...v);
+    lines.push(t('chart.summary.range', { min, max }));
+
+    const yl = spec.yAxisLabel?.trim();
+    const xl = spec.xAxisLabel?.trim();
+    if (yl || xl) {
+        const parts: string[] = [];
+        if (yl) parts.push(t('chart.summary.yAxis', { label: yl }));
+        if (xl) parts.push(t('chart.summary.xAxis', { label: xl }));
+        lines.push(parts.join(' '));
+    }
+
+    const xv = spec.xValues;
+    lines.push(t('chart.summary.valuesHeading'));
+    v.forEach((n, i) => {
+        lines.push(t('chart.summary.valueRow', { x: xv[i], y: n }));
+    });
+
+    return lines.join('\n');
+}
+
+/** Locale-aware mirror of `buildChartSummaryNemethPlainText` (utils/chartBraille.ts). */
+function buildChartSummaryNemethPlainTextT(spec: ChartSpec, t: TFn): string {
+    const v = spec.values;
+    if (v.length === 0) return '';
+
+    const kindLabel = t(spec.kind === 'line' ? 'chart.summary.lineChart' : 'chart.summary.barChart');
+    const lines: string[] = [];
+
+    lines.push(t('chart.nemeth.kindLine', { kind: kindLabel }));
+    const title = spec.title?.trim();
+    if (title) lines.push(title);
+
+    lines.push(t('chart.nemeth.grid', { width: spec.cellsWidth, height: spec.cellsHeight, count: v.length }));
+
+    const min = Math.min(...v);
+    const max = Math.max(...v);
+    lines.push(t('chart.nemeth.range', { min, max }));
+
+    const yl = spec.yAxisLabel?.trim();
+    const xl = spec.xAxisLabel?.trim();
+    if (yl || xl) {
+        const parts: string[] = [];
+        if (yl) parts.push(t('chart.summary.yAxis', { label: yl }).replace(/\.$/, ''));
+        if (xl) parts.push(t('chart.summary.xAxis', { label: xl }).replace(/\.$/, ''));
+        lines.push(t('chart.nemeth.axis', { axisParts: parts.join('. ') }));
+    }
+
+    const xv = spec.xValues;
+    lines.push(t('chart.nemeth.valuesHeading'));
+    v.forEach((n, i) => {
+        lines.push(t('chart.nemeth.valueRow', { x: xv[i], y: n }));
+    });
+
+    return lines.join('\n');
 }
 
 function buildSpecFromState(
@@ -73,6 +209,7 @@ export function ChartGenerator({
     onClose,
     inline,
 }: ChartGeneratorProps) {
+    const { t } = useTranslation();
     const [step, setStep] = useState(0);
     const [chartType, setChartType] = useState<ChartKind>('line');
     const [cellsWidth, setCellsWidth] = useState(30);
@@ -109,8 +246,8 @@ export function ChartGenerator({
         values: number[];
         parseErrors: string[];
     } {
-        const yParsed = parseCommaSeparatedNumbers(dataYInput);
-        const xParsed = parseCommaSeparatedNumbers(dataXInput);
+        const yParsed = parseCommaSeparatedNumbersT(dataYInput, t);
+        const xParsed = parseCommaSeparatedNumbersT(dataXInput, t);
         const parseErrors = [...yParsed.errors, ...xParsed.errors];
         const values = yParsed.numbers;
         if (values.length === 0) {
@@ -121,7 +258,7 @@ export function ChartGenerator({
             xValues = values.map((_, i) => i);
         } else if (xParsed.numbers.length !== values.length) {
             parseErrors.push(
-                `X has ${xParsed.numbers.length} number(s) and Y has ${values.length}. Counts must match, or leave X empty for 0, 1, 2, …`
+                t('chart.messages.countMismatch', { xCount: xParsed.numbers.length, yCount: values.length })
             );
             xValues = [];
         } else {
@@ -154,15 +291,15 @@ export function ChartGenerator({
                 return;
             }
             const spec = getSpecForValidation();
-            const v = validateChartSpec(spec);
+            const v = validateChartSpecT(spec, t);
             if (!v.ok) {
                 setFieldErrors(v.errors);
                 announce(v.errors.join(' '));
                 return;
             }
-            announce(`Data OK. ${values.length} points.`);
+            announce(t('chart.messages.dataOk', { count: values.length }));
         }
-        setStep((s) => Math.min(s + 1, STEPS.length - 1));
+        setStep((s) => Math.min(s + 1, STEP_KEYS.length - 1));
     }
 
     function goBack() {
@@ -198,7 +335,7 @@ export function ChartGenerator({
             setDataXInput(pairRows.map((p) => String(p.x)).join(', '));
             setDataYInput(pairRows.map((p) => String(p.y)).join(', '));
             setFieldErrors([]);
-            announce(`${pairRows.length} points loaded (two columns: X, Y).`);
+            announce(t('chart.messages.twoColumnsLoaded', { count: pairRows.length }));
             setCsvPaste('');
             return;
         }
@@ -208,14 +345,20 @@ export function ChartGenerator({
             setDataXInput(tokenPairs.map((p) => String(p.x)).join(', '));
             setDataYInput(tokenPairs.map((p) => String(p.y)).join(', '));
             setFieldErrors([]);
-            announce(`${tokenPairs.length} points loaded (X, Y from each line).`);
+            announce(t('chart.messages.xyFromEachLine', { count: tokenPairs.length }));
             setCsvPaste('');
             return;
         }
 
         const { values, rowCount, error } = parseCsvRows(csvPaste);
         if (values.length === 0) {
-            const msg = error ?? 'No numbers found in pasted text.';
+            // parseCsvRows only ever returns one of these two fixed English messages; bridge them
+            // to the translated equivalents rather than editing the shared utility for i18n.
+            const msg = error == null
+                ? t('chart.messages.noNumbersFound')
+                : error === 'No numeric values found in pasted text.'
+                    ? t('chart.messages.noNumericValues')
+                    : t('chart.messages.multiColumnWarning');
             setFieldErrors([msg]);
             announce(msg);
             return;
@@ -223,7 +366,7 @@ export function ChartGenerator({
         setDataXInput('');
         setDataYInput(values.map(String).join(', '));
         setFieldErrors([]);
-        announce(`${values.length} Y values loaded from ${rowCount} row(s). X left empty (0, 1, 2, …).`);
+        announce(t('chart.messages.yOnlyLoaded', { count: values.length, rows: rowCount }));
         setCsvPaste('');
     }
 
@@ -236,7 +379,7 @@ export function ChartGenerator({
             return;
         }
         const spec = getSpecForValidation();
-        const v = validateChartSpec(spec);
+        const v = validateChartSpecT(spec, t);
         if (!v.ok) {
             setFieldErrors(v.errors);
             announce(v.errors.join(' '));
@@ -246,20 +389,20 @@ export function ChartGenerator({
         const brf = generateChartBrf(spec);
         const summary =
             mathCode === 'nemeth'
-                ? buildChartSummaryNemethPlainText(spec)
-                : buildChartSummaryPlainText(spec);
+                ? buildChartSummaryNemethPlainTextT(spec, t)
+                : buildChartSummaryPlainTextT(spec, t);
         const pageBreakBeforeChart = mathCode === 'nemeth' ? '\n\n\f\n\n' : '\n\n';
         const block = `${summary}${pageBreakBeforeChart}:::chart\n${brf}\n:::\n`;
         onInsert(block);
     }
 
     const reviewSpec = getSpecForValidation();
-    const reviewValidation = validateChartSpec(reviewSpec);
+    const reviewValidation = validateChartSpecT(reviewSpec, t);
     const reviewSummaryPreview =
         reviewValidation.ok && reviewSpec.values.length > 0
             ? mathCode === 'nemeth'
-                ? buildChartSummaryNemethPlainText(reviewSpec)
-                : buildChartSummaryPlainText(reviewSpec)
+                ? buildChartSummaryNemethPlainTextT(reviewSpec, t)
+                : buildChartSummaryPlainTextT(reviewSpec, t)
             : '';
 
     const inputStyle: CSSProperties = {
@@ -281,20 +424,20 @@ export function ChartGenerator({
         <div style={inline ? { display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' } : undefined}>
             {!inline && (
                 <header className="welcome-header">
-                    <h2 id="chart-gen-title">Data-to-Braille Chart Generator</h2>
+                    <h2 id="chart-gen-title">{t('chart.title')}</h2>
                     <button
                         type="button"
                         className="welcome-close"
                         onClick={onClose}
-                        aria-label="Close"
+                        aria-label={t('chart.closeAriaLabel')}
                     >
-                        ✕
+                        {t('chart.closeIcon')}
                     </button>
                 </header>
             )}
 
             <div aria-live="polite" style={{ fontSize: '0.82rem', minHeight: '1.25em', marginBottom: '8px', opacity: 0.92 }}>
-                {liveMessage ? <span>Status: {liveMessage}</span> : <span aria-hidden> </span>}
+                {liveMessage ? <span>{t('chart.statusPrefix', { message: liveMessage })}</span> : <span aria-hidden> </span>}
             </div>
 
                 <div className="welcome-body" style={{ flex: 1, padding: inline ? 0 : '20px' }}>
@@ -307,13 +450,11 @@ export function ChartGenerator({
                             opacity: 0.85,
                         }}
                     >
-                        Step {step + 1} of {STEPS.length}: {STEPS[step]}. Chart graphics use
-                        low-resolution 6-dot cells; a plain-text summary is inserted with each chart
-                        so exact values stay available for reading and embossing.
+                        {t('chart.stepAnnouncement', { current: step + 1, stepName: t(`chart.steps.${STEP_KEYS[step]}`) })}
                     </p>
 
                     <ol
-                        aria-label="Progress"
+                        aria-label={t('chart.progressAriaLabel')}
                         style={{
                             margin: '0 0 16px 0',
                             paddingLeft: '1.25rem',
@@ -321,14 +462,14 @@ export function ChartGenerator({
                             opacity: 0.9,
                         }}
                     >
-                        {STEPS.map((name, i) => (
+                        {STEP_KEYS.map((key, i) => (
                             <li
-                                key={name}
+                                key={key}
                                 style={{
                                     fontWeight: i === step ? 700 : 400,
                                 }}
                             >
-                                {name}
+                                {t(`chart.steps.${key}`)}
                             </li>
                         ))}
                     </ol>
@@ -354,14 +495,14 @@ export function ChartGenerator({
                         <div>
                             <div style={{ marginBottom: '12px' }}>
                                 <label htmlFor="chart-data-x" style={labelStyle}>
-                                    X values (comma-separated, optional)
+                                    {t('chart.dataStep.xValuesLabel')}
                                 </label>
                                 <textarea
                                     id="chart-data-x"
                                     rows={2}
                                     value={dataXInput}
                                     onChange={(e) => setDataXInput(e.target.value)}
-                                    placeholder="e.g. 1990, 2000, 2010 — or leave empty for 0, 1, 2, …"
+                                    placeholder={t('chart.dataStep.xValuesPlaceholder')}
                                     aria-describedby="chart-data-x-hint"
                                     style={{
                                         ...inputStyle,
@@ -377,12 +518,12 @@ export function ChartGenerator({
                                         opacity: 0.85,
                                     }}
                                 >
-                                    If provided, must have the same count as Y. Empty uses 0, 1, 2, … in order.
+                                    {t('chart.dataStep.xValuesHint')}
                                 </p>
                             </div>
                             <div style={{ marginBottom: '12px' }}>
                                 <label htmlFor="chart-data-y" style={labelStyle}>
-                                    Y values (comma-separated)
+                                    {t('chart.dataStep.yValuesLabel')}
                                 </label>
                                 <textarea
                                     ref={firstFieldRef}
@@ -390,7 +531,7 @@ export function ChartGenerator({
                                     rows={3}
                                     value={dataYInput}
                                     onChange={(e) => setDataYInput(e.target.value)}
-                                    placeholder="e.g. 10, 25, 18"
+                                    placeholder={t('chart.dataStep.yValuesPlaceholder')}
                                     style={{
                                         ...inputStyle,
                                         fontFamily: 'monospace',
@@ -401,14 +542,14 @@ export function ChartGenerator({
 
                             <div>
                                 <label htmlFor="chart-csv-paste" style={labelStyle}>
-                                    Optional: paste CSV — one Y per line, or two columns (X, Y) per line
+                                    {t('chart.dataStep.pasteHint')}
                                 </label>
                                 <textarea
                                     id="chart-csv-paste"
                                     rows={3}
                                     value={csvPaste}
                                     onChange={(e) => setCsvPaste(e.target.value)}
-                                    placeholder="e.g. 10, 20, 30 or two columns: 1, 10 / 2, 20"
+                                    placeholder={t('chart.dataStep.pastePlaceholder')}
                                     style={{
                                         ...inputStyle,
                                         fontFamily: 'monospace',
@@ -421,7 +562,7 @@ export function ChartGenerator({
                                     style={{ marginTop: '8px' }}
                                     onClick={applyCsv}
                                 >
-                                    Load from pasted text
+                                    {t('chart.dataStep.loadFromPaste')}
                                 </button>
                             </div>
                         </div>
@@ -431,7 +572,7 @@ export function ChartGenerator({
                         <div>
                             <div style={{ marginBottom: '15px' }}>
                                 <label htmlFor="chart-type-select" style={labelStyle}>
-                                    Chart type
+                                    {t('chart.chartTypeStep.chartType')}
                                 </label>
                                 <select
                                     id="chart-type-select"
@@ -441,15 +582,14 @@ export function ChartGenerator({
                                     }
                                     style={inputStyle}
                                 >
-                                    <option value="line">Line chart</option>
-                                    <option value="bar">Bar chart</option>
+                                    <option value="line">{t('chart.chartTypeStep.line')}</option>
+                                    <option value="bar">{t('chart.chartTypeStep.bar')}</option>
                                 </select>
                             </div>
                             <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                                 <div style={{ flex: '1 1 140px' }}>
                                     <label htmlFor="chart-width" style={labelStyle}>
-                                        Width (cells, {CHART_LIMITS.cellsWidth.min}–
-                                        {CHART_LIMITS.cellsWidth.max})
+                                        {t('chart.chartTypeStep.width')}
                                     </label>
                                     <input
                                         id="chart-width"
@@ -465,8 +605,7 @@ export function ChartGenerator({
                                 </div>
                                 <div style={{ flex: '1 1 140px' }}>
                                     <label htmlFor="chart-height" style={labelStyle}>
-                                        Height (lines, {CHART_LIMITS.cellsHeight.min}–
-                                        {CHART_LIMITS.cellsHeight.max})
+                                        {t('chart.chartTypeStep.height')}
                                     </label>
                                     <input
                                         id="chart-height"
@@ -490,7 +629,7 @@ export function ChartGenerator({
                                 }}
                             >
                                 <legend style={{ fontSize: '0.85rem', padding: '0 6px' }}>
-                                    LaTeX math (Nemeth vs UEB)
+                                    {t('chart.chartTypeStep.mathHeading')}
                                 </legend>
                                 <p
                                     style={{
@@ -500,15 +639,9 @@ export function ChartGenerator({
                                         opacity: 0.9,
                                     }}
                                 >
-                                    Applies when the editor translates <code>$$…$$</code> and{' '}
-                                    <code>{`\\(`}…{`\\)`}</code>. This choice is saved for the app and
-                                    used for the whole document. With <strong>Nemeth</strong>, numeric lines
-                                    use <code>$$…$$</code> blocks (kind and title stay literary), and a form
-                                    feed places the graphic on the following page; with{' '}
-                                    <strong>UEB math</strong>, the summary stays plain prose above the chart
-                                    on the same page sequence.
+                                    {t('chart.chartTypeStep.mathDescription')}
                                 </p>
-                                <div role="radiogroup" aria-label="Math braille code for LaTeX">
+                                <div role="radiogroup" aria-label={t('chart.chartTypeStep.mathAriaLabel')}>
                                     <label
                                         style={{
                                             display: 'flex',
@@ -524,10 +657,7 @@ export function ChartGenerator({
                                             checked={mathCode === 'nemeth'}
                                             onChange={() => onMathCodeChange('nemeth')}
                                         />
-                                        <span>
-                                            <strong>Nemeth</strong> — US math notation (often wrapped for
-                                            UEB literary context)
-                                        </span>
+                                        <span>{t('chart.chartTypeStep.nemeth')}</span>
                                     </label>
                                     <label
                                         style={{
@@ -543,9 +673,7 @@ export function ChartGenerator({
                                             checked={mathCode === 'ueb'}
                                             onChange={() => onMathCodeChange('ueb')}
                                         />
-                                        <span>
-                                            <strong>UEB math</strong> — Unified English Braille math
-                                        </span>
+                                        <span>{t('chart.chartTypeStep.uebMath')}</span>
                                     </label>
                                 </div>
                             </fieldset>
@@ -556,7 +684,7 @@ export function ChartGenerator({
                         <div>
                             <div style={{ marginBottom: '12px' }}>
                                 <label htmlFor="chart-title" style={labelStyle}>
-                                    Title (optional)
+                                    {t('chart.labelsStep.titleOptional')}
                                 </label>
                                 <input
                                     id="chart-title"
@@ -568,7 +696,7 @@ export function ChartGenerator({
                             </div>
                             <div style={{ marginBottom: '12px' }}>
                                 <label htmlFor="chart-x-label" style={labelStyle}>
-                                    X-axis label (optional)
+                                    {t('chart.labelsStep.xAxisLabel')}
                                 </label>
                                 <input
                                     id="chart-x-label"
@@ -580,7 +708,7 @@ export function ChartGenerator({
                             </div>
                             <div>
                                 <label htmlFor="chart-y-label" style={labelStyle}>
-                                    Y-axis label (optional)
+                                    {t('chart.labelsStep.yAxisLabel')}
                                 </label>
                                 <input
                                     id="chart-y-label"
@@ -601,23 +729,12 @@ export function ChartGenerator({
                                     fontSize: '1rem',
                                 }}
                             >
-                                Review — text summary to insert
+                                {t('chart.reviewStep.heading')}
                             </h3>
                             <p style={{ fontSize: '0.88rem', opacity: 0.9, marginTop: 0 }}>
-                                {mathCode === 'nemeth' ? (
-                                    <>
-                                        Nemeth layout below: kind and title lines are literary; grid, range,
-                                        axes, and each value pair use <code>$$…$$</code>. The chart starts on
-                                        the next page after a form feed. LaTeX math elsewhere uses Nemeth
-                                        (set on step 2).
-                                    </>
-                                ) : (
-                                    <>
-                                        Plain English below will appear above the tactile chart and will be
-                                        translated with your literary table like the rest of the document.
-                                        LaTeX math in the file uses UEB math (set on step 2).
-                                    </>
-                                )}
+                                {mathCode === 'nemeth'
+                                    ? t('chart.reviewStep.nemethNote')
+                                    : t('chart.reviewStep.uebNote')}
                             </p>
                             {reviewValidation.ok && reviewSummaryPreview ? (
                                 <pre
@@ -632,7 +749,7 @@ export function ChartGenerator({
                                     {reviewSummaryPreview}
                                 </pre>
                             ) : (
-                                <p role="alert">Fix data on step 1 before inserting.</p>
+                                <p role="alert">{t('chart.reviewStep.fixDataHint')}</p>
                             )}
                         </div>
                     )}
@@ -655,27 +772,27 @@ export function ChartGenerator({
                                 className="welcome-btn-secondary"
                                 onClick={goBack}
                             >
-                                Back
+                                {t('chart.back')}
                             </button>
                         )}
-                        {step < STEPS.length - 1 && (
+                        {step < STEP_KEYS.length - 1 && (
                             <button
                                 type="button"
                                 className="welcome-btn-primary"
                                 onClick={goNext}
                             >
-                                Next
+                                {t('chart.next')}
                             </button>
                         )}
                     </div>
-                    {step === STEPS.length - 1 && (
+                    {step === STEP_KEYS.length - 1 && (
                         <button
                             type="button"
                             className="welcome-btn-primary"
                             onClick={handleInsert}
                             disabled={!reviewValidation.ok}
                         >
-                            Insert chart and summary
+                            {t('chart.insertChartAndSummary')}
                         </button>
                     )}
                 </footer>
@@ -690,7 +807,7 @@ export function ChartGenerator({
         <div
             className="welcome-overlay"
             onClick={onClose}
-            aria-label="Close chart generator"
+            aria-label={t('chart.closeAriaLabel')}
         >
             <div
                 className="welcome-modal"

@@ -1,5 +1,17 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { WordMapData } from './workers/braille.worker';
+import { changeUiLocale } from './i18n';
+import {
+  UI_LOCALES,
+  type UiLocaleId,
+  readStoredUiLocale,
+  readStoredAutoPairTable,
+  defaultTableForLocale,
+  UI_LOCALE_STORAGE_KEY,
+  AUTO_PAIR_TABLE_STORAGE_KEY,
+  applyDocumentLocale,
+} from './i18n/locales';
 import { Editor, type EditorHandle } from './components/Editor';
 import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
 import { PrintPanel } from './components/PrintPanel';
@@ -62,10 +74,11 @@ const monacoThemeMap: Record<Theme, string> = {
   'high-contrast': 'hc-black',
 };
 
-const themeLabels: Record<Theme, string> = {
-  dark: 'Light',
-  light: 'Hi-Con',
-  'high-contrast': 'Dark',
+/** Maps the current theme to the i18n key for the label of the *next* theme (what cycling shows). */
+const nextThemeLabelKey: Record<Theme, string> = {
+  dark: 'app.view.theme.labels.light',
+  light: 'app.view.theme.labels.highContrast',
+  'high-contrast': 'app.view.theme.labels.dark',
 };
 
 type PaperFormat = 'us-letter' | 'wide' | 'custom';
@@ -116,6 +129,7 @@ const DEFAULT_PAGE_SETTINGS: PageSettings = {
 };
 
 export default function App() {
+  const { t } = useTranslation();
   const [hasSeenWelcome, setHasSeenWelcome] = useState(
     () => !!localStorage.getItem('graham-braille-welcome-seen')
   );
@@ -173,6 +187,45 @@ export default function App() {
       /* ignore */
     }
   }, [selectedTable]);
+
+  // ── UI locale & table auto-pairing ───────────────────────────────────────
+  const [uiLocale, setUiLocale] = useState<UiLocaleId>(() => readStoredUiLocale());
+  const [autoPairTable, setAutoPairTable] = useState<boolean>(() => readStoredAutoPairTable());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(UI_LOCALE_STORAGE_KEY, uiLocale);
+    } catch {
+      /* ignore */
+    }
+    void changeUiLocale(uiLocale);
+    applyDocumentLocale(uiLocale);
+  }, [uiLocale]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(AUTO_PAIR_TABLE_STORAGE_KEY, String(autoPairTable));
+    } catch {
+      /* ignore */
+    }
+  }, [autoPairTable]);
+
+  function handleLanguageChange(id: UiLocaleId) {
+    setUiLocale(id);
+    if (autoPairTable) {
+      setSelectedTable(defaultTableForLocale(id));
+    }
+  }
+
+  function handleAutoPairToggle() {
+    setAutoPairTable(prev => {
+      const next = !prev;
+      if (next) {
+        setSelectedTable(defaultTableForLocale(uiLocale));
+      }
+      return next;
+    });
+  }
 
   const [mathCode, setMathCode] = useState<MathCode>(() => readStoredMathCode());
 
@@ -670,13 +723,13 @@ Accuracy: _____________ %
   return (
     <div className="app-layout">
       {/* Skip navigation link for keyboard and screen reader users */}
-      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <a className="skip-link" href="#main-content">{t('app.brand.skipLink')}</a>
 
       {/* ── Header toolbar ───────────────────────────────────────────────── */}
       <header className="app-header">
         <div className="app-title">
-          <h1>Graham Braille Editor</h1>
-          <span className="subtitle">Braille Editing &amp; Embossing Suite</span>
+          <h1>{t('app.brand.title')}</h1>
+          <span className="subtitle">{t('app.brand.subtitle')}</span>
         </div>
 
         <div className="toolbar-container">
@@ -687,7 +740,7 @@ Accuracy: _____________ %
               role="tab"
               aria-selected={activeTab === 'file'}
             >
-              File
+              {t('app.tabs.file')}
             </button>
             <button 
               className={`tab-btn${activeTab === 'view' ? ' tab-btn--active' : ''}`}
@@ -695,7 +748,7 @@ Accuracy: _____________ %
               role="tab"
               aria-selected={activeTab === 'view'}
             >
-              View & Layout
+              {t('app.tabs.view')}
             </button>
             <button 
               className={`tab-btn${activeTab === 'languages-codes' ? ' tab-btn--active' : ''}`}
@@ -703,7 +756,7 @@ Accuracy: _____________ %
               role="tab"
               aria-selected={activeTab === 'languages-codes'}
             >
-              Languages & Codes
+              {t('app.tabs.languagesCodes')}
             </button>
             <button 
               className={`tab-btn${activeTab === 'tools' ? ' tab-btn--active' : ''}`}
@@ -711,7 +764,7 @@ Accuracy: _____________ %
               role="tab"
               aria-selected={activeTab === 'tools'}
             >
-              Teaching Tools
+              {t('app.tabs.tools')}
             </button>
             <button 
               className={`tab-btn${activeTab === 'help' ? ' tab-btn--active' : ''}`}
@@ -719,7 +772,7 @@ Accuracy: _____________ %
               role="tab"
               aria-selected={activeTab === 'help'}
             >
-              Help & Support
+              {t('app.tabs.help')}
             </button>
           </div>
 
@@ -740,40 +793,42 @@ Accuracy: _____________ %
                   className="toolbar-btn"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPerkinsMode}
-                  title="Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
-                  aria-label="Import text or BRF file"
+                  title={t('app.file.import.title')}
+                  aria-label={t('app.file.import.ariaLabel')}
                 >
-                  Import file
+                  {t('app.file.import.label')}
                 </button>
 
                 <button
                   className="toolbar-btn"
                   onClick={handleOpenDrafts}
                   disabled={isPerkinsMode}
-                  title="View unsaved drafts from the last 30 days"
-                  aria-label="View drafts"
+                  title={t('app.file.drafts.title')}
+                  aria-label={t('app.file.drafts.ariaLabel')}
                 >
-                  Drafts {drafts.length > 0 && `(${drafts.length})`}
+                  {drafts.length > 0
+                    ? t('app.file.drafts.labelWithCount', { count: drafts.length })
+                    : t('app.file.drafts.label')}
                 </button>
 
                 <button
                   className="toolbar-btn toolbar-btn--primary"
                   onClick={handleDownloadBrf}
                   disabled={!translatedText || isPerkinsMode}
-                  title="Download BRF with Layout settings: cells per row, lines per page, paragraph line starts, optional page numbers, CRLF lines, form feed between pages"
-                  aria-label="Download translated BRF file"
+                  title={t('app.file.downloadBrf.title')}
+                  aria-label={t('app.file.downloadBrf.ariaLabel')}
                 >
-                  Download BRF
+                  {t('app.file.downloadBrf.label')}
                 </button>
 
                 <button
                   className="toolbar-btn"
                   onClick={handleDownloadPrintLayoutText}
                   disabled={!inputText.trim() || isPerkinsMode}
-                  title="Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
-                  aria-label="Download print layout text file"
+                  title={t('app.file.downloadPrintLayout.title')}
+                  aria-label={t('app.file.downloadPrintLayout.ariaLabel')}
                 >
-                  Download print layout
+                  {t('app.file.downloadPrintLayout.label')}
                 </button>
 
                 <button
@@ -781,9 +836,9 @@ Accuracy: _____________ %
                   onClick={() => setShowPrint(s => !s)}
                   disabled={isPerkinsMode}
                   aria-expanded={showPrint}
-                  title="Toggle Print to Embosser panel"
+                  title={t('app.file.print.title')}
                 >
-                  Print
+                  {t('app.file.print.label')}
                 </button>
               </div>
             )}
@@ -795,49 +850,36 @@ Accuracy: _____________ %
                   onClick={() => setShowPageSettings(s => !s)}
                   aria-expanded={showPageSettings}
                   aria-controls="page-settings-panel"
-                  title="Configure page layout (cells per row, lines per page)"
+                  title={t('app.view.layoutSettings.title')}
                 >
-                  Layout Settings
+                  {t('app.view.layoutSettings.label')}
                 </button>
 
                 <button
                   className={`toolbar-btn${syncHighlight ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setSyncHighlight(s => !s)}
                   disabled={isPerkinsMode}
-                  title="Highlight corresponding braille words when selecting text in the editor."
-                  aria-label="Toggle braille highlight sync"
+                  title={t('app.view.syncHighlight.title')}
+                  aria-label={t('app.view.syncHighlight.ariaLabel')}
                 >
-                  Sync Highlight
+                  {t('app.view.syncHighlight.label')}
                 </button>
 
                 <button
                   className="theme-toggle"
                   onClick={cycleTheme}
-                  aria-label={`Switch theme (current: ${theme}). Click to switch to ${themeLabels[theme]} theme.`}
-                  title="Cycle theme: dark → light → high contrast"
+                  aria-label={t('app.view.theme.cycleAriaLabel', { theme, nextTheme: t(nextThemeLabelKey[theme]) })}
+                  title={t('app.view.theme.cycleTitle')}
                 >
-                  {themeLabels[theme]}
+                  {t(nextThemeLabelKey[theme])}
                 </button>
               </div>
             )}
 
             {activeTab === 'languages-codes' && (
               <div className="toolbar">
-                <label className="toolbar-label" htmlFor="language-select">
-                  Languages
-                </label>
-                <select
-                  id="language-select"
-                  className="language-select"
-                  defaultValue="en"
-                  title="Select language"
-                  aria-label="Select language"
-                >
-                  <option value="en">English</option>
-                </select>
-
-                <label className="toolbar-label" htmlFor="table-select" style={{ marginLeft: '0.5rem' }}>
-                  Table
+                <label className="toolbar-label" htmlFor="table-select">
+                  {t('app.languages.table.label')}
                 </label>
                 <select
                   id="table-select"
@@ -845,19 +887,49 @@ Accuracy: _____________ %
                   value={selectedTable}
                   onChange={(e) => setSelectedTable(e.target.value)}
                   disabled={isPerkinsMode}
-                  title="Select a liblouis braille translation table"
-                  aria-label="Select braille translation table"
+                  title={t('app.languages.table.title')}
+                  aria-label={t('app.languages.table.ariaLabel')}
                 >
                   {TABLE_GROUPS.map((group) => (
                     <optgroup key={group.group} label={group.group}>
-                      {group.tables.map((t) => (
-                        <option key={t.file} value={t.file}>
-                          {t.name}
+                      {group.tables.map((table) => (
+                        <option key={table.file} value={table.file}>
+                          {table.name}
                         </option>
                       ))}
                     </optgroup>
                   ))}
                 </select>
+
+                <label className="toolbar-label" htmlFor="language-select" style={{ marginInlineStart: '0.5rem' }}>
+                  {t('app.languages.language.label')}
+                </label>
+                <select
+                  id="language-select"
+                  className="language-select"
+                  value={uiLocale}
+                  onChange={(e) => handleLanguageChange(e.target.value as UiLocaleId)}
+                  title={t('app.languages.language.label')}
+                  aria-label={t('app.languages.language.ariaLabel')}
+                >
+                  {UI_LOCALES.map((locale) => (
+                    <option key={locale.id} value={locale.id}>
+                      {locale.nativeLabel}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  className={`toolbar-btn${autoPairTable ? ' toolbar-btn--active' : ''}`}
+                  onClick={handleAutoPairToggle}
+                  aria-pressed={autoPairTable}
+                  style={{ marginInlineStart: '0.5rem' }}
+                  title={autoPairTable ? t('app.languages.autoPair.on.title') : t('app.languages.autoPair.off.title')}
+                  aria-label={autoPairTable ? t('app.languages.autoPair.on.label') : t('app.languages.autoPair.off.label')}
+                >
+                  {autoPairTable ? t('app.languages.autoPair.on.label') : t('app.languages.autoPair.off.label')}
+                </button>
               </div>
             )}
 
@@ -867,29 +939,29 @@ Accuracy: _____________ %
                   className={`toolbar-btn${isPerkinsMode ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setIsPerkinsMode(s => !s)}
                   aria-expanded={isPerkinsMode}
-                  title="Toggle Perkins Brailler Translator layout"
+                  title={t('app.tools.perkins.title')}
                 >
-                  Perkins Viewer
+                  {t('app.tools.perkins.label')}
                 </button>
 
                 <button
                   className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowGraphicsEditor(s => !s)}
                   disabled={isPerkinsMode}
-                  title="Open the Tactile Graphics Editor"
-                  aria-label="Tactile Graphics Editor"
+                  title={t('app.tools.graphics.title')}
+                  aria-label={t('app.tools.graphics.ariaLabel')}
                 >
-                  Graphics
+                  {t('app.tools.graphics.label')}
                 </button>
 
                 <button
                   className={`toolbar-btn${showAlphabetGenerator ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowAlphabetGenerator(s => !s)}
                   disabled={isPerkinsMode}
-                  title="Insert alphabet and simple words exercises"
-                  aria-label="Alphabet & Words Generator"
+                  title={t('app.tools.alphabet.title')}
+                  aria-label={t('app.tools.alphabet.ariaLabel')}
                 >
-                  Alphabet Exercises
+                  {t('app.tools.alphabet.label')}
                 </button>
 
                 <button
@@ -907,31 +979,31 @@ Accuracy: _____________ %
                   className="toolbar-btn"
                   onClick={() => setShowStlExportDialog(true)}
                   disabled={isPerkinsMode}
-                  title="Export the paginated Braille preview as a 3D STL door sign (BANA midpoint dot spacing, millimeters) for 3D printing."
-                  aria-label="Export Braille layout as STL for 3D printing"
+                  title={t('app.tools.stl.title')}
+                  aria-label={t('app.tools.stl.ariaLabel')}
                 >
-                  Door Sign (STL)
+                  {t('app.tools.stl.label')}
                 </button>
 
                 <button
                   className={`toolbar-btn${showGradingPrintLayoutDialog ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowGradingPrintLayoutDialog(true)}
                   disabled={!inputText.trim() || isPerkinsMode}
-                  title="Download print layout (.rtf) with grading metrics; choose whether the grading header appears on all pages."
-                  aria-label="Download grading print layout text file"
+                  title={t('app.tools.grading.title')}
+                  aria-label={t('app.tools.grading.ariaLabel')}
                   aria-expanded={showGradingPrintLayoutDialog}
                 >
-                  Download Grading Print Layout
+                  {t('app.tools.grading.label')}
                 </button>
 
                 <span className="toolbar-label" style={{ margin: '0 0.5rem' }}>
-                  UEB Math is standard and $$math$$ is Nemeth.
+                  {t('app.tools.uebMathHint')}
                 </span>
                 <button
                   className="toolbar-btn"
                   id="ai-prompt-btn"
                   onClick={() => {
-                    const promptText = "Extract raw text for the purpose of braille translation. Please reformat my text so that every mathematical expression, equation, and arithmetic operation is wrapped in LaTeX notation: \\(...\\) for inline math and $$...$$ for display equations. Leave all non-math prose unchanged.";
+                    const promptText = t('app.tools.copyAiPrompt.promptText');
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                       navigator.clipboard.writeText(promptText);
                     } else {
@@ -950,14 +1022,14 @@ Accuracy: _____________ %
                     const btn = document.getElementById('ai-prompt-btn');
                     if (btn) {
                       const originalText = btn.innerText;
-                      btn.innerText = "Copied!";
+                      btn.innerText = t('app.tools.copied');
                       setTimeout(() => { btn.innerText = originalText; }, 2000);
                     }
                   }}
-                  title="Copy prompt for AI to format math"
-                  aria-label="Copy prompt for AI to format math"
+                  title={t('app.tools.copyAiPrompt.title')}
+                  aria-label={t('app.tools.copyAiPrompt.ariaLabel')}
                 >
-                  Copy AI Prompt
+                  {t('app.tools.copyAiPrompt.label')}
                 </button>
               </div>
             )}
@@ -967,10 +1039,10 @@ Accuracy: _____________ %
                 <button
                   className="toolbar-btn guide-btn"
                   onClick={() => setShowWelcome(true)}
-                  aria-label="Open User Guide"
-                  title="Open the User Guide"
+                  aria-label={t('app.help.userGuide.ariaLabel')}
+                  title={t('app.help.userGuide.title')}
                 >
-                  User Guide
+                  {t('app.help.userGuide.label')}
                 </button>
 
                 <button
@@ -986,10 +1058,10 @@ Accuracy: _____________ %
                 <button
                   className="toolbar-btn guide-btn"
                   onClick={() => setShowPrivacyPolicy(true)}
-                  aria-label="Open Privacy Policy"
-                  title="Open the Privacy Policy"
+                  aria-label={t('app.help.privacy.ariaLabel')}
+                  title={t('app.help.privacy.title')}
                 >
-                  Privacy Policy
+                  {t('app.help.privacy.label')}
                 </button>
 
                 <a
@@ -997,14 +1069,14 @@ Accuracy: _____________ %
                   target="_blank"
                   rel="noopener noreferrer"
                   className="toolbar-btn tip-me-btn"
-                  title="Support Graham Braille Editor"
-                  aria-label="Tip me on Buy Me a Coffee"
+                  title={t('app.help.tipMe.title')}
+                  aria-label={t('app.help.tipMe.ariaLabel')}
                 >
-                  Tip Me
+                  {t('app.help.tipMe.label')}
                 </a>
 
-                <span className="toolbar-version" style={{ marginLeft: 'auto', alignSelf: 'center', paddingRight: '1rem', fontSize: '0.8rem', opacity: 0.6 }}>
-                  Build: {import.meta.env.VITE_GITHUB_BUILD_NUMBER || 'dev'}
+                <span className="toolbar-version" style={{ marginInlineStart: 'auto', alignSelf: 'center', paddingInlineEnd: '1rem', fontSize: '0.8rem', opacity: 0.6 }}>
+                  {t('app.help.build', { buildNumber: import.meta.env.VITE_GITHUB_BUILD_NUMBER || 'dev' })}
                 </span>
               </div>
             )}
@@ -1036,15 +1108,15 @@ Accuracy: _____________ %
         <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="pane-title-row">
             <div className="pane-title" style={{ margin: 0 }}>
-              Text Input
+              {t('app.panes.textInput.title')}
             </div>
             <button
               className="layout-settings-btn"
               onClick={handleInsertPageBreak}
-              title="Insert page break / Form Feed (Cmd+Enter / Ctrl+Enter)"
-              aria-label="Insert page break"
+              title={t('app.pageBreak.title')}
+              aria-label={t('app.pageBreak.ariaLabel')}
             >
-              Page Break
+              {t('app.pageBreak.label')}
             </button>
           </div>
           
@@ -1069,15 +1141,15 @@ Accuracy: _____________ %
           ) : (
             <section
               className="brf-preview"
-              aria-label="Braille preview output"
+              aria-label={t('app.panes.brfPreview.ariaLabel')}
               aria-live="polite"
             >
               {/* Pane title row with settings toggle */}
               <div className="pane-title-row">
                 <div className="pane-title">
-                  BRF Preview
+                  {t('app.panes.brfPreview.title')}
                   {isLoading && translatedText && (
-                    <span className="preview-loading"> — translating…</span>
+                    <span className="preview-loading">{t('app.panes.brfPreview.translatingSuffix')}</span>
                   )}
                 </div>
                 {brfPages.length > 1 && (
@@ -1086,22 +1158,22 @@ Accuracy: _____________ %
                       className="layout-settings-btn"
                       onClick={() => scrollToPage(currentPreviewPage - 2)}
                       disabled={currentPreviewPage <= 1}
-                      title="Jump to previous page"
-                      aria-label="Previous page"
+                      title={t('app.pageNav.prev.title')}
+                      aria-label={t('app.pageNav.prev.ariaLabel')}
                     >
-                      ◀
+                      {t('app.pageNav.prev.symbol')}
                     </button>
                     <span className="toolbar-label" style={{ fontSize: '0.75rem', minWidth: '70px', textAlign: 'center', userSelect: 'none' }}>
-                      Page {currentPreviewPage} of {brfPages.length}
+                      {t('app.pageNav.pageOf', { current: currentPreviewPage, total: brfPages.length })}
                     </span>
                     <button
                       className="layout-settings-btn"
                       onClick={() => scrollToPage(currentPreviewPage)}
                       disabled={currentPreviewPage >= brfPages.length}
-                      title="Jump to next page"
-                      aria-label="Next page"
+                      title={t('app.pageNav.next.title')}
+                      aria-label={t('app.pageNav.next.ariaLabel')}
                     >
-                      ▶
+                      {t('app.pageNav.next.symbol')}
                     </button>
                   </div>
                 )}
@@ -1122,9 +1194,9 @@ Accuracy: _____________ %
                           paperFormat: 'us-letter',
                         }))
                       }
-                      title="Standard 8.5×11 inch paper (US Letter)"
+                      title={t('app.layoutSettings.presets.usLetter.title')}
                     >
-                      8.5×11in
+                      {t('app.layoutSettings.presets.usLetter.label')}
                     </button>
                     <button
                       type="button"
@@ -1137,39 +1209,39 @@ Accuracy: _____________ %
                           paperFormat: 'wide',
                         }))
                       }
-                      title="Wide 11×11.5 inch tractor feed paper"
+                      title={t('app.layoutSettings.presets.wideTractor.title')}
                     >
-                      11×11.5in
+                      {t('app.layoutSettings.presets.wideTractor.label')}
                     </button>
                     <button
                       type="button"
                       className={`toolbar-btn ${pageSettings.paperFormat === 'custom' ? 'toolbar-btn--active' : ''}`}
                       style={{ cursor: 'default' }}
-                      title="Custom dimensions (set cells and lines below)"
+                      title={t('app.layoutSettings.presets.custom.title')}
                     >
-                      Custom
+                      {t('app.layoutSettings.presets.custom.label')}
                     </button>
                   </div>
                   <label className="settings-field">
-                    <span>Cells / row</span>
+                    <span>{t('app.layoutSettings.cellsPerRow.label')}</span>
                     <input
                       type="number"
                       min={10}
                       max={100}
                       value={pageSettings.cellsPerRow}
                       onChange={handleCellsChange}
-                      aria-label="Braille cells per row"
+                      aria-label={t('app.layoutSettings.cellsPerRow.ariaLabel')}
                     />
                   </label>
                   <label className="settings-field">
-                    <span>Lines / page</span>
+                    <span>{t('app.layoutSettings.linesPerPage.label')}</span>
                     <input
                       type="number"
                       min={5}
                       max={50}
                       value={pageSettings.linesPerPage}
                       onChange={handleLinesChange}
-                      aria-label="Lines per page"
+                      aria-label={t('app.layoutSettings.linesPerPage.ariaLabel')}
                     />
                   </label>
                   <label className="settings-field">
@@ -1177,21 +1249,19 @@ Accuracy: _____________ %
                       type="checkbox"
                       checked={pageSettings.showPageNumbers || false}
                       onChange={(e) => setPageSettings(s => ({ ...s, showPageNumbers: e.target.checked }))}
-                      aria-label="Show Page Numbers"
+                      aria-label={t('app.layoutSettings.showPageNums.ariaLabel')}
                     />
-                    <span>Show Page Nums</span>
+                    <span>{t('app.layoutSettings.showPageNums.label')}</span>
                   </label>
 
                   <div
                     className="paragraph-format-block"
                     role="group"
-                    aria-label="Paragraph line start positions"
+                    aria-label={t('app.layoutSettings.paragraphFormat.ariaLabel')}
                   >
-                    <div className="paragraph-format-heading">Paragraph line starts (1–5)</div>
+                    <div className="paragraph-format-heading">{t('app.layoutSettings.paragraphFormat.heading')}</div>
                     <p className="settings-hint paragraph-format-note">
-                      Each new line from Enter is a paragraph: pick which <strong>cell</strong> the first line begins on and
-                      which cell <strong>runover</strong> lines use (e.g. literary <strong>3–5</strong>). ViewPlus left padding
-                      adds the same blank cells to <em>every</em> line, so these positions stay aligned on the page.
+                      {t('app.layoutSettings.paragraphFormat.note')}
                     </p>
                     <div className="paragraph-matrix">
                       <div className="paragraph-matrix-corner" aria-hidden="true" />
@@ -1202,7 +1272,7 @@ Accuracy: _____________ %
                       ))}
                       {[1, 2, 3, 4, 5].map((first) => (
                         <Fragment key={`row-${first}`}>
-                          <div className="paragraph-matrix-rowhead">First {first}</div>
+                          <div className="paragraph-matrix-rowhead">{t('app.layoutSettings.paragraphFormat.rowHead', { n: first })}</div>
                           {[1, 2, 3, 4, 5].map((run) => {
                             const active =
                               pageSettings.paragraphFirstLineStartCell === first &&
@@ -1212,7 +1282,7 @@ Accuracy: _____________ %
                                 key={`${first}-${run}`}
                                 type="button"
                                 className={`paragraph-matrix-cell${active ? ' paragraph-matrix-cell--active' : ''}`}
-                                aria-label={`First line cell ${first}, runover cell ${run}`}
+                                aria-label={t('app.layoutSettings.paragraphFormat.matrixCellAriaLabel', { first, run })}
                                 aria-pressed={active}
                                 onClick={() =>
                                   setPageSettings((s) => ({
@@ -1222,7 +1292,7 @@ Accuracy: _____________ %
                                   }))
                                 }
                               >
-                                {first}-{run}
+                                {t('app.layoutSettings.paragraphFormat.cellLabel', { first, run })}
                               </button>
                             );
                           })}
@@ -1230,7 +1300,7 @@ Accuracy: _____________ %
                       ))}
                     </div>
                     <div className="paragraph-format-quick">
-                      <span className="paragraph-format-quick-label">Quick:</span>
+                      <span className="paragraph-format-quick-label">{t('app.layoutSettings.paragraphFormat.quickLabel')}</span>
                       <button
                         type="button"
                         className="toolbar-btn"
@@ -1242,7 +1312,7 @@ Accuracy: _____________ %
                           }))
                         }
                       >
-                        1–1 (flush)
+                        {t('app.layoutSettings.paragraphFormat.quickFlush')}
                       </button>
                       <button
                         type="button"
@@ -1255,43 +1325,40 @@ Accuracy: _____________ %
                           }))
                         }
                       >
-                        3–5 (literary)
+                        {t('app.layoutSettings.paragraphFormat.quickLiterary')}
                       </button>
                     </div>
                   </div>
 
                   <p className="settings-hint">
-                    Common: 32 × 25 (8.5×11), 40 × 25 (11×11.5)
+                    {t('app.layoutSettings.sizeHint')}
                   </p>
 
-                  <div className="viewplus-layout-block" role="group" aria-label="Embosser edge padding">
-                    <div className="viewplus-layout-heading">Embosser edge padding</div>
+                  <div className="viewplus-layout-block" role="group" aria-label={t('app.layoutSettings.embosserPadding.ariaLabel')}>
+                    <div className="viewplus-layout-heading">{t('app.layoutSettings.embosserPadding.heading')}</div>
                     <p className="viewplus-layout-note">
-                      If your embosser feeds sheets offset and loses characters on the left edge, we can add optional{' '}
-                      <strong>left padding</strong> (blank cells) on each line. This applies to <strong>any embosser</strong> and paper size. If you
-                      find a setting that works well for your setup, email{' '}
-                      <a href="mailto:grahamthetvi@icloud.com">grahamthetvi@icloud.com</a> so we can add it to the presets.
+                      {t('app.layoutSettings.embosserPadding.note')}
                     </p>
                     <label className="settings-field">
-                      <span>Left padding (cells)</span>
+                      <span>{t('app.layoutSettings.embosserPadding.leftPadding.label')}</span>
                       <input
                         type="number"
                         min={-80}
                         max={80}
                         value={pageSettings.viewPlusLeftPadCells}
                         onChange={handleViewPlusPadChange}
-                        aria-label="Left padding in braille cells"
+                        aria-label={t('app.layoutSettings.embosserPadding.leftPadding.ariaLabel')}
                       />
                     </label>
                     <p className="settings-hint viewplus-padding-hint">
-                      Padding is <strong>applied</strong> to all print jobs.
+                      {t('app.layoutSettings.embosserPadding.appliedHint')}
                     </p>
                     <label className="settings-field">
-                      <span>Quick preset</span>
+                      <span>{t('app.layoutSettings.embosserPadding.quickPreset.label')}</span>
                       <select
                         key={viewPlusPresetKey}
                         className="viewplus-preset-select"
-                        aria-label="ViewPlus padding preset"
+                        aria-label={t('app.layoutSettings.embosserPadding.quickPreset.ariaLabel')}
                         defaultValue=""
                         onChange={(e) => {
                           const v = e.target.value;
@@ -1309,42 +1376,42 @@ Accuracy: _____________ %
                           if (v) setViewPlusPresetKey(k => k + 1);
                         }}
                       >
-                        <option value="">Apply model preset…</option>
-                        <option value="none">None (0)</option>
-                        <option value="max">ViewPlus Max (15)</option>
-                        <option value="rogue">ViewPlus Rogue (0)</option>
-                        <option value="premier">ViewPlus Premier (0)</option>
-                        <option value="embraille">ViewPlus EmBraille (0)</option>
+                        <option value="">{t('app.layoutSettings.embosserPadding.quickPreset.placeholder')}</option>
+                        <option value="none">{t('app.layoutSettings.embosserPadding.quickPreset.none')}</option>
+                        <option value="max">{t('app.layoutSettings.embosserPadding.quickPreset.viewPlusMax')}</option>
+                        <option value="rogue">{t('app.layoutSettings.embosserPadding.quickPreset.viewPlusRogue')}</option>
+                        <option value="premier">{t('app.layoutSettings.embosserPadding.quickPreset.viewPlusPremier')}</option>
+                        <option value="embraille">{t('app.layoutSettings.embosserPadding.quickPreset.viewPlusEmBraille')}</option>
                       </select>
                     </label>
                   </div>
 
-                  <div className="display-settings-block" role="group" aria-label="Braille display settings">
-                    <div className="display-settings-heading">Braille Display Settings</div>
+                  <div className="display-settings-block" role="group" aria-label={t('app.layoutSettings.brailleDisplay.ariaLabel')}>
+                    <div className="display-settings-heading">{t('app.layoutSettings.brailleDisplay.heading')}</div>
                     <label className="settings-field">
-                      <span>Display size</span>
+                      <span>{t('app.layoutSettings.brailleDisplay.displaySize.label')}</span>
                       <input
                         type="range"
                         min={14}
                         max={36}
                         value={brailleSize}
                         onChange={(e) => setBrailleSize(parseInt(e.target.value, 10))}
-                        aria-label="Braille display cell size slider"
+                        aria-label={t('app.layoutSettings.brailleDisplay.displaySize.ariaLabel')}
                       />
-                      <span className="settings-value-label">{brailleSize}px</span>
+                      <span className="settings-value-label">{t('app.layoutSettings.brailleDisplay.displaySize.valueSuffix', { px: brailleSize })}</span>
                     </label>
                     <label className="settings-field">
                       <input
                         type="checkbox"
                         checked={showEmptyDots}
                         onChange={(e) => setShowEmptyDots(e.target.checked)}
-                        aria-label="Show empty dots in braille cells"
+                        aria-label={t('app.layoutSettings.brailleDisplay.showEmptyDots.ariaLabel')}
                       />
-                      <span>Show empty dots</span>
+                      <span>{t('app.layoutSettings.brailleDisplay.showEmptyDots.label')}</span>
                     </label>
                     {showEmptyDots && (
                       <label className="settings-field">
-                        <span>Empty dot size</span>
+                        <span>{t('app.layoutSettings.brailleDisplay.emptyDotSize.label')}</span>
                         <input
                           type="range"
                           min={2.0}
@@ -1352,9 +1419,9 @@ Accuracy: _____________ %
                           step={0.1}
                           value={inactiveDotSize}
                           onChange={(e) => setInactiveDotSize(parseFloat(e.target.value))}
-                          aria-label="Braille display empty dot size slider"
+                          aria-label={t('app.layoutSettings.brailleDisplay.emptyDotSize.ariaLabel')}
                         />
-                        <span className="settings-value-label">{inactiveDotSize.toFixed(1)}px</span>
+                        <span className="settings-value-label">{t('app.layoutSettings.brailleDisplay.emptyDotSize.value', { px: inactiveDotSize.toFixed(1) })}</span>
                       </label>
                     )}
                   </div>
@@ -1369,7 +1436,7 @@ Accuracy: _____________ %
                   aria-valuenow={progress}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-label="Translation progress"
+                  aria-label={t('app.panes.translating', { progress })}
                 >
                   <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
                   <span className="progress-label">{progress}%</span>
@@ -1378,7 +1445,7 @@ Accuracy: _____________ %
 
               {error && (
                 <p className="translation-error" role="alert">
-                  Translation error: {error}
+                  {t('app.layoutSettings.translationErrorPrefix', { error })}
                 </p>
               )}
 
@@ -1386,7 +1453,7 @@ Accuracy: _____________ %
               {brfPages.length > 0 ? (
                 <div 
                   className="brf-pages-container" 
-                  aria-label="Braille pages"
+                  aria-label={t('app.layoutSettings.braillePreviewAriaLabel')}
                   ref={brfContainerRef}
                   onScroll={handleBrfScroll}
                   style={{
@@ -1405,10 +1472,10 @@ Accuracy: _____________ %
                       <div
                         key={i}
                         className="brf-page"
-                        aria-label={`Braille page ${i + 1} of ${brfPages.length}`}
+                        aria-label={t('app.layoutSettings.pageLabel', { page: i + 1, total: brfPages.length })}
                       >
                         <div className="brf-page-number" aria-hidden="true">
-                          p. {i + 1}
+                          {t('app.layoutSettings.pageMarker', { page: i + 1 })}
                         </div>
                         <div className="brf-page-content">
                           {lines.map((line, lineIdx) => {
@@ -1499,8 +1566,8 @@ Accuracy: _____________ %
               ) : (
                 <p className="brf-placeholder" aria-live="polite">
                   {workerReady
-                    ? 'Type in the editor or open a file to see braille output.'
-                    : 'Loading liblouis WASM…'}
+                    ? t('app.layoutSettings.placeholders.typeToSee')
+                    : t('app.layoutSettings.placeholders.loading')}
                 </p>
               )}
             </section>

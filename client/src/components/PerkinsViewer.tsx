@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     buildDotsSpeech,
     buildFingersSpeech,
@@ -14,13 +15,15 @@ interface PerkinsViewerProps {
 }
 
 export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
+    const { t } = useTranslation();
     const [currentIndex, setCurrentIndex] = useState(0);
 
     // Filter out any carriage returns or newlines that might be in the raw text
     // for a pure character-by-character view
     const characters = rawText.replace(/[\r\n]+/g, '').split('');
 
-    const hasContent = characters.length > 0;
+    const totalChars = characters.length;
+    const hasContent = totalChars > 0;
 
     // Keep index in bounds if text shrinks
     if (hasContent && currentIndex >= characters.length) {
@@ -53,7 +56,7 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
     if (!hasContent) {
         return (
             <div className="perkins-viewer empty">
-                <p>Type in the editor or open a file to learn the Perkins Brailler keys.</p>
+                <p>{t('perkins.prompt')}</p>
             </div>
         );
     }
@@ -68,20 +71,20 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
             {/* Paper Feed Area */}
             <div className="perkins-paper-feed">
                 <div className="perkins-paper">
-                    <span className="perkins-paper-label">Current Character</span>
+                    <span className="perkins-paper-label">{t('perkins.currentCharacter')}</span>
                     <div className="perkins-paper-display">
                         <div className="perkins-paper-char">
-                            {isSpace ? '[Space]' : currentChar}
+                            {isSpace ? t('perkins.spaceLabel') : currentChar}
                         </div>
                         {/* Visual Braille Cell Reference - Perkins Input Order */}
                         <div className="perkins-visual-cell perkins-visual-input" aria-hidden="true">
-                            <div className={`visual-dot ${dots[2] ? 'active' : ''}`}>3</div>
-                            <div className={`visual-dot ${dots[1] ? 'active' : ''}`}>2</div>
-                            <div className={`visual-dot ${dots[0] ? 'active' : ''}`}>1</div>
-                            <div className={`visual-dot space-dot ${isSpace ? 'active' : ''}`}>SPC</div>
-                            <div className={`visual-dot ${dots[3] ? 'active' : ''}`}>4</div>
-                            <div className={`visual-dot ${dots[4] ? 'active' : ''}`}>5</div>
-                            <div className={`visual-dot ${dots[5] ? 'active' : ''}`}>6</div>
+                            <div className={`visual-dot ${dots[2] ? 'active' : ''}`}>{t('perkins.dotLabels.d3')}</div>
+                            <div className={`visual-dot ${dots[1] ? 'active' : ''}`}>{t('perkins.dotLabels.d2')}</div>
+                            <div className={`visual-dot ${dots[0] ? 'active' : ''}`}>{t('perkins.dotLabels.d1')}</div>
+                            <div className={`visual-dot space-dot ${isSpace ? 'active' : ''}`}>{t('perkins.dotLabels.space')}</div>
+                            <div className={`visual-dot ${dots[3] ? 'active' : ''}`}>{t('perkins.dotLabels.d4')}</div>
+                            <div className={`visual-dot ${dots[4] ? 'active' : ''}`}>{t('perkins.dotLabels.d5')}</div>
+                            <div className={`visual-dot ${dots[5] ? 'active' : ''}`}>{t('perkins.dotLabels.d6')}</div>
                         </div>
                     </div>
                 </div>
@@ -90,7 +93,7 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
             {/* Machine Chassis */}
             <div className="perkins-machine">
                 <div className="perkins-machine-branding">
-                    <div className="perkins-badge">Graham Brailler</div>
+                    <div className="perkins-badge">{t('perkins.title')}</div>
                 </div>
 
                 {/* Keyboard Layout */}
@@ -99,35 +102,35 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
                     <div className="perkins-keys-side left-side">
                         <button className={`perkins-key key-dot3 ${dots[2] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 3</span>
+                            <span>{t('perkins.keyLabels.dot3')}</span>
                         </button>
                         <button className={`perkins-key key-dot2 ${dots[1] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 2</span>
+                            <span>{t('perkins.keyLabels.dot2')}</span>
                         </button>
                         <button className={`perkins-key key-dot1 ${dots[0] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 1</span>
+                            <span>{t('perkins.keyLabels.dot1')}</span>
                         </button>
                     </div>
 
                     <button className={`perkins-spacebar ${isSpace ? 'active' : ''}`}>
                         <div className="spacebar-ridge"></div>
-                        <span className="spacebar-label">Space</span>
+                        <span className="spacebar-label">{t('perkins.keyLabels.space')}</span>
                     </button>
 
                     <div className="perkins-keys-side right-side">
                         <button className={`perkins-key key-dot4 ${dots[3] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 4</span>
+                            <span>{t('perkins.keyLabels.dot4')}</span>
                         </button>
                         <button className={`perkins-key key-dot5 ${dots[4] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 5</span>
+                            <span>{t('perkins.keyLabels.dot5')}</span>
                         </button>
                         <button className={`perkins-key key-dot6 ${dots[5] ? 'active' : ''}`}>
                             <div className="key-cap-indicator"></div>
-                            <span>Dot 6</span>
+                            <span>{t('perkins.keyLabels.dot6')}</span>
                         </button>
                     </div>
 
@@ -137,23 +140,23 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
             <div
                 className="perkins-audio"
                 role="group"
-                aria-label="Speak braille dot and finger hints for the current character"
+                aria-label={t('perkins.speakAriaLabel')}
             >
                 <button
                     type="button"
                     className="toolbar-btn"
                     onClick={speakDots}
-                    title="Read which dots to press at once, in order 1 through 6"
+                    title={t('perkins.speakDots.title')}
                 >
-                    Speak dots
+                    {t('perkins.speakDots.label')}
                 </button>
                 <button
                     type="button"
                     className="toolbar-btn"
                     onClick={speakFingers}
-                    title="Read which fingers to use: left pointer to ring for dots 1–3, right pointer to ring for dots 4–6"
+                    title={t('perkins.speakFingers.title')}
                 >
-                    Speak fingers
+                    {t('perkins.speakFingers.label')}
                 </button>
             </div>
 
@@ -163,17 +166,17 @@ export function PerkinsViewer({ rawText }: PerkinsViewerProps) {
                     onClick={prevChar}
                     disabled={currentIndex === 0}
                 >
-                    &larr; Previous Step
+                    {t('perkins.prevStep')}
                 </button>
                 <div className="perkins-progress">
-                    Step {currentIndex + 1} of {characters.length}
+                    {t('perkins.stepOf', { current: currentIndex + 1, total: totalChars })}
                 </div>
                 <button
                     className="toolbar-btn"
                     onClick={nextChar}
                     disabled={currentIndex === characters.length - 1}
                 >
-                    Next Step &rarr;
+                    {t('perkins.nextStep')}
                 </button>
             </div>
         </div>
