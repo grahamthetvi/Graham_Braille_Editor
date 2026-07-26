@@ -4,12 +4,22 @@
  * The bridge runs on http://127.0.0.1:8080 and exposes:
  *   GET  /status  → { status: "ok" }
  *   POST /print   → { printer: string, data: string (base64 BRF) }
+ *   GET  /printers → PrintTarget[] (local + paired shared Bridges)
  */
 
 const BRIDGE_BASE = 'http://127.0.0.1:8080';
 const BASE_POLL_INTERVAL_MS = 5_000;
 const BACKOFF_POLL_INTERVAL_MS = 30_000;
 const MAX_FAST_FAILURES = 3;
+
+/** A local or remote embosser target from GET /printers. */
+export interface PrintTarget {
+  id: string;
+  name: string;
+  kind: 'local' | 'peer';
+  printer: string;
+  peerId?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Status polling
@@ -142,21 +152,46 @@ export async function checkBridgeStatus(): Promise<{ connected: boolean; localVe
   }
 }
 
+function normalizePrintTargets(raw: unknown): PrintTarget[] {
+  if (!Array.isArray(raw)) return [];
+  const out: PrintTarget[] = [];
+  for (const item of raw) {
+    if (typeof item === 'string' && item) {
+      out.push({ id: `local:${item}`, name: item, kind: 'local', printer: item });
+      continue;
+    }
+    if (item && typeof item === 'object') {
+      const o = item as Record<string, unknown>;
+      const name = String(o.name ?? o.printer ?? '');
+      const printer = String(o.printer ?? '');
+      const id = String(o.id ?? (printer ? `local:${printer}` : name));
+      const kind = o.kind === 'peer' ? 'peer' : 'local';
+      if (!name && !printer) continue;
+      // Skip unreachable peer placeholders (empty printer)
+      if (kind === 'peer' && !printer) continue;
+      out.push({
+        id,
+        name: name || printer,
+        kind,
+        printer: printer || name,
+        peerId: typeof o.peerId === 'string' ? o.peerId : undefined,
+      });
+    }
+  }
+  return out;
+}
+
 /**
- * Fetch the list of installed printers from the bridge.
+ * Fetch the list of installed printers (and paired shared Bridges) from the bridge.
  */
-export async function getPrinters(): Promise<string[]> {
+export async function getPrinters(): Promise<PrintTarget[]> {
   try {
     const res = await fetch(`${BRIDGE_BASE}/printers`, {
       signal: AbortSignal.timeout(10_000), // Increase timeout as PowerShell on backend takes a few seconds
     });
     if (!res.ok) return [];
-    const _printers = await res.json();
-    if (Array.isArray(_printers)) {
-      // Filter out null or undefined names and convert to string
-      return _printers.filter(p => !!p).map(String);
-    }
-    return [];
+    const raw = await res.json();
+    return normalizePrintTargets(raw);
   } catch {
     return [];
   }
@@ -169,8 +204,8 @@ export async function getPrinters(): Promise<string[]> {
 /**
  * Send BRF content to the bridge for raw printing.
  *
- * @param printer  The OS printer name (e.g. "ViewPlus Columbia").
- * @param brf      The BRF content as a plain string (UTF-8).
+ * @param printer  Target id from getPrinters() (or legacy OS printer name).
+ * @param rawData  Raw bytes for the embosser.
  * @throws         If the bridge is unreachable or returns an error.
  */
 export async function printBrf(printer: string, rawData: Uint8Array): Promise<void> {
@@ -182,7 +217,7 @@ export async function printBrf(printer: string, rawData: Uint8Array): Promise<vo
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ printer, data }),
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!res.ok) {

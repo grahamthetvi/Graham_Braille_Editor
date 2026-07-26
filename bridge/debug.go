@@ -168,13 +168,6 @@ func writeSSE(w http.ResponseWriter, f http.Flusher, e JobEvent) {
 	f.Flush()
 }
 
-// handlePrinters returns a JSON array of available printer names.
-func handlePrinters(w http.ResponseWriter, _ *http.Request) {
-	printers := listPrinters()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(printers)
-}
-
 // handleTestPrint sends a known-good BRF test page to a named printer.
 func handleTestPrint(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -490,14 +483,23 @@ async function loadPrinters() {
     }
     document.getElementById('printer-empty').style.display = 'none';
     ul.style.display = '';
-    list.forEach(name => {
+    list.forEach(item => {
+      const name = typeof item === 'string' ? item : (item.name || item.printer || '');
+      const printName = typeof item === 'string' ? item : (item.printer || item.name || '');
+      const kind = typeof item === 'object' && item.kind === 'peer' ? 'peer' : 'local';
+      if (kind === 'peer' && !printName) return; // skip unreachable placeholders for test print
       const li = document.createElement('li');
       li.innerHTML = '<span>🖨</span>'+esc(name);
       li.onclick = () => {
         document.querySelectorAll('#printer-ul li').forEach(l=>l.classList.remove('sel'));
         li.classList.add('sel');
-        selPrinter = name;
-        document.getElementById('test-btn').disabled = false;
+        selPrinter = printName;
+        document.getElementById('test-btn').disabled = !printName || kind === 'peer';
+        if (kind === 'peer') {
+          document.getElementById('test-btn').title = 'Test print from Debug is local-only; print shared embossers from the editor.';
+        } else {
+          document.getElementById('test-btn').title = '';
+        }
       };
       ul.appendChild(li);
     });

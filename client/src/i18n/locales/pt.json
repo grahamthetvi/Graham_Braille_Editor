@@ -1,0 +1,1063 @@
+{
+  "app": {
+    "brand": {
+      "title": "Graham Braille Editor",
+      "subtitle": "Suite de Edição e Impressão em Braille",
+      "skipLink": "Ir para o conteúdo principal"
+    },
+    "tabs": {
+      "file": "Arquivo",
+      "view": "Visualização e Layout",
+      "languagesCodes": "Idiomas e Códigos",
+      "tools": "Ferramentas de Ensino",
+      "help": "Ajuda e Suporte"
+    },
+    "file": {
+      "import": {
+        "label": "Importar arquivo",
+        "ariaLabel": "Importar arquivo de texto ou BRF",
+        "title": "Texto simples: traduz para braille. .brf: retrotraduz para texto (tabela selecionada) e mostra o BRF à direita. A retrotradução do Grau 2 é aproximada; tente novamente após o carregamento do liblouis, se necessário."
+      },
+      "drafts": {
+        "label": "Rascunhos",
+        "labelWithCount": "Rascunhos ({{count}})",
+        "ariaLabel": "Ver rascunhos",
+        "title": "Ver rascunhos não salvos dos últimos 30 dias"
+      },
+      "downloadBrf": {
+        "label": "Baixar BRF",
+        "ariaLabel": "Baixar arquivo BRF traduzido",
+        "title": "Baixar BRF com configurações de layout: células por linha, linhas por página, início de linha de parágrafo, números de página opcionais, linhas CRLF, alimentação de formulário entre páginas"
+      },
+      "downloadPrintLayout": {
+        "label": "Baixar layout de impressão",
+        "ariaLabel": "Baixar arquivo de texto do layout de impressão",
+        "title": "Baixar texto simples (.txt) com as mesmas quebras de linha do editor de texto — cada linha corresponde a uma linha em braille, para que você possa imprimir ou abrir no Word e alinhar com o layout em relevo."
+      },
+      "tts": {
+        "selectAriaLabel": "Motor de conversão de texto em fala para exportação em MP3"
+      },
+      "downloadMp3": {
+        "label": "Baixar MP3",
+        "exportingLabel": "Exportando MP3…",
+        "ariaLabel": "Baixar áudio MP3",
+        "title": "Baixar MP3 do texto do editor usando o motor de TTS do navegador selecionado (Kitten, eSpeak NG ou Piper). O primeiro uso pode baixar um modelo de voz.",
+        "status": {
+          "starting": "Iniciando…",
+          "loadingKitten": "Carregando modelo Kitten TTS…",
+          "synthesizingKitten": "Sintetizando com Kitten…",
+          "loadingEspeak": "Carregando eSpeak NG…",
+          "synthesizingEspeak": "Sintetizando com eSpeak NG…",
+          "loadingPiper": "Carregando voz Piper (a primeira execução baixa o modelo)…",
+          "downloadingPiper": "Baixando modelo Piper… {{percent}}%",
+          "decodingPiper": "Decodificando áudio Piper…",
+          "encodingMp3": "Codificando MP3…"
+        },
+        "errorPrefix": "Falha na exportação de MP3: {{error}}",
+        "errors": {
+          "emptyText": "Nada para falar — digite algum texto primeiro.",
+          "textTooLong": "O texto excede o limite de {{limit}} caracteres para exportação de áudio.",
+          "emptyAudio": "O TTS produziu áudio vazio."
+        }
+      },
+      "print": {
+        "label": "Imprimir",
+        "title": "Alternar painel de Impressão para Impressora Braille"
+      }
+    },
+    "view": {
+      "layoutSettings": {
+        "label": "Configurações de Layout",
+        "title": "Configurar o layout da página (células por linha, linhas por página)"
+      },
+      "syncHighlight": {
+        "label": "Sincronizar Destaque",
+        "ariaLabel": "Alternar sincronização de destaque em braille",
+        "title": "Destacar as palavras em braille correspondentes ao selecionar texto no editor."
+      },
+      "theme": {
+        "labels": {
+          "dark": "Escuro",
+          "light": "Claro",
+          "highContrast": "Alto Cont."
+        },
+        "cycleTitle": "Alternar tema: escuro → claro → alto contraste",
+        "cycleAriaLabel": "Alternar tema (atual: {{theme}}). Clique para mudar para o tema {{nextTheme}}."
+      }
+    },
+    "languages": {
+      "table": {
+        "label": "Tabela",
+        "title": "Selecione uma tabela de tradução braille liblouis",
+        "ariaLabel": "Selecionar tabela de tradução braille"
+      },
+      "language": {
+        "label": "Idiomas",
+        "ariaLabel": "Selecionar idioma"
+      },
+      "autoPair": {
+        "on": {
+          "label": "Pareamento automático: Ativado",
+          "title": "Alternar automaticamente a tabela de braille para corresponder ao idioma selecionado"
+        },
+        "off": {
+          "label": "Pareamento automático: Desativado",
+          "title": "Manter a tabela de braille selecionada atualmente ao mudar de idioma"
+        }
+      }
+    },
+    "tools": {
+      "perkins": {
+        "label": "Visualizador Perkins",
+        "title": "Alternar o layout do Tradutor de Máquina Perkins"
+      },
+      "graphics": {
+        "label": "Gráficos",
+        "title": "Abrir o Editor de Gráficos Táteis",
+        "ariaLabel": "Editor de Gráficos Táteis"
+      },
+      "alphabet": {
+        "label": "Exercícios do Alfabeto",
+        "title": "Inserir exercícios de alfabeto e palavras simples",
+        "ariaLabel": "Gerador de Alfabeto e Palavras"
+      },
+      "stl": {
+        "label": "Placa de Porta (STL)",
+        "title": "Exportar a pré-visualização em Braille paginada como uma placa de porta STL em 3D (espaçamento de pontos no ponto médio BANA, em milímetros) para impressão 3D.",
+        "ariaLabel": "Exportar layout Braille como STL para impressão 3D"
+      },
+      "grading": {
+        "label": "Baixar Layout de Impressão para Avaliação",
+        "title": "Baixar layout de impressão (.rtf) com métricas de avaliação; escolha se o cabeçalho de avaliação aparece em todas as páginas.",
+        "ariaLabel": "Baixar arquivo de texto do layout de impressão para avaliação"
+      },
+      "uebMathHint": "UEB Math é o padrão e $$math$$ é Nemeth.",
+      "copyAiPrompt": {
+        "label": "Copiar Prompt de IA",
+        "title": "Copiar prompt para a IA formatar matemática",
+        "ariaLabel": "Copiar prompt para a IA formatar matemática",
+        "promptText": "Extraia o texto bruto para fins de tradução em braille. Por favor, reformate meu texto para que toda expressão matemática, equação e operação aritmética seja envolvida em notação LaTeX: \\(...\\) para matemática em linha e $$...$$ para equações em destaque. Deixe toda a prosa não matemática inalterada."
+      },
+      "copied": "Copiado!"
+    },
+    "help": {
+      "userGuide": {
+        "label": "Guia do Usuário",
+        "title": "Abrir o Guia do Usuário",
+        "ariaLabel": "Abrir Guia do Usuário"
+      },
+      "privacy": {
+        "label": "Política de Privacidade",
+        "title": "Abrir a Política de Privacidade",
+        "ariaLabel": "Abrir Política de Privacidade"
+      },
+      "tipMe": {
+        "label": "Deixe uma Gorjeta",
+        "title": "Apoie o Graham Braille Editor",
+        "ariaLabel": "Deixe uma gorjeta no Buy Me a Coffee"
+      },
+      "build": "Compilação: {{buildNumber}}"
+    },
+    "panes": {
+      "textInput": {
+        "title": "Entrada de Texto"
+      },
+      "brfPreview": {
+        "title": "Pré-visualização BRF",
+        "translatingSuffix": " — traduzindo…",
+        "ariaLabel": "Saída de pré-visualização em braille"
+      },
+      "translating": "Traduzindo… {{progress}}%"
+    },
+    "pageBreak": {
+      "label": "Quebra de Página",
+      "ariaLabel": "Inserir quebra de página",
+      "title": "Inserir quebra de página / Alimentação de Formulário (Cmd+Enter / Ctrl+Enter)"
+    },
+    "pageNav": {
+      "prev": {
+        "symbol": "◀",
+        "title": "Ir para a página anterior",
+        "ariaLabel": "Página anterior"
+      },
+      "next": {
+        "symbol": "▶",
+        "title": "Ir para a próxima página",
+        "ariaLabel": "Próxima página"
+      },
+      "pageOf": "Página {{current}} de {{total}}"
+    },
+    "layoutSettings": {
+      "presets": {
+        "usLetter": {
+          "label": "8,5×11pol",
+          "title": "Papel padrão de 8,5×11 polegadas (Carta dos EUA)"
+        },
+        "wideTractor": {
+          "label": "11×11,5pol",
+          "title": "Papel de tração largo de 11×11,5 polegadas"
+        },
+        "custom": {
+          "label": "Personalizado",
+          "title": "Dimensões personalizadas (defina células e linhas abaixo)"
+        }
+      },
+      "cellsPerRow": {
+        "label": "Células / linha",
+        "ariaLabel": "Células braille por linha"
+      },
+      "linesPerPage": {
+        "label": "Linhas / página",
+        "ariaLabel": "Linhas por página"
+      },
+      "showPageNums": {
+        "label": "Mostrar Núm. de Página",
+        "ariaLabel": "Mostrar Números de Página"
+      },
+      "sizeHint": "Comum: 32 × 25 (8,5×11), 40 × 25 (11×11,5)",
+      "paragraphFormat": {
+        "ariaLabel": "Posições de início de linha de parágrafo",
+        "heading": "Início de linha de parágrafo (1–5)",
+        "note": "Cada nova linha do Enter é um parágrafo: escolha em qual célula a primeira linha começa e qual célula as linhas de continuação usam (por exemplo, literário 3–5). O preenchimento esquerdo da ViewPlus adiciona as mesmas células em branco a cada linha, para que essas posições permaneçam alinhadas na página.",
+        "rowHead": "Primeira {{n}}",
+        "cellLabel": "{{first}}-{{run}}",
+        "matrixCellAriaLabel": "Célula da primeira linha {{first}}, célula de continuação {{run}}",
+        "quickLabel": "Rápido:",
+        "quickFlush": "1–1 (alinhado)",
+        "quickLiterary": "3–5 (literário)"
+      },
+      "embosserPadding": {
+        "ariaLabel": "Preenchimento da borda da impressora braille",
+        "heading": "Preenchimento da borda da impressora braille",
+        "note": "Se sua impressora braille alimenta as folhas de forma desalinhada e perde caracteres na borda esquerda, podemos adicionar um preenchimento esquerdo opcional (células em branco) em cada linha. Isso se aplica a qualquer impressora braille e tamanho de papel. Se você encontrar uma configuração que funcione bem para o seu equipamento, envie um e-mail para grahamthetvi@icloud.com para que possamos adicioná-la às predefinições.",
+        "leftPadding": {
+          "label": "Preenchimento esquerdo (células)",
+          "ariaLabel": "Preenchimento esquerdo em células braille"
+        },
+        "appliedHint": "O preenchimento é aplicado a todos os trabalhos de impressão.",
+        "quickPreset": {
+          "label": "Predefinição rápida",
+          "ariaLabel": "Predefinição de preenchimento ViewPlus",
+          "placeholder": "Aplicar predefinição do modelo…",
+          "none": "Nenhum (0)",
+          "viewPlusMax": "ViewPlus Max (15)",
+          "viewPlusRogue": "ViewPlus Rogue (0)",
+          "viewPlusPremier": "ViewPlus Premier (0)",
+          "viewPlusEmBraille": "ViewPlus EmBraille (0)"
+        }
+      },
+      "brailleDisplay": {
+        "ariaLabel": "Configurações da linha braille",
+        "heading": "Configurações da Linha Braille",
+        "displaySize": {
+          "label": "Tamanho de exibição",
+          "ariaLabel": "Controle deslizante do tamanho da célula da linha braille",
+          "valueSuffix": "{{px}}px"
+        },
+        "showEmptyDots": {
+          "label": "Mostrar pontos vazios",
+          "ariaLabel": "Mostrar pontos vazios nas células braille"
+        },
+        "emptyDotSize": {
+          "label": "Tamanho do ponto vazio",
+          "ariaLabel": "Controle deslizante do tamanho do ponto vazio da linha braille",
+          "value": "{{px}}px"
+        }
+      },
+      "placeholders": {
+        "loading": "Carregando liblouis WASM…",
+        "typeToSee": "Digite no editor ou abra um arquivo para ver a saída em braille."
+      },
+      "translationErrorPrefix": "Erro de tradução: {{error}}",
+      "braillePreviewAriaLabel": "Páginas em braille",
+      "pageLabel": "Página braille {{page}} de {{total}}",
+      "pageMarker": "p. {{page}}"
+    },
+    "brailleCell": {
+      "space": "Espaço",
+      "emptyCell": "Célula Vazia",
+      "withChar": "Braille '{{char}}' (Pontos {{dots}})",
+      "dotsOnly": "Braille (Pontos {{dots}})"
+    }
+  },
+  "tts": {
+    "kitten": {
+      "label": "Kitten (padrão)",
+      "description": "Voz neural leve (~25–60 MB no primeiro download)"
+    },
+    "espeak": {
+      "label": "eSpeak NG",
+      "description": "Voz robótica muito pequena; carregamento mais rápido"
+    },
+    "piper": {
+      "label": "Piper",
+      "description": "Voz neural de maior qualidade (download maior)"
+    }
+  },
+  "welcome": {
+    "ariaLabel": "Fechar guia de boas-vindas",
+    "titleFirstVisit": "Bem-vindo ao Graham Braille Editor",
+    "titleReturning": "Guia do Usuário",
+    "closeIcon": "✕",
+    "sections": {
+      "layout": {
+        "heading": "Layout de Página — Predefinições, Células e Linhas",
+        "body": "Clique em Configurações de Layout na aba Visualização e Layout para abrir as configurações de página. Use predefinições rápidas: 8,5×11pol (Carta dos EUA, 32 × 25 células) ou 11×11,5pol (papel de tração largo, 40 × 25), ou escolha Personalizado e defina você mesmo Células / linha (10–100) e Linhas / página (5–50) — por exemplo, 28 linhas para páginas estilo A4. Esses valores determinam a pré-visualização na tela, o .brf baixado, e são salvos para sua próxima visita.",
+        "viewPlusNote": "Impressoras braille ViewPlus: em Configurações de Layout, você pode ajustar o preenchimento esquerdo (células em branco extras por linha) para o formato Carta dos EUA. O preenchimento é aplicado na impressão somente se o seu layout for Carta dos EUA (predefinição 8,5×11 ou 32 × 25). O alinhamento de folha única varia por modelo; se você encontrar um valor que funcione bem para o seu papel e quiser compartilhá-lo, envie um e-mail para grahamthetvi@icloud.com. Quando você usa Imprimir com um driver ViewPlus, um breve lembrete também aparece lá."
+      },
+      "embossing": {
+        "heading": "Impressão em Braille Sem Interrupções (WebUSB e Bridge)",
+        "body": "O aplicativo inclui drivers de impressoras braille para Enabling Technologies, Index, ViewPlus, Braillo e outros — escolha o modelo que corresponde ao seu dispositivo ao imprimir. Usuários do ChromeOS podem usar o WebUSB para enviar braille diretamente do navegador. Usuários de Windows/macOS/Linux executam o pequeno aplicativo Graham Bridge para que os trabalhos de impressão cheguem à impressora braille de forma confiável. O ajuste da margem esquerda da ViewPlus permanece em Configurações de Layout (veja acima). O bridge escuta apenas em 127.0.0.1:8080 e aceita tráfego do navegador apenas de sites oficiais do Graham Braille Editor (e desenvolvimento local), portanto sites aleatórios não podem enviar trabalhos de impressão para ele. Por predefinição a Bridge escuta apenas em 127.0.0.1:8080 e aceita tráfego do navegador dos sites oficiais do Graham Braille Editor (e desenvolvimento local). O modo Partilhar opcional permite que outra Bridge na LAN envie trabalhos (emparelhamento com um código curto).",
+        "windows": {
+          "heading": "Bridge para Windows",
+          "steps": [
+            "Baixe e extraia o arquivo zip",
+            "Mova o .exe para uma pasta segura",
+            "Adicione à pasta Inicializar"
+          ]
+        },
+        "macos": {
+          "heading": "Bridge para macOS",
+          "steps": [
+            "Arraste o .app para Aplicativos",
+            "Clique com o botão direito → Abrir na primeira vez",
+            "Adicione aos Itens de Login"
+          ]
+        },
+        "linux": {
+          "heading": "Bridge para Linux",
+          "steps": [
+            "ZIP: mova graham-bridge-linux-amd64 para /usr/local/bin/graham-bridge, instale o arquivo .desktop e inicie a partir do menu do aplicativo",
+            "Fedora / RPM: nas Releases, baixe graham-bridge-<versão>-linux-fedora.x86_64.rpm e execute sudo dnf install ./esse-arquivo.rpm"
+          ]
+        },
+        "downloadButton": "Baixar Bridge para Desktop",
+        "sharedPi": {
+          "heading": "Bridge partilhada / Raspberry Pi",
+          "steps": [
+            "No Pi (Raspberry Pi OS Desktop): instale o Bridge linux-arm64, ligue a embossadora, abra Bridge → Definições → Partilhar nesta rede → defina um nome → anote o código e o IP do Pi",
+            "No PC do professor: instale o Bridge → Definições → Ligar a uma Bridge partilhada → introduza o IP do Pi e o código",
+            "No editor, imprima como habitualmente e escolha a embossadora partilhada na lista"
+          ],
+          "itNote": "TI: os dispositivos devem poder comunicar na LAN (desative o isolamento de clientes ou use uma VLAN de impressão). Reserve um IP/DNS estático para o Pi. Permita a porta TCP 8081 para o Pi."
+        }
+      },
+      "math": {
+        "heading": "Tradução de Matemática — LaTeX para Braille",
+        "body": "O editor detecta automaticamente a matemática em LaTeX no seu texto e a traduz para a notação matemática em braille. Envolva as equações em destaque (bloco) em $$…$$ (traduzidas para Nemeth) e as expressões em linha em \\(…\\) (traduzidas para UEB Math).",
+        "tip": "Dica: para melhores resultados, cole seu documento em um assistente de IA (ChatGPT, Claude, Gemini etc.) com a seguinte solicitação antes de colá-lo aqui:",
+        "promptText": "\"Por favor, reformate meu texto para que toda expressão matemática, equação e operação aritmética — incluindo números simples usados em um contexto matemático — seja envolvida em notação LaTeX: \\(…\\) para matemática em linha e $$…$$ para equações em destaque. Deixe toda a prosa não matemática inalterada.\""
+      },
+      "downloading": {
+        "heading": "Download e Salvamento Automático",
+        "body": "Quando sua tradução estiver pronta, clique em Baixar BRF na aba Arquivo para gerar arquivos .brf padrão formatados diretamente de acordo com suas configurações de layout de página selecionadas. Se precisar de um layout de texto simples perfeitamente correspondente para compartilhar visualmente, clique em Baixar layout de impressão. Isso garante que seu documento de impressão quebre as linhas de forma idêntica à versão em braille.",
+        "autosave": "Seu trabalho é salvo automaticamente enquanto você digita. Clique em Rascunhos na aba Arquivo para ver e restaurar trabalhos não salvos dos últimos 30 dias."
+      },
+      "perkins": {
+        "heading": "Visualizador Perkins",
+        "body": "Clique em Visualizador Perkins na aba Ferramentas para praticar ou demonstrar a entrada de 6 teclas da Perkins diretamente no seu navegador. Este modo se sobrepõe ao painel direito, oferecendo um simulador interativo dedicado para a prática da máquina braille padrão sem interromper seu documento principal."
+      },
+      "largePrint": {
+        "heading": "Braille em Letra Ampliada (Jumbo)",
+        "body": "Para livros de impressão/braille de mídia dupla ou leitores com baixa visão, você pode inserir seções de letra ampliada. Clique em Letra Ampliada na aba Ferramentas para configurar o tamanho e inserir blocos. No painel de pré-visualização à direita, esses blocos são traduzidos e renderizados como células braille em letra ampliada no formato BRF, preservando a legibilidade tátil e o alinhamento."
+      },
+      "graphics": {
+        "heading": "Gráficos Táteis e Impressão 3D",
+        "body": "Clique em Gráficos na aba Ferramentas para abrir o Editor de Gráficos Táteis, onde você pode projetar diagramas táteis para imprimir junto com seu Braille.",
+        "shapesHeading": "Inventário de Formas e Formas Personalizadas:",
+        "simpleShapes": "Formas Simples: Linhas, retângulos e polígonos ajustáveis.",
+        "complexShapes": "Formas Complexas: Nuvem, Lua Crescente, Raio, Estrela de 5 Pontas, Maçã e Cruz. Formas como a Cruz permitem ajustar diretamente a largura/altura das barras.",
+        "positioningTool": "Ferramenta de Posicionamento: No painel Ferramentas de Tela, selecione a ferramenta de ponteiro para reposicionar texto ou formas na sua tela sem redimensioná-los.",
+        "customElements": "Elementos Personalizados: Inclui detalhes como um Pincel, flores de Margarida (sempre renderizadas com centros preenchidos para contraste) e Presas de Vampiro.",
+        "dotPatternPreview": "Pré-visualização do Padrão de Pontos: O editor exibe as formas da tela como grades de pontos braille físicos em tempo real.",
+        "stlNote": "Além disso, clique em Placa de Porta (STL) na aba Ferramentas para exportar seu layout braille paginado como um arquivo STL imprimível em 3D com o espaçamento de pontos no ponto médio BANA padrão."
+      }
+    },
+    "footer": {
+      "license": "Código aberto sob a Licença Pública Geral GNU v2. Suporte: grahamthetvi@icloud.com",
+      "credit": "Criado por Addison Graham e construído a partir do APH Braille Blaster."
+    },
+    "buttons": {
+      "getStarted": "Começar",
+      "closeGuide": "Fechar Guia"
+    }
+  },
+  "privacy": {
+    "ariaLabel": "Fechar política de privacidade",
+    "title": "Política de Privacidade (Resumo)",
+    "closeIcon": "✕",
+    "intro": "No Graham Braille Editor, sua privacidade e a segurança dos seus dados são nossas principais prioridades. Devido à natureza sensível dos documentos que você pode estar traduzindo, projetamos este aplicativo para processar tudo localmente.",
+    "tldrLead": "Aqui está o resumo de como tratamos seus dados:",
+    "tldr": {
+      "localProcessing": "100% de Processamento Local: toda a tradução em braille, o processamento de texto e a geração de STL 3D acontecem diretamente dentro do seu navegador web. Seus documentos nunca saem do seu dispositivo.",
+      "noCloudServers": "Sem Servidores em Nuvem: não enviamos seu texto, arquivos braille ou qualquer informação pessoal para servidores em nuvem.",
+      "localStorageOnly": "Apenas Armazenamento Local: seus rascunhos, configurações do aplicativo e preferências de tabela são salvos com segurança no armazenamento local do seu navegador.",
+      "offlineCapable": "Capaz de Funcionar Offline: uma vez que a página tenha sido carregada, os recursos principais de tradução funcionam completamente offline.",
+      "embosserBridge": "Bridge da embossadora: se usar a nossa aplicação Bridge local, os ficheiros são transmitidos diretamente à embossadora no seu computador/rede, não pela Internet. O modo Partilhar opcional aceita trabalhos de outras Graham Bridges na LAN que conheçam o código — sem relay na nuvem.",
+      "noTracking": "Sem Rastreamento: não usamos análises, rastreadores ou cookies de publicidade. O que você faz no editor é inteiramente da sua conta."
+    },
+    "readFullPolicy": "Ler a Política de Privacidade Completa",
+    "effectiveDate": "Data de Vigência: maio de 2026",
+    "fullPolicy": {
+      "intro": "No Graham Braille Editor, acreditamos que seus dados pertencem somente a você. Como nosso software é usado para traduzir documentos educacionais, pessoais e profissionais sensíveis, construímos nossa arquitetura em torno do princípio de processamento estritamente local. Esta Política de Privacidade detalha exatamente como suas informações são tratadas quando você usa nosso aplicativo.",
+      "section1": {
+        "heading": "1. Informações que Não Coletamos",
+        "lead": "Não coletamos, transmitimos ou armazenamos nenhuma informação pessoal, documento ou dado de uso.",
+        "noAnalytics": "Sem Análises: não usamos o Google Analytics, pixels de rastreamento ou qualquer outra telemetria para monitorar seu comportamento.",
+        "noAccounts": "Sem Contas: você não precisa criar uma conta, fornecer um endereço de e-mail ou fazer login para usar o editor.",
+        "noCloudStorage": "Sem Armazenamento em Nuvem: não enviamos seu texto, braille traduzido, arquivos importados ou arquivos STL exportados para nenhum servidor."
+      },
+      "section2": {
+        "heading": "2. Como Seus Dados São Processados (Somente do Lado do Cliente)",
+        "body": "Toda a funcionalidade principal do Graham Braille Editor acontece diretamente dentro do seu navegador web. Quando você digita texto, o traduz para braille ou gera um arquivo STL imprimível em 3D, o processamento é realizado inteiramente pelo processador do seu dispositivo usando tecnologias web. Como o processamento é local, seus documentos nunca saem do seu computador."
+      },
+      "section3": {
+        "heading": "3. Armazenamento Local",
+        "lead": "Para oferecer uma experiência contínua, salvamos determinados dados localmente no seu dispositivo usando os recursos padrão localStorage e IndexedDB do seu navegador. Isso inclui:",
+        "appSettings": "Configurações do Aplicativo: suas tabelas braille selecionadas, preferências de tema (modo escuro/claro) e configurações de layout de página.",
+        "autosavedDrafts": "Rascunhos Salvos Automaticamente: o texto em que você está trabalhando no momento é salvo localmente de forma periódica para que você não perca seu trabalho caso feche a aba acidentalmente. Você pode apagar esses dados a qualquer momento limpando os dados do site no seu navegador ou usando a função \"Descartar Tudo\" no menu de Rascunhos do editor."
+      },
+      "section4": {
+        "heading": "4. Aplicativo Graham Bridge (Opcional)",
+        "lead": "Se você optar por usar o aplicativo de desktop Graham Bridge para enviar trabalhos de impressão à sua impressora braille local, observe que:",
+        "localServer": "Por predefinição a Bridge corre um servidor local na sua máquina (ligado apenas a 127.0.0.1) para o editor web. Se ativar o modo Partilhar, também escuta na LAN (porta 8081) trabalhos autenticados de outras Graham Bridges emparelhadas com o seu código. Não há relay na nuvem.",
+        "facilitates": "Facilita a comunicação exclusivamente entre o seu navegador (via Bridge local) e a sua embossadora local ou partilhada emparelhada.",
+        "noInternet": "A aplicação Bridge não envia os seus documentos para servidores cloud da Graham. O modo Partilhar opcional fica na LAN e exige o código para emparelhar.",
+        "shareMode": "Qualquer pessoa na rede local que conheça o código de partilha atual pode emparelhar e enviar trabalhos até regenerar o código ou desligar a Partilha."
+      },
+      "section5": {
+        "heading": "5. Hospedagem de Terceiros",
+        "body": "O Graham Braille Editor é entregue ao seu navegador por meio de hospedagem web padrão (como o GitHub Pages). Ao visitar o site para carregar o aplicativo, o provedor de hospedagem pode coletar registros de servidor padrão (como seu endereço IP e user agent) como parte de seus procedimentos operacionais padrão. No entanto, o próprio aplicativo Graham Braille Editor não injeta nenhum script de rastreamento de terceiros."
+      },
+      "section6": {
+        "heading": "6. Privacidade Infantil e Uso Educacional",
+        "body": "Como nosso aplicativo não coleta, armazena ou transmite dados pessoais, ele está inerentemente em conformidade com regulamentações de privacidade infantil, como a COPPA (Lei de Proteção da Privacidade Online das Crianças) e a FERPA (Lei de Direitos Educacionais e Privacidade Familiar). É seguro para uso em salas de aula e por estudantes de todas as idades."
+      },
+      "section7": {
+        "heading": "7. Alterações a Esta Política",
+        "body": "Podemos atualizar esta Política de Privacidade de tempos em tempos. Quaisquer alterações serão refletidas neste documento dentro do aplicativo. Como não coletamos suas informações de contato, não podemos notificá-lo sobre alterações por e-mail."
+      },
+      "section8": {
+        "heading": "8. Informações de Contato",
+        "body": "Se você tiver dúvidas ou preocupações sobre esta Política de Privacidade ou sobre como seus dados são tratados, entre em contato conosco pelo e-mail: grahamthetvi@icloud.com"
+      }
+    },
+    "closingLine": "Sua privacidade é nossa prioridade.",
+    "closeButton": "Fechar"
+  },
+  "errorBoundary": {
+    "heading": "🚨 O Aplicativo Falhou",
+    "message": "Lamentamos muito, mas o Editor de Braille encontrou um erro inesperado. Não se preocupe, seu trabalho pode estar seguro.",
+    "reload": "Recarregar Aplicativo",
+    "reportButton": "📧 Reportar ao Desenvolvedor",
+    "mailto": {
+      "subject": "Falha no Graham Braille Editor",
+      "bodyTemplate": "Descreva o que você estava fazendo antes da falha:\n\n\n--- Detalhes da falha ---\nErro: {{error}}\n\nRastreamento da Pilha:\n{{stack}}"
+    },
+    "rescueHeading": "Resgate seu texto não traduzido:",
+    "rescueHint": "Copie tudo abaixo para um local seguro antes de clicar em \"Recarregar Aplicativo\".",
+    "errorDetailsHeading": "Detalhes do Erro (para desenvolvedores)",
+    "unknownStack": "Rastreamento da pilha desconhecido",
+    "unknownError": "Erro desconhecido"
+  },
+  "restore": {
+    "ariaLabel": "Rascunhos",
+    "title": "Rascunhos (Últimos 30 Dias)",
+    "closeAriaLabel": "Fechar",
+    "closeButton": "Fechar",
+    "empty": "Nenhum rascunho não salvo encontrado.",
+    "description": "Esses documentos foram salvos automaticamente recentemente. Rascunhos ativos e arquivos exportados são preservados aqui.",
+    "lastEditedPrefix": "Última edição: ",
+    "exported": "Exportado",
+    "activeDraft": "Rascunho Ativo",
+    "discard": "Descartar",
+    "restoreButton": "Restaurar",
+    "emptyDocument": "Documento vazio",
+    "confirmDiscardAll": "Tem certeza de que deseja descartar todos os rascunhos?",
+    "discardAll": "Descartar Tudo"
+  },
+  "perkins": {
+    "prompt": "Digite no editor ou abra um arquivo para aprender as teclas da Máquina Perkins.",
+    "currentCharacter": "Caractere Atual",
+    "spaceLabel": "[Espaço]",
+    "dotLabels": {
+      "d1": "1",
+      "d2": "2",
+      "d3": "3",
+      "d4": "4",
+      "d5": "5",
+      "d6": "6",
+      "space": "ESP"
+    },
+    "title": "Graham Brailler",
+    "keyLabels": {
+      "dot1": "Ponto 1",
+      "dot2": "Ponto 2",
+      "dot3": "Ponto 3",
+      "dot4": "Ponto 4",
+      "dot5": "Ponto 5",
+      "dot6": "Ponto 6",
+      "space": "Espaço"
+    },
+    "speakAriaLabel": "Falar dicas de pontos e dedos em braille para o caractere atual",
+    "speakDots": {
+      "label": "Falar pontos",
+      "title": "Ler quais pontos pressionar de uma vez, na ordem de 1 a 6"
+    },
+    "speakFingers": {
+      "label": "Falar dedos",
+      "title": "Ler quais dedos usar: indicador ao anelar esquerdo para os pontos 1–3, indicador ao anelar direito para os pontos 4–6"
+    },
+    "prevStep": "← Passo Anterior",
+    "stepOf": "Passo {{current}} de {{total}}",
+    "nextStep": "Próximo Passo →",
+    "speech": {
+      "fingerNames": {
+        "leftPointer": "indicador esquerdo",
+        "leftMiddle": "médio esquerdo",
+        "leftRing": "anelar esquerdo",
+        "rightPointer": "indicador direito",
+        "rightMiddle": "médio direito",
+        "rightRing": "anelar direito"
+      },
+      "spaceDots": "Pressione a barra de espaço. Nenhum ponto de letra para um espaço.",
+      "noDotsDefined": "Nenhum ponto está definido para este caractere no mapa de prática.",
+      "pressDotsTogether": "Pressione os pontos {{list}} juntos, todos de uma vez.",
+      "spaceFingers": "Pressione a barra de espaço com os dois polegares.",
+      "noFingerKeys": "Nenhuma tecla de dedo para este caractere no mapa de prática.",
+      "pressTogether": "Pressione juntos: {{list}}."
+    }
+  },
+  "alphabetGenerator": {
+    "ariaLabel": "Gerador de Alfabeto",
+    "title": "Gerador de Alfabeto e Palavras",
+    "close": "Fechar",
+    "wordListType": {
+      "label": "Tipo de Lista de Palavras",
+      "simplestCvc": "Palavras CVC Mais Simples (ex.: a - abelha)",
+      "standardCommon": "Substantivos Comuns Padrão (ex.: a - abacaxi)",
+      "animals": "Animais (ex.: a - abelha)"
+    },
+    "letterCasing": {
+      "label": "Caixa das Letras",
+      "lowercase": "Minúsculas (a - abacaxi)",
+      "uppercase": "Maiúsculas (A - ABACAXI)",
+      "capitalized": "Capitalizado (A - Abacaxi)",
+      "bothCases": "Ambas as Caixas (Aa - abacaxi)",
+      "spacedBothCases": "Ambas as Caixas Espaçadas (A a - abacaxi)"
+    },
+    "delimiter": {
+      "label": "Separador Delimitador",
+      "hyphen": "Hífen ( - )",
+      "colon": "Dois Pontos (: )",
+      "equals": "Igual ( = )",
+      "arrow": "Seta ( → )",
+      "spaces": "Espaços (   )"
+    },
+    "pageBreaks": {
+      "label": "Quebras de Página Descendentes",
+      "none": "Lista contínua (sem quebras de página)",
+      "everyLetter": "Quebra de página após cada letra (1 por página)",
+      "every5": "Quebra de página a cada 5 letras",
+      "every10": "Quebra de página a cada 10 letras"
+    },
+    "livePreview": "Pré-visualização ao Vivo",
+    "pageBreakMarker": "--- QUEBRA DE PÁGINA ---",
+    "cancel": "Cancelar",
+    "insert": "Inserir Exercícios"
+  },
+  "stlExport": {
+    "closeAriaLabel": "Fechar exportação STL",
+    "closeButton": "Fechar",
+    "title": "Placa de Porta 3D (STL)",
+    "description": "Usa dimensões de ponto médio BANA (mm): diâmetro do ponto, altura, intracelular, intercelular e espaçamento entre linhas. O STL é exportado na posição vertical (o eixo Z é a altura da placa, Y é a espessura) para uma qualidade de impressão 3D ideal. Ao exportar exatamente uma linha de texto, uma etiqueta de letra ampliada estilo ADA é gerada acima do braille (ou à direita de qualquer logotipo opcional). Como manter uma placa fina em pé pode ser instável durante a impressão, recomendamos fortemente ativar uma aba (brim) ou base (raft) no seu fatiador.",
+    "logo": {
+      "heading": "Logotipo opcional (canto superior esquerdo)",
+      "description": "Adicione um logotipo tátil: escolha uma imagem ou SVG, opcionalmente remova um fundo de papel branco ou claro (tintas e cores não brancas permanecem) e, em seguida, prepare. Os SVGs são amostrados na qualidade de detalhe STL selecionada; Baixar SVG envolve os pixels do PNG preparado em um contêiner SVG mínimo.",
+      "chooseAriaLabel": "Escolher imagem do logotipo",
+      "chooseButton": "Escolher imagem…",
+      "working": "Processando…",
+      "prepareButton": "Preparar logotipo",
+      "downloadSvg": "Baixar SVG",
+      "clear": "Limpar logotipo",
+      "clearBackground": "Remover fundo quase branco ao preparar (preserva cores mais escuras e bordas; sem ML em nuvem)",
+      "selected": "Selecionado: {{filename}}",
+      "widthLabel": "Largura do logotipo na placa (mm)",
+      "status": {
+        "fileSelected": "Arquivo selecionado. Escolha Preparar logotipo para rasterizar (e opcionalmente remover o fundo).",
+        "chooseFileFirst": "Escolha primeiro um arquivo de imagem.",
+        "clearingBackground": "Rasterizando e removendo pixels quase brancos…",
+        "rasterizing": "Rasterizando imagem…",
+        "ready": "Logotipo pronto ({{width}}×{{height}} px, detalhe {{quality}}). Ele aparecerá como relevo elevado no canto superior esquerdo do STL; o braille e a letra ampliada se deslocam para liberar espaço. Prepare novamente após alterar a largura ou a qualidade de detalhe do logotipo.",
+        "prepareBeforeDownload": "Prepare um logotipo antes de baixar o SVG."
+      }
+    },
+    "detail": {
+      "heading": "Qualidade de detalhe em relevo",
+      "label": "Detalhe do STL",
+      "standard": "Padrão ({{samples}} amostras/mm)",
+      "high": "Alta ({{samples}} amostras/mm)",
+      "ultra": "Ultra ({{samples}} amostras/mm)"
+    },
+    "printLetterHeight": "Altura da letra impressa (mm)",
+    "detailHint": "Um detalhe maior melhora logotipos e letras impressas, mas produz arquivos STL maiores. A redondeza dos pontos braille ainda usa a configuração de ponto STL da BANA.",
+    "textSource": {
+      "heading": "Fonte do Texto da Placa",
+      "custom": "Usar texto personalizado",
+      "editor": "Usar texto do Editor"
+    },
+    "customText": {
+      "label": "Texto Personalizado da Placa de Porta",
+      "placeholder": "ex.: SALA 101"
+    },
+    "translating": "Traduzindo para Braille...",
+    "scope": {
+      "heading": "Escopo",
+      "singlePage": "Página única",
+      "allPages": "Todas as páginas (um STL por página)",
+      "pageOf": "Página (1–{{count}})"
+    },
+    "errors": {
+      "workerTerminated": "O worker de STL foi encerrado inesperadamente.",
+      "workerNotReady": "O worker de STL não está pronto.",
+      "timedOut": "A geração do STL expirou.",
+      "nothingToExport": "Nada para exportar. Traduza o texto e verifique o layout primeiro.",
+      "enterCustomText": "Por favor, insira o texto personalizado da placa de porta."
+    },
+    "cancel": "Cancelar",
+    "generating": "Gerando…",
+    "download": "Baixar STL"
+  },
+  "gradingPrint": {
+    "closeAriaLabel": "Fechar opções de layout de impressão para avaliação",
+    "title": "Layout de Impressão para Avaliação",
+    "close": "Fechar",
+    "description": "Baixar layout de impressão (.rtf) correspondente à quebra de linha do braille com métricas de avaliação adicionadas no início.",
+    "onAllPages": {
+      "label": "Em todas as páginas",
+      "hint": "Quando ativado, o cabeçalho de avaliação é repetido no topo de cada página. Caso contrário, aparece apenas na primeira página."
+    },
+    "cancel": "Cancelar",
+    "download": "Baixar"
+  },
+  "print": {
+    "drivers": {
+      "genericFallback": "Impressora Braille de Texto Genérica (Alternativa)",
+      "enablingTechnologies": "Enabling Technologies (Romeo/Juliet)",
+      "indexBraille": "Index Braille (Basic-D / Everest)",
+      "braillo": "Braillo (200 / 270)",
+      "aphPageBlaster": "APH PageBlaster",
+      "aphPixBlaster": "APH PixBlaster",
+      "viewPlusEmBraille": "ViewPlus EmBraille",
+      "viewPlusFamily": "ViewPlus (Rogue / Max / Premier)"
+    },
+    "errors": {
+      "enterPrinterName": "Por favor, insira um nome de impressora.",
+      "noContent": "Nenhum conteúdo Braille para imprimir. Digite algo primeiro.",
+      "invalidRange": "Intervalo de páginas personalizado inválido ou nenhuma página corresponde.",
+      "unknown": "Erro desconhecido"
+    },
+    "viewPlusNotice": {
+      "body": "A alimentação de folha única e as margens do driver variam conforme o modelo. Se você ajustar o layout para o seu papel e quiser compartilhar o que funciona, envie um e-mail para grahamthetvi@icloud.com.",
+      "driver": "Use o driver de impressora ViewPlus oficial para a sua impressora braille."
+    },
+    "compact": {
+      "bridgeOffline": "Bridge offline",
+      "printer": "Impressora:",
+      "loading": "Carregando...",
+      "noPrintersFound": "Nenhuma impressora encontrada",
+      "driverAriaLabel": "Modelo do driver da impressora braille",
+      "rangeAriaLabel": "Intervalo de impressão",
+      "allPages": "Todas as Páginas",
+      "custom": "Personalizado",
+      "customPlaceholder": "ex.: 1-3, 5",
+      "customRangeAriaLabel": "Intervalo de páginas personalizado",
+      "sending": "Enviando…",
+      "selectAndPrint": "Selecionar e Imprimir (USB)",
+      "print": "Imprimir",
+      "boundaryTest": {
+        "title": "Imprimir uma página de teste com linhas/colunas numeradas para verificar margens e limites de impressão",
+        "label": "Teste de Limites"
+      },
+      "debug": {
+        "title": "Abrir Painel de Depuração do Bridge",
+        "label": "Depurar"
+      },
+      "sent": "✓ Enviado"
+    },
+    "full": {
+      "webUsbHeading": "Impressão em Braille via WebUSB",
+      "heading": "Imprimir na Impressora Braille",
+      "bridgeNotConnected": "Bridge não conectado. Baixe e execute o binário do bridge para habilitar a impressão.",
+      "selectSecurely": "Selecione sua impressora braille com segurança diretamente na janela de prompt do navegador.",
+      "selectPrinter": "Selecionar Impressora",
+      "noPrintersFound": "Nenhuma impressora encontrada no computador",
+      "driverModel": "Modelo do Driver da Impressora Braille",
+      "pagesToPrint": "Páginas a Imprimir",
+      "allPages": "Todas as Páginas",
+      "custom": "Personalizado",
+      "customPlaceholder": "ex.: 1-5, 8, 11-13",
+      "printing": "Imprimindo...",
+      "selectEmbosserAndPrint": "Selecionar Impressora Braille e Imprimir",
+      "print": "Imprimir",
+      "printBoundaryTest": "Imprimir Teste de Limites",
+      "debugDashboard": "Painel de Depuração",
+      "sentSuccess": "Enviado para a impressora braille com sucesso.",
+      "errorPrefix": "Erro: {{error}}",
+      "sharedHint": "As embossadoras partilhadas aparecem depois de emparelhar nas Definições da Bridge (Abrir Definições a partir do ícone na bandeja)."
+    }
+  },
+  "statusBar": {
+    "ariaLabel": "Status do aplicativo",
+    "bridgeUpdateRequired": {
+      "label": "Atualização do Bridge Necessária",
+      "title": "Atualização de Segurança Disponível para o Graham Bridge",
+      "ariaLabel": "Atualização do bridge disponível"
+    },
+    "webUsbReady": {
+      "label": "● WebUSB Pronto",
+      "title": "Impressão em Braille via WebUSB Disponível",
+      "ariaLabel": "WebUSB pronto"
+    },
+    "bridgeConnected": {
+      "label": "● Bridge Conectado",
+      "title": "Bridge em execução em localhost:8080",
+      "ariaLabel": "Bridge conectado"
+    },
+    "bridgeOffline": {
+      "label": "○ Bridge Offline",
+      "title": "Bridge não detectado",
+      "ariaLabel": "Bridge offline"
+    },
+    "wordCount": {
+      "label": "{{count}} palavras",
+      "title": "Contagem de palavras da fonte"
+    },
+    "charCount": {
+      "label": "{{count}} caracteres",
+      "title": "Contagem de caracteres da fonte"
+    },
+    "brfSize": {
+      "label": "BRF: {{bytes}} bytes",
+      "title": "Tamanho da saída BRF"
+    },
+    "translating": {
+      "label": "Traduzindo… {{progress}}%",
+      "title": "Progresso da tradução"
+    }
+  },
+  "graphics": {
+    "title": "Gerador de Gráficos Táteis",
+    "close": "✕",
+    "graphicType": "Tipo de Gráfico",
+    "sidebar": {
+      "clock": "Relógio",
+      "fraction": "Fração",
+      "numberLine": "Reta Numérica",
+      "base10": "Base10",
+      "manipulatives": "Manipulativos",
+      "customShapes": "Formas Personalizadas",
+      "shapeInventory": "Inventário de Formas",
+      "photoOverlay": "Sobreposição de Foto",
+      "raisedPrintText": "Texto Impresso em Relevo",
+      "graphs": "Gráficos",
+      "chart": "Gráfico"
+    },
+    "cancel": "Cancelar",
+    "insert": "Inserir Gráfico",
+    "alerts": {
+      "pdfParseFailed": "Falha ao analisar o arquivo PDF.",
+      "pdfLibFailed": "Falha ao carregar a biblioteca PDF.",
+      "confirmClearDrawing": "Tem certeza de que deseja limpar seu desenho?",
+      "fontLoadFailed": "Falha ao carregar o arquivo de fonte."
+    },
+    "graphs": {
+      "equationLabel": "Equação (em termos de x)",
+      "equationPlaceholder": "ex.: sin(x), x^2, 2x+3, sqrt(x)",
+      "equationHint": "Suporta: sin, cos, tan, sqrt, abs, log, ln, exp, pi, e, ^ e mais. Atalhos como \"sinx\" e \"2x\" funcionam.",
+      "xMin": "X Mín:",
+      "xMax": "X Máx:",
+      "yMin": "Y Mín (automático se vazio):",
+      "yMax": "Y Máx (automático se vazio):",
+      "autoPlaceholder": "automático",
+      "xTick": "Distância de Marcação X (0 = automático):",
+      "yTick": "Distância de Marcação Y (0 = automático):",
+      "gridWidth": "Largura da Grade (células):",
+      "gridHeight": "Altura da Grade (linhas):",
+      "samplePoints": "Pontos de Amostra:",
+      "titleOptional": "Título (opcional):",
+      "errors": {
+        "enterEquation": "Por favor, insira uma equação.",
+        "parseError": "Não foi possível analisar a equação: {{message}}",
+        "xMinMax": "X mín deve ser menor que X máx.",
+        "noFiniteValues": "A equação não produziu valores finitos neste intervalo de X."
+      },
+      "summary": {
+        "graph": "Gráfico: {{title}}",
+        "domain": "Domínio: x de {{min}} a {{max}}",
+        "range": "Intervalo: y de {{ymin}} a {{ymax}}",
+        "grid": "Grade: {{width}} células de largura por {{height}} linhas de altura",
+        "xTickSpacing": "Espaçamento de marcação X: {{value}}",
+        "yTickSpacing": "Espaçamento de marcação Y: {{value}}",
+        "samplePoints": "Pontos de amostra: {{value}}"
+      }
+    },
+    "photoOverlay": {
+      "photo": "Foto:",
+      "opacity": "Opacidade: {{value}}%",
+      "scale": "Escala: {{value}}%",
+      "offsets": "Deslocamentos:",
+      "xOffsetTitle": "Deslocamento X",
+      "yOffsetTitle": "Deslocamento Y",
+      "tool": "Ferramenta:",
+      "tools": {
+        "pencil": "Lápis",
+        "eraser": "Borracha",
+        "line": "Linha",
+        "stamp": "Carimbo"
+      },
+      "brush": "Pincel: {{value}}",
+      "stamps": {
+        "mask": "Máscara",
+        "apple": "Maçã",
+        "axe": "Machado",
+        "beach": "Praia",
+        "bed": "Cama",
+        "birdHouse": "Casa de Pássaro",
+        "bowling": "Boliche",
+        "candle": "Vela",
+        "cat": "Gato",
+        "circle": "Círculo",
+        "cloud": "Nuvem",
+        "cloudLightning": "Nuvem+Raio",
+        "moon": "Lua",
+        "cross": "Cruz",
+        "dog": "Cachorro",
+        "flower": "Flor",
+        "heart": "Coração",
+        "hiking": "Trilha",
+        "house": "Casa",
+        "skates": "Patins",
+        "lightning": "Raio",
+        "projector": "Projetor",
+        "mustache": "Bigode",
+        "brush": "Pincel",
+        "star": "Estrela",
+        "fangs": "Presas"
+      },
+      "stampSizeTitle": "Tamanho do Carimbo",
+      "fillTitle": "Preencher",
+      "grid": "Grade:",
+      "gridWidthTitle": "Largura (células)",
+      "gridHeightTitle": "Altura (linhas)",
+      "gridSeparator": "×",
+      "hideGrid": "Ocultar Grade",
+      "showGrid": "Mostrar Grade",
+      "clear": "Limpar",
+      "invert": "Inverter",
+      "defaultLayoutSize": "Tamanho de layout padrão: {{cells}} células × {{lines}} linhas",
+      "cross": {
+        "label": "Cruz:",
+        "hLen": "Comp. H:",
+        "vThick": "Esp. V:",
+        "hThick": "Esp. H:",
+        "hRatio": "Proporção H:"
+      },
+      "overlayGuideAlt": "Guia de sobreposição",
+      "braillePreview": "Pré-visualização em Braille",
+      "dotsSize": "{{width}} × {{height}} pontos",
+      "summary": "Desenho de Sobreposição de Foto ({{cells}} células × {{lines}} linhas)"
+    },
+    "shapes": {
+      "clock": {
+        "radius": "Raio:",
+        "hours": "Horas:",
+        "minutes": "Minutos:"
+      },
+      "fraction": {
+        "radius": "Raio:",
+        "numerator": "Numerador:",
+        "denominator": "Denominador:"
+      },
+      "numberLine": {
+        "length": "Comprimento:",
+        "start": "Início:",
+        "end": "Fim:",
+        "step": "Passo:",
+        "vertical": "Vertical"
+      },
+      "base10": {
+        "hundreds": "Centenas:",
+        "tens": "Dezenas:",
+        "ones": "Unidades:"
+      },
+      "manipulatives": {
+        "rows": "Linhas:",
+        "columns": "Colunas:",
+        "spacing": "Espaçamento:"
+      },
+      "inventory": {
+        "label": "Forma:",
+        "names": {
+          "actingMask": "Máscara Teatral",
+          "apple": "Maçã",
+          "axe": "Machado",
+          "beach": "Praia",
+          "bed": "Cama",
+          "birdHouse": "Casa de Pássaro",
+          "bowling": "Boliche",
+          "candle": "Vela",
+          "cat": "Gato",
+          "circle": "Círculo",
+          "cloud": "Nuvem",
+          "cloudLightning": "Nuvem com Raio",
+          "crescentMoon": "Lua Crescente",
+          "cross": "Cruz",
+          "dog": "Cachorro",
+          "flower": "Flor",
+          "heart": "Coração",
+          "hiking": "Trilha",
+          "house": "Casa",
+          "iceSkates": "Patins de Gelo",
+          "lightningBolt": "Raio",
+          "movieProjector": "Projetor de Cinema",
+          "mustache": "Bigode",
+          "paintbrush": "Pincel",
+          "star5": "Estrela (5 Pontas)",
+          "vampireFangs": "Presas de Vampiro"
+        },
+        "sizeRadius": "Tamanho (raio em pontos):",
+        "filled": "Preenchido (sólido)",
+        "crossParams": {
+          "heading": "Parâmetros da Cruz",
+          "hBarLength": "Comprimento da Barra Horizontal (pontos):",
+          "vBarThickness": "Espessura da Barra Vertical (pontos):",
+          "hBarThickness": "Espessura da Barra Horizontal (pontos):",
+          "crossbarRatio": "Proporção da Altura da Barra Transversal (0,1 - 0,9):"
+        }
+      },
+      "custom": {
+        "sizeRadius": "Tamanho (raio em pontos):",
+        "sides": "Lados:",
+        "rotation": "Rotação (graus):",
+        "filled": "Preenchido (sólido)"
+      },
+      "raisedPrint": {
+        "loadingFont": "Carregando fonte de impressão...",
+        "errorPrefix": "Erro: {{message}}",
+        "printText": "Texto Impresso:",
+        "fontSize": "Tamanho da Fonte (altura em pontos):",
+        "letterStyle": "Estilo de Letra:",
+        "thickBubble": "Letras Bolha Grossas",
+        "thinSingleStroke": "Letras Finas (Traço Único)",
+        "filledSolid": "Preenchido (letras em bloco sólido)",
+        "loadingFontShort": "Carregando fonte...",
+        "fontNotLoaded": "Fonte não carregada."
+      }
+    },
+    "summaries": {
+      "clock": "Relógio mostrando {{hours}}:{{minutes}}",
+      "fraction": "Círculo de fração mostrando {{numerator}} de {{denominator}}",
+      "numberLine": "Reta numérica de {{start}} a {{end}} com passos de {{step}}",
+      "base10": "Blocos base-10 mostrando {{hundreds}} centenas, {{tens}} dezenas e {{ones}} unidades",
+      "manipulatives": "Matriz de manipulativos com {{rows}} linhas e {{columns}} colunas",
+      "shapeFilled": "{{label}} (tamanho {{radius}}, preenchido)",
+      "shapeOutline": "{{label}} (tamanho {{radius}}, contorno)",
+      "cross": "Cruz (altura {{height}}, largura {{width}}, espessura vertical {{vThick}}, espessura horizontal {{hThick}}, {{fillState}})",
+      "polygon": "Polígono com {{sides}} lados (tamanho {{radius}}, {{fillState}})",
+      "raisedPrintThin": "Texto impresso em relevo \"{{text}}\" (tamanho da fonte {{size}}, letras finas)",
+      "raisedPrintFilled": "Texto impresso em relevo \"{{text}}\" (tamanho da fonte {{size}}, {{fillState}})",
+      "fillStateFilled": "preenchido",
+      "fillStateOutline": "contorno"
+    }
+  },
+  "chart": {
+    "title": "Gerador de Gráfico de Dados para Braille",
+    "close": "Fechar",
+    "closeIcon": "✕",
+    "closeAriaLabel": "Fechar gerador de gráfico",
+    "statusPrefix": "Status: {{message}}",
+    "stepAnnouncement": "Passo {{current}} de 4: {{stepName}}. Os gráficos usam células de 6 pontos de baixa resolução; um resumo em texto simples é inserido com cada gráfico para que os valores exatos permaneçam disponíveis para leitura e impressão em relevo.",
+    "steps": {
+      "data": "Dados",
+      "chartTypeAndGrid": "Tipo de gráfico e grade",
+      "labels": "Rótulos",
+      "review": "Revisão"
+    },
+    "progressAriaLabel": "Progresso",
+    "back": "Voltar",
+    "next": "Próximo",
+    "insertChartAndSummary": "Inserir gráfico e resumo",
+    "dataStep": {
+      "xValuesLabel": "Valores de X (separados por vírgula, opcional)",
+      "xValuesPlaceholder": "ex.: 1990, 2000, 2010 — ou deixe vazio para 0, 1, 2, …",
+      "xValuesHint": "Se fornecido, deve ter a mesma quantidade que Y. Vazio usa 0, 1, 2, … em ordem.",
+      "yValuesLabel": "Valores de Y (separados por vírgula)",
+      "yValuesPlaceholder": "ex.: 10, 25, 18",
+      "pasteHint": "Opcional: cole CSV — um Y por linha, ou duas colunas (X, Y) por linha",
+      "pastePlaceholder": "ex.: 10, 20, 30 ou duas colunas: 1, 10 / 2, 20",
+      "loadFromPaste": "Carregar do texto colado"
+    },
+    "chartTypeStep": {
+      "chartType": "Tipo de gráfico",
+      "line": "Gráfico de linha",
+      "bar": "Gráfico de barras",
+      "width": "Largura (células, 5–80)",
+      "height": "Altura (linhas, 5–40)",
+      "mathHeading": "Matemática em LaTeX (Nemeth vs UEB)",
+      "mathDescription": "Aplica-se quando o editor traduz $$…$$ e \\(…\\). Essa escolha é salva para o aplicativo e usada em todo o documento. Com Nemeth, as linhas numéricas usam blocos $$…$$ (tipo e título permanecem literários), e uma alimentação de formulário coloca o gráfico na página seguinte; com UEB math, o resumo permanece em prosa simples acima do gráfico na mesma sequência de páginas.",
+      "mathAriaLabel": "Código braille matemático para LaTeX",
+      "nemeth": "Nemeth — notação matemática dos EUA (frequentemente envolvida para contexto literário UEB)",
+      "uebMath": "UEB math — Braille Inglês Unificado matemático"
+    },
+    "labelsStep": {
+      "titleOptional": "Título (opcional)",
+      "xAxisLabel": "Rótulo do eixo X (opcional)",
+      "yAxisLabel": "Rótulo do eixo Y (opcional)"
+    },
+    "reviewStep": {
+      "heading": "Revisão — resumo de texto a inserir",
+      "nemethNote": "Layout Nemeth abaixo: as linhas de tipo e título são literárias; grade, intervalo, eixos e cada par de valores usam $$…$$. O gráfico começa na próxima página após uma alimentação de formulário. A matemática em LaTeX em outras partes usa Nemeth (definido no passo 2).",
+      "uebNote": "O inglês simples abaixo aparecerá acima do gráfico tátil e será traduzido com sua tabela literária como o restante do documento. A matemática em LaTeX no arquivo usa UEB math (definido no passo 2).",
+      "fixDataHint": "Corrija os dados no passo 1 antes de inserir."
+    },
+    "messages": {
+      "dataOk": "Dados OK. {{count}} pontos.",
+      "twoColumnsLoaded": "{{count}} pontos carregados (duas colunas: X, Y).",
+      "xyFromEachLine": "{{count}} pontos carregados (X, Y de cada linha).",
+      "yOnlyLoaded": "{{count}} valores de Y carregados de {{rows}} linha(s). X deixado vazio (0, 1, 2, …).",
+      "noNumbersFound": "Nenhum número encontrado no texto colado.",
+      "countMismatch": "X tem {{xCount}} número(s) e Y tem {{yCount}}. As quantidades devem coincidir, ou deixe X vazio para 0, 1, 2, …",
+      "addAtLeastOnePoint": "Adicione pelo menos um ponto de dado.",
+      "tooManyPoints": "Muitos pontos (máximo 512).",
+      "xyCountMismatch": "X e Y devem ter o mesmo número de valores.",
+      "invalidYAt": "Valor de Y inválido na posição {{index}}.",
+      "invalidXAt": "Valor de X inválido na posição {{index}}.",
+      "widthRange": "A largura deve estar entre 5 e 80 células.",
+      "heightRange": "A altura deve estar entre 5 e 40 linhas.",
+      "invalidNumber": "Número inválido: \"{{value}}\".",
+      "noNumericValues": "Nenhum valor numérico encontrado no texto colado.",
+      "multiColumnWarning": "Esse texto colado parece ter várias colunas. Use um valor de Y por linha, uma linha de valores de Y separados por vírgula, ou duas colunas (X, Y) em cada linha."
+    },
+    "summary": {
+      "lineChart": "Gráfico de linha",
+      "barChart": "Gráfico de barras",
+      "lineChartTitled": "Gráfico de linha: {{title}}",
+      "barChartTitled": "Gráfico de barras: {{title}}",
+      "grid": "Grade {{width}} células de largura por {{height}} linhas de altura. {{count}} ponto(s).",
+      "range": "Intervalo: mínimo {{min}}, máximo {{max}}.",
+      "yAxis": "Eixo Y: {{label}}.",
+      "xAxis": "Eixo X: {{label}}.",
+      "valuesHeading": "Valores (x, y):",
+      "valueRow": "  {{x}}: {{y}}"
+    },
+    "nemeth": {
+      "kindLine": "{{kind}}:",
+      "grid": "$$Grade {{width}} células de largura por {{height}} linhas de altura. {{count}} ponto(s).$$",
+      "range": "$$Intervalo: mínimo {{min}}, máximo {{max}}.$$",
+      "axis": "$${{axisParts}}.$$",
+      "valuesHeading": "Valores (x, y):",
+      "valueRow": "  $${{x}}: {{y}}$$"
+    }
+  }
+}

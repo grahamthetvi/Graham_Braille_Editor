@@ -1,10 +1,21 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
-import { printBrf, getPrinters } from '../services/bridge-client';
+import { useTranslation } from 'react-i18next';
+import { printBrf, getPrinters, type PrintTarget } from '../services/bridge-client';
 import { printBrfWebUSB } from '../services/webusb-client';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isMac, isWindows } from '../utils/os';
 
-const VIEWPLUS_SUPPORT_EMAIL = 'grahamthetvi@icloud.com';
+/** Maps known embosser driver ids to their `print.drivers.*` translation keys. */
+const EMBOSSER_ID_TO_TRANSLATION_KEY: Record<string, string> = {
+  generic: 'print.drivers.genericFallback',
+  'enabling-romeo': 'print.drivers.enablingTechnologies',
+  'index-basic': 'print.drivers.indexBraille',
+  'braillo-200': 'print.drivers.braillo',
+  'aph-pageblaster': 'print.drivers.aphPageBlaster',
+  'aph-pixblaster': 'print.drivers.aphPixBlaster',
+  'viewplus-embraille': 'print.drivers.viewPlusEmBraille',
+  viewplus: 'print.drivers.viewPlusFamily',
+};
 
 interface PrintPanelProps {
   brf: string;
@@ -41,11 +52,16 @@ export function PrintPanel({
   cellsPerRow = 32,
   linesPerPage = 25,
 }: PrintPanelProps) {
+  const { t } = useTranslation();
+  const embosserDisplayName = (id: string, fallbackName: string): string => {
+    const key = EMBOSSER_ID_TO_TRANSLATION_KEY[id];
+    return key ? t(key) : fallbackName;
+  };
   const [printerName, setPrinterName] = useState('');
   const [selectedDriverId, setSelectedDriverId] = useState('generic');
   const [status, setStatus] = useState<'idle' | 'printing' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [availablePrinters, setAvailablePrinters] = useState<string[]>([]);
+  const [availablePrinters, setAvailablePrinters] = useState<PrintTarget[]>([]);
   const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
   const [printRange, setPrintRange] = useState<'all' | 'custom'>('all');
   const [customRange, setCustomRange] = useState('');
@@ -82,7 +98,7 @@ export function PrintPanel({
         setAvailablePrinters(printers);
         setIsLoadingPrinters(false);
         if (printers.length > 0 && !printerName) {
-          handlePrinterSelect(printers[0]);
+          handlePrinterSelect(printers[0].id, printers[0]);
         }
       }).catch(() => setIsLoadingPrinters(false));
     }
@@ -98,9 +114,10 @@ export function PrintPanel({
     }
   }
 
-  function handlePrinterSelect(name: string) {
-    setPrinterName(name);
-    const lower = name.toLowerCase();
+  function handlePrinterSelect(id: string, targetHint?: PrintTarget) {
+    setPrinterName(id);
+    const target = targetHint ?? availablePrinters.find(p => p.id === id);
+    const lower = (target?.printer || target?.name || id).toLowerCase();
     let driverId = selectedDriverId;
     if (lower.includes('embraille')) {
       driverId = 'viewplus-embraille';
@@ -125,11 +142,11 @@ export function PrintPanel({
 
   async function handlePrint() {
     if (!useWebUSB && !printerName.trim()) {
-      setErrorMsg('Please enter a printer name.');
+      setErrorMsg(t('print.errors.enterPrinterName'));
       return;
     }
     if (!brf) {
-      setErrorMsg('No Braille content to print. Type something first.');
+      setErrorMsg(t('print.errors.noContent'));
       return;
     }
     setStatus('printing');
@@ -141,7 +158,7 @@ export function PrintPanel({
       if (printRange === 'custom') {
         const selectedPageNums = parseCustomRange(customRange, allPages.length);
         if (selectedPageNums.length === 0) {
-          setErrorMsg('Invalid custom page range or no pages match.');
+          setErrorMsg(t('print.errors.invalidRange'));
           setStatus('error');
           return;
         }
@@ -173,7 +190,7 @@ export function PrintPanel({
       onExport?.();
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+      setErrorMsg(err instanceof Error ? err.message : t('print.errors.unknown'));
     }
   }
 
@@ -212,7 +229,7 @@ export function PrintPanel({
       onExport?.();
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+      setErrorMsg(err instanceof Error ? err.message : t('print.errors.unknown'));
     }
   }
 
@@ -224,14 +241,11 @@ export function PrintPanel({
     return (
       <div style={compact ? { flexBasis: '100%', marginTop: '0.35rem' } : undefined}>
         <div style={{ ...style, color: '#0369a1' }}>
-          <strong>ViewPlus:</strong> Single-sheet feeding and driver margins vary by model.
-          If you tune the layout for your paper and want to share what works,
-          email{' '}
-          <a href={`mailto:${VIEWPLUS_SUPPORT_EMAIL}`}>{VIEWPLUS_SUPPORT_EMAIL}</a>.
+          {t('print.viewPlusNotice.body')}
         </div>
         {isWindows() || isMac() ? (
           <div style={{ ...style, color: '#0369a1' }}>
-            <strong>Driver:</strong> Use the official ViewPlus printer driver for your embosser.
+            {t('print.viewPlusNotice.driver')}
           </div>
         ) : null}
 
@@ -243,11 +257,11 @@ export function PrintPanel({
     return (
       <div className="print-panel-compact">
         {!useWebUSB && !bridgeConnected && (
-          <span className="bridge-badge" role="status">Bridge offline</span>
+          <span className="bridge-badge" role="status">{t('print.compact.bridgeOffline')}</span>
         )}
         {!useWebUSB && (
           <>
-            <label htmlFor="printer-name-compact">Printer</label>
+            <label htmlFor="printer-name-compact">{t('print.compact.printer')}</label>
             <select
               id="printer-name-compact"
               className="printer-input"
@@ -256,43 +270,43 @@ export function PrintPanel({
               disabled={!bridgeConnected || isLoadingPrinters}
             >
               {isLoadingPrinters ? (
-                <option>Loading...</option>
+                <option>{t('print.compact.loading')}</option>
               ) : availablePrinters.length === 0 ? (
-                <option value="">No printers found</option>
+                <option value="">{t('print.compact.noPrintersFound')}</option>
               ) : (
-                availablePrinters.map(p => <option key={p} value={p}>{p}</option>)
+                availablePrinters.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
               )}
             </select>
           </>
         )}
         <select
           className="printer-input"
-          aria-label="Embosser driver model"
+          aria-label={t('print.compact.driverAriaLabel')}
           value={selectedDriverId}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => handleDriverSelect(e.target.value)}
           style={{ width: '130px', marginLeft: '0.4rem' }}
         >
-          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{embosserDisplayName(e.id, e.name)}</option>)}
         </select>
         <select
           className="printer-input"
-          aria-label="Print range"
+          aria-label={t('print.compact.rangeAriaLabel')}
           value={printRange}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => setPrintRange(e.target.value as 'all' | 'custom')}
           style={{ width: '80px', marginLeft: '0.4rem' }}
         >
-          <option value="all">All Pages</option>
-          <option value="custom">Custom</option>
+          <option value="all">{t('print.compact.allPages')}</option>
+          <option value="custom">{t('print.compact.custom')}</option>
         </select>
         {printRange === 'custom' && (
           <input
             type="text"
             className="printer-input"
-            placeholder="e.g. 1-3, 5"
+            placeholder={t('print.compact.customPlaceholder')}
             value={customRange}
             onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomRange(e.target.value)}
             style={{ width: '80px', marginLeft: '0.4rem' }}
-            aria-label="Custom page range"
+            aria-label={t('print.compact.customRangeAriaLabel')}
           />
         )}
         <button
@@ -300,30 +314,30 @@ export function PrintPanel({
           onClick={handlePrint}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
-          {status === 'printing' ? 'Sending…' : useWebUSB ? 'Select & Print (USB)' : 'Print'}
+          {status === 'printing' ? t('print.compact.sending') : useWebUSB ? t('print.compact.selectAndPrint') : t('print.compact.print')}
         </button>
         <button
           className="toolbar-btn"
           onClick={handlePrintBoundaryTest}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
-          title="Print a test page with numbered rows/columns to check print margins and limits"
+          title={t('print.compact.boundaryTest.title')}
           style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
         >
-          Boundary Test
+          {t('print.compact.boundaryTest.label')}
         </button>
         {bridgeConnected && !useWebUSB && (
           <button
             className="toolbar-btn"
             onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
-            title="Open Bridge Debug Dashboard"
+            title={t('print.compact.debug.title')}
             style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
           >
-            Debug
+            {t('print.compact.debug.label')}
           </button>
         )}
         {renderViewPlusNotice()}
         {status === 'success' && (
-          <span className="print-status-ok" aria-live="polite">✓ Sent</span>
+          <span className="print-status-ok" aria-live="polite">{t('print.compact.sent')}</span>
         )}
         {(status === 'error' || (errorMsg && status === 'idle')) && (
           <span className="print-status-err" role="alert">{errorMsg}</span>
@@ -334,21 +348,26 @@ export function PrintPanel({
 
   return (
     <div className="print-panel">
-      <h3>{useWebUSB ? 'WebUSB Embossing' : 'Print to Embosser'}</h3>
+      <h3>{useWebUSB ? t('print.full.webUsbHeading') : t('print.full.heading')}</h3>
 
       {!useWebUSB && !bridgeConnected && (
         <p className="bridge-warning" role="status">
-          Bridge not connected. Download and run the bridge binary to enable printing.
+          {t('print.full.bridgeNotConnected')}
+        </p>
+      )}
+      {bridgeConnected && !useWebUSB && (
+        <p className="bridge-hint" role="note" style={{ fontSize: '0.85rem', marginBottom: '0.75rem', color: 'var(--text-secondary, #666)' }}>
+          {t('print.full.sharedHint')}
         </p>
       )}
 
       {useWebUSB ? (
         <p className="webusb-info" style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
-          Select your embosser securely directly from the browser window prompt.
+          {t('print.full.selectSecurely')}
         </p>
       ) : (
         <>
-          <label htmlFor="printer-name">Select Printer</label>
+          <label htmlFor="printer-name">{t('print.full.selectPrinter')}</label>
           <select
             id="printer-name"
             value={printerName}
@@ -357,31 +376,31 @@ export function PrintPanel({
             style={{ padding: '0.4rem', marginBottom: '1rem' }}
           >
             {isLoadingPrinters ? (
-              <option>Loading...</option>
+              <option>{t('print.compact.loading')}</option>
             ) : availablePrinters.length === 0 ? (
-              <option value="">No printers found on computer</option>
+              <option value="">{t('print.full.noPrintersFound')}</option>
             ) : (
-              availablePrinters.map(p => <option key={p} value={p}>{p}</option>)
+              availablePrinters.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
             )}
           </select>
         </>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>
-        <label htmlFor="embosser-driver">Embosser Driver Model</label>
+        <label htmlFor="embosser-driver">{t('print.full.driverModel')}</label>
         <select
           id="embosser-driver"
           value={selectedDriverId}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => handleDriverSelect(e.target.value)}
           style={{ padding: '0.4rem' }}
         >
-          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          {EMBOSSER_LIST.map(e => <option key={e.id} value={e.id}>{embosserDisplayName(e.id, e.name)}</option>)}
         </select>
         {renderViewPlusNotice()}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem' }}>
-        <label>Pages to Print</label>
+        <label>{t('print.full.pagesToPrint')}</label>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.2rem' }}>
           <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', fontSize: '0.9rem' }}>
             <input
@@ -391,7 +410,7 @@ export function PrintPanel({
               onChange={() => setPrintRange('all')}
               style={{ marginRight: '0.3rem' }}
             />
-            All Pages
+            {t('print.full.allPages')}
           </label>
           <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', fontSize: '0.9rem', marginLeft: '1rem' }}>
             <input
@@ -401,16 +420,16 @@ export function PrintPanel({
               onChange={() => setPrintRange('custom')}
               style={{ marginRight: '0.3rem' }}
             />
-            Custom
+            {t('print.full.custom')}
           </label>
           {printRange === 'custom' && (
             <input
               type="text"
-              placeholder="e.g. 1-5, 8, 11-13"
+              placeholder={t('print.full.customPlaceholder')}
               value={customRange}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomRange(e.target.value)}
               style={{ padding: '0.3rem', width: '150px' }}
-              aria-label="Custom page range"
+              aria-label={t('print.compact.customRangeAriaLabel')}
             />
           )}
         </div>
@@ -421,14 +440,14 @@ export function PrintPanel({
           onClick={handlePrint}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
-          {status === 'printing' ? 'Printing...' : useWebUSB ? 'Select Embosser & Print' : 'Print'}
+          {status === 'printing' ? t('print.full.printing') : useWebUSB ? t('print.full.selectEmbosserAndPrint') : t('print.full.print')}
         </button>
         <button
           onClick={handlePrintBoundaryTest}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
           style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
         >
-          Print Boundary Test
+          {t('print.full.printBoundaryTest')}
         </button>
         
         {bridgeConnected && !useWebUSB && (
@@ -436,16 +455,16 @@ export function PrintPanel({
             onClick={() => window.open('http://127.0.0.1:8080/debug', '_blank')}
             style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
           >
-            Debug Dashboard
+            {t('print.full.debugDashboard')}
           </button>
         )}
       </div>
 
       {status === 'success' && (
-        <p className="status-ok" aria-live="polite">Sent to embosser successfully.</p>
+        <p className="status-ok" aria-live="polite">{t('print.full.sentSuccess')}</p>
       )}
       {status === 'error' && (
-        <p className="status-err" role="alert">Error: {errorMsg}</p>
+        <p className="status-err" role="alert">{t('print.full.errorPrefix', { error: errorMsg })}</p>
       )}
       {errorMsg && status === 'idle' && (
         <p className="status-err" role="alert">{errorMsg}</p>

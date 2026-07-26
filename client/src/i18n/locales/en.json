@@ -1,0 +1,1076 @@
+{
+  "app": {
+    "brand": {
+      "title": "Graham Braille Editor",
+      "subtitle": "Braille Editing & Embossing Suite",
+      "skipLink": "Skip to main content"
+    },
+    "tabs": {
+      "file": "File",
+      "view": "View & Layout",
+      "languagesCodes": "Languages & Codes",
+      "tools": "Teaching Tools",
+      "help": "Help & Support"
+    },
+    "file": {
+      "import": {
+        "label": "Import file",
+        "ariaLabel": "Import text or BRF file",
+        "title": "Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+      },
+      "drafts": {
+        "label": "Drafts",
+        "labelWithCount": "Drafts ({{count}})",
+        "ariaLabel": "View drafts",
+        "title": "View unsaved drafts from the last 30 days"
+      },
+      "downloadBrf": {
+        "label": "Download BRF",
+        "ariaLabel": "Download translated BRF file",
+        "title": "Download BRF with Layout settings: cells per row, lines per page, paragraph line starts, optional page numbers, CRLF lines, form feed between pages"
+      },
+      "downloadPrintLayout": {
+        "label": "Download print layout",
+        "ariaLabel": "Download print layout text file",
+        "title": "Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
+      },
+      "tts": {
+        "selectAriaLabel": "Text-to-speech engine for MP3 export"
+      },
+      "downloadMp3": {
+        "label": "Download MP3",
+        "exportingLabel": "Exporting MP3…",
+        "ariaLabel": "Download MP3 audio",
+        "title": "Download MP3 of the editor text using the selected browser TTS engine (Kitten, eSpeak NG, or Piper). First use may download a voice model.",
+        "status": {
+          "starting": "Starting…",
+          "loadingKitten": "Loading Kitten TTS model…",
+          "synthesizingKitten": "Synthesizing with Kitten…",
+          "loadingEspeak": "Loading eSpeak NG…",
+          "synthesizingEspeak": "Synthesizing with eSpeak NG…",
+          "loadingPiper": "Loading Piper voice (first run downloads the model)…",
+          "downloadingPiper": "Downloading Piper model… {{percent}}%",
+          "decodingPiper": "Decoding Piper audio…",
+          "encodingMp3": "Encoding MP3…"
+        },
+        "errorPrefix": "MP3 export failed: {{error}}",
+        "errors": {
+          "emptyText": "Nothing to speak — enter some text first.",
+          "textTooLong": "Text exceeds {{limit}} character limit for audio export.",
+          "emptyAudio": "TTS produced empty audio."
+        }
+      },
+      "print": {
+        "label": "Print",
+        "title": "Toggle Print to Embosser panel"
+      }
+    },
+    "view": {
+      "layoutSettings": {
+        "label": "Layout Settings",
+        "title": "Configure page layout (cells per row, lines per page)"
+      },
+      "syncHighlight": {
+        "label": "Sync Highlight",
+        "ariaLabel": "Toggle braille highlight sync",
+        "title": "Highlight corresponding braille words when selecting text in the editor."
+      },
+      "theme": {
+        "labels": {
+          "dark": "Dark",
+          "light": "Light",
+          "highContrast": "Hi-Con"
+        },
+        "cycleTitle": "Cycle theme: dark → light → high contrast",
+        "cycleAriaLabel": "Switch theme (current: {{theme}}). Click to switch to {{nextTheme}} theme."
+      }
+    },
+    "languages": {
+      "table": {
+        "label": "Table",
+        "title": "Select a liblouis braille translation table",
+        "ariaLabel": "Select braille translation table"
+      },
+      "language": {
+        "label": "Languages",
+        "ariaLabel": "Select language"
+      },
+      "autoPair": {
+        "on": {
+          "label": "Auto-pair: On",
+          "title": "Automatically switch the braille table to match the selected language"
+        },
+        "off": {
+          "label": "Auto-pair: Off",
+          "title": "Keep the currently selected braille table when changing language"
+        }
+      }
+    },
+    "tools": {
+      "perkins": {
+        "label": "Perkins Viewer",
+        "title": "Toggle Perkins Brailler Translator layout"
+      },
+      "graphics": {
+        "label": "Graphics",
+        "title": "Open the Tactile Graphics Editor",
+        "ariaLabel": "Tactile Graphics Editor"
+      },
+      "alphabet": {
+        "label": "Alphabet Exercises",
+        "title": "Insert alphabet and simple words exercises",
+        "ariaLabel": "Alphabet & Words Generator"
+      },
+      "stl": {
+        "label": "Door Sign (STL)",
+        "title": "Export the paginated Braille preview as a 3D STL door sign (BANA midpoint dot spacing, millimeters) for 3D printing.",
+        "ariaLabel": "Export Braille layout as STL for 3D printing"
+      },
+      "grading": {
+        "label": "Download Grading Print Layout",
+        "title": "Download print layout (.rtf) with grading metrics; choose whether the grading header appears on all pages.",
+        "ariaLabel": "Download grading print layout text file"
+      },
+      "uebMathHint": "UEB Math is standard and $$math$$ is Nemeth.",
+      "copyAiPrompt": {
+        "label": "Copy AI Prompt",
+        "title": "Copy prompt for AI to format math",
+        "ariaLabel": "Copy prompt for AI to format math",
+        "promptText": "Extract raw text for the purpose of braille translation. Please reformat my text so that every mathematical expression, equation, and arithmetic operation is wrapped in LaTeX notation: \\(...\\) for inline math and $$...$$ for display equations. Leave all non-math prose unchanged."
+      },
+      "copied": "Copied!"
+    },
+    "help": {
+      "userGuide": {
+        "label": "User Guide",
+        "title": "Open the User Guide",
+        "ariaLabel": "Open User Guide"
+      },
+      "privacy": {
+        "label": "Privacy Policy",
+        "title": "Open the Privacy Policy",
+        "ariaLabel": "Open Privacy Policy"
+      },
+      "tipMe": {
+        "label": "Tip Me",
+        "title": "Support Graham Braille Editor",
+        "ariaLabel": "Tip me on Buy Me a Coffee"
+      },
+      "build": "Build: {{buildNumber}}"
+    },
+    "panes": {
+      "textInput": {
+        "title": "Text Input"
+      },
+      "brfPreview": {
+        "title": "BRF Preview",
+        "translatingSuffix": " — translating…",
+        "ariaLabel": "Braille preview output"
+      },
+      "translating": "Translating… {{progress}}%"
+    },
+    "pageBreak": {
+      "label": "Page Break",
+      "ariaLabel": "Insert page break",
+      "title": "Insert page break / Form Feed (Cmd+Enter / Ctrl+Enter)"
+    },
+    "pageNav": {
+      "prev": {
+        "symbol": "◀",
+        "title": "Jump to previous page",
+        "ariaLabel": "Previous page"
+      },
+      "next": {
+        "symbol": "▶",
+        "title": "Jump to next page",
+        "ariaLabel": "Next page"
+      },
+      "pageOf": "Page {{current}} of {{total}}"
+    },
+    "layoutSettings": {
+      "presets": {
+        "usLetter": {
+          "label": "8.5×11in",
+          "title": "Standard 8.5×11 inch paper (US Letter)"
+        },
+        "wideTractor": {
+          "label": "11×11.5in",
+          "title": "Wide 11×11.5 inch tractor feed paper"
+        },
+        "custom": {
+          "label": "Custom",
+          "title": "Custom dimensions (set cells and lines below)"
+        }
+      },
+      "cellsPerRow": {
+        "label": "Cells / row",
+        "ariaLabel": "Braille cells per row"
+      },
+      "linesPerPage": {
+        "label": "Lines / page",
+        "ariaLabel": "Lines per page"
+      },
+      "showPageNums": {
+        "label": "Show Page Nums",
+        "ariaLabel": "Show Page Numbers"
+      },
+      "sizeHint": "Common: 32 × 25 (8.5×11), 40 × 25 (11×11.5)",
+      "paragraphFormat": {
+        "ariaLabel": "Paragraph line start positions",
+        "heading": "Paragraph line starts (1–5)",
+        "note": "Each new line from Enter is a paragraph: pick which cell the first line begins on and which cell runover lines use (e.g. literary 3–5). ViewPlus left padding adds the same blank cells to every line, so these positions stay aligned on the page.",
+        "rowHead": "First {{n}}",
+        "cellLabel": "{{first}}-{{run}}",
+        "matrixCellAriaLabel": "First line cell {{first}}, runover cell {{run}}",
+        "quickLabel": "Quick:",
+        "quickFlush": "1–1 (flush)",
+        "quickLiterary": "3–5 (literary)"
+      },
+      "embosserPadding": {
+        "ariaLabel": "Embosser edge padding",
+        "heading": "Embosser edge padding",
+        "note": "If your embosser feeds sheets offset and loses characters on the left edge, we can add optional left padding (blank cells) on each line. This applies to any embosser and paper size. If you find a setting that works well for your setup, email grahamthetvi@icloud.com so we can add it to the presets.",
+        "leftPadding": {
+          "label": "Left padding (cells)",
+          "ariaLabel": "Left padding in braille cells"
+        },
+        "appliedHint": "Padding is applied to all print jobs.",
+        "quickPreset": {
+          "label": "Quick preset",
+          "ariaLabel": "ViewPlus padding preset",
+          "placeholder": "Apply model preset…",
+          "none": "None (0)",
+          "viewPlusMax": "ViewPlus Max (15)",
+          "viewPlusRogue": "ViewPlus Rogue (0)",
+          "viewPlusPremier": "ViewPlus Premier (0)",
+          "viewPlusEmBraille": "ViewPlus EmBraille (0)"
+        }
+      },
+      "brailleDisplay": {
+        "ariaLabel": "Braille display settings",
+        "heading": "Braille Display Settings",
+        "displaySize": {
+          "label": "Display size",
+          "ariaLabel": "Braille display cell size slider",
+          "valueSuffix": "{{px}}px"
+        },
+        "showEmptyDots": {
+          "label": "Show empty dots",
+          "ariaLabel": "Show empty dots in braille cells"
+        },
+        "emptyDotSize": {
+          "label": "Empty dot size",
+          "ariaLabel": "Braille display empty dot size slider",
+          "value": "{{px}}px"
+        }
+      },
+      "placeholders": {
+        "loading": "Loading liblouis WASM…",
+        "typeToSee": "Type in the editor or open a file to see braille output."
+      },
+      "translationErrorPrefix": "Translation error: {{error}}",
+      "braillePreviewAriaLabel": "Braille pages",
+      "pageLabel": "Braille page {{page}} of {{total}}",
+      "pageMarker": "p. {{page}}"
+    },
+    "brailleCell": {
+      "space": "Space",
+      "emptyCell": "Empty Cell",
+      "withChar": "Braille '{{char}}' (Dots {{dots}})",
+      "dotsOnly": "Braille (Dots {{dots}})"
+    }
+  },
+
+  "tts": {
+    "kitten": {
+      "label": "Kitten (default)",
+      "description": "Lightweight neural voice (~25–60 MB first download)"
+    },
+    "espeak": {
+      "label": "eSpeak NG",
+      "description": "Very small robotic voice; fastest load"
+    },
+    "piper": {
+      "label": "Piper",
+      "description": "Higher-quality neural voice (larger download)"
+    }
+  },
+
+  "welcome": {
+    "ariaLabel": "Close welcome guide",
+    "titleFirstVisit": "Welcome to Graham Braille Editor",
+    "titleReturning": "User Guide",
+    "closeIcon": "✕",
+    "sections": {
+      "layout": {
+        "heading": "Page Layout — Presets, Cells & Lines",
+        "body": "Click Layout Settings under the View & Layout tab to open page settings. Use quick presets: 8.5×11in (US Letter, 32 × 25 cells) or 11×11.5in (wide tractor paper, 40 × 25), or choose Custom and set Cells / row (10–100) and Lines / page (5–50) yourself—for example 28 lines for A4-style pages. These values drive the on-screen preview, the downloaded .brf, and are saved for your next visit.",
+        "viewPlusNote": "ViewPlus embossers: Under Layout Settings you can tune left padding (extra blank cells per line) for US Letter. Padding is applied when printing only if your layout is US Letter (8.5×11 preset or 32 × 25). Single-sheet alignment varies by model; if you dial in a value that works for your paper and want to share it, email grahamthetvi@icloud.com. When you use Print with a ViewPlus driver, a short reminder appears there too."
+      },
+      "embossing": {
+        "heading": "Seamless Embossing (WebUSB & Bridge)",
+        "body": "The app includes embosser drivers for Enabling Technologies, Index, ViewPlus, Braillo, and others—pick the model that matches your device when you print. ChromeOS users can use WebUSB to send braille directly from the browser. Windows/macOS/Linux users run the small Graham Bridge app so print jobs reach the embosser reliably. ViewPlus left-margin tuning stays under Layout Settings (see above). By default the bridge listens only on 127.0.0.1:8080 and accepts browser traffic from official Graham Braille Editor sites (and local dev). Optional Share mode lets another Bridge on your LAN send jobs (paired with a short code).",
+        "windows": {
+          "heading": "Windows Bridge",
+          "steps": [
+            "Download & extract the zip",
+            "Move .exe to a safe folder",
+            "Add to Startup folder"
+          ]
+        },
+        "macos": {
+          "heading": "macOS Bridge",
+          "steps": [
+            "Drag .app to Applications",
+            "Right-click → Open first time",
+            "Add to Login Items"
+          ]
+        },
+        "linux": {
+          "heading": "Linux Bridge",
+          "steps": [
+            "ZIP: move graham-bridge-linux-amd64 to /usr/local/bin/graham-bridge, install the .desktop file, launch from the app menu",
+            "Fedora / RPM: from Releases, download graham-bridge-<version>-linux-fedora.x86_64.rpm, then sudo dnf install ./that-file.rpm"
+          ]
+        },
+        "sharedPi": {
+          "heading": "Shared Bridge / Raspberry Pi",
+          "steps": [
+            "On the Pi (Raspberry Pi OS Desktop): install the linux-arm64 Bridge, plug in the embosser, open Bridge → Settings → Share on this network → set a name → note the code and the Pi’s IP address",
+            "On the teacher PC: install Bridge → Settings → Connect to a shared Bridge → enter the Pi’s IP and code",
+            "In the editor, print as usual and choose the shared embosser in the printer list"
+          ],
+          "itNote": "IT: devices must be allowed to talk on the LAN (disable client isolation or use a print VLAN). Reserve a static IP or DNS name for the Pi. Allow TCP port 8081 to the Pi."
+        },
+        "downloadButton": "Download Desktop Bridge"
+      },
+      "math": {
+        "heading": "Math Translation — LaTeX to Braille",
+        "body": "The editor auto-detects LaTeX math in your text and translates it to braille math notation. Wrap display (block) equations in $$…$$ (translated to Nemeth) and inline expressions in \\(…\\) (translated to UEB Math).",
+        "tip": "Tip: For best results, paste your document into an AI assistant (ChatGPT, Claude, Gemini, etc.) with the following request before pasting it here:",
+        "promptText": "\"Please reformat my text so that every mathematical expression, equation, and arithmetic operation — including plain numbers used in a math context — is wrapped in LaTeX notation: \\(…\\) for inline math and $$…$$ for display equations. Leave all non-math prose unchanged.\""
+      },
+      "downloading": {
+        "heading": "Downloading & Autosave",
+        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. If you need a perfectly matched plain text layout to share visually, click Download print layout. This guarantees your print document wraps identically to the braille version.",
+        "autosave": "Your work is automatically saved as you type. Click Drafts under the File tab to view and restore unsaved work from the last 30 days."
+      },
+      "perkins": {
+        "heading": "Perkins Viewer",
+        "body": "Click Perkins Viewer under the Tools tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document."
+      },
+      "largePrint": {
+        "heading": "Large-Print (Jumbo) Braille",
+        "body": "For dual-media print/braille books or low-vision readers, you can insert large-print sections. Click Large Print under the Tools tab to configure size and insert blocks. In the right-hand preview panel, these blocks are translated and rendered as large-print Braille cells in BRF format, preserving tactile readability and alignment."
+      },
+      "graphics": {
+        "heading": "Tactile Graphics & 3D Printing",
+        "body": "Click Graphics under the Tools tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille.",
+        "shapesHeading": "Shape Inventory & Custom Shapes:",
+        "simpleShapes": "Simple Shapes: Lines, rectangles, and adjustable polygons.",
+        "complexShapes": "Complex Shapes: Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross. Shapes like the Cross support adjusting the width/height of the bars directly.",
+        "positioningTool": "Positioning Tool: In the Canvas Tools panel, select the pointer tool to reposition text or shapes on your canvas without resizing them.",
+        "customElements": "Custom Elements: Includes details like a Paintbrush, Flower/Daisy blooms (always rendered with filled centers for contrast), and Vampire Fangs.",
+        "dotPatternPreview": "Dot Pattern Preview: The editor displays canvas shapes as physical Braille dot grids in real-time.",
+        "stlNote": "Additionally, click Door Sign (STL) under the Tools tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing."
+      }
+    },
+    "footer": {
+      "license": "Open source under the GNU General Public License v2. Support: grahamthetvi@icloud.com",
+      "credit": "Created by Addison Graham and built off of APH Braille Blaster."
+    },
+    "buttons": {
+      "getStarted": "Get Started",
+      "closeGuide": "Close Guide"
+    }
+  },
+
+  "privacy": {
+    "ariaLabel": "Close privacy policy",
+    "title": "Privacy Policy (TL;DR)",
+    "closeIcon": "✕",
+    "intro": "At Graham Braille Editor, your privacy and data security are our top priorities. Because of the sensitive nature of the documents you may be translating, we've designed this app to process everything locally.",
+    "tldrLead": "Here is the TL;DR of how we handle your data:",
+    "tldr": {
+      "localProcessing": "100% Local Processing: All braille translation, text processing, and 3D STL generation happens directly inside your web browser. Your documents never leave your device.",
+      "noCloudServers": "No Cloud Servers: We do not upload your text, braille files, or any personal information to any cloud servers.",
+      "localStorageOnly": "Local Storage Only: Your drafts, application settings, and table preferences are saved securely within your browser's local storage.",
+      "offlineCapable": "Offline Capable: Once the web page is loaded, the core translation features work completely offline.",
+      "embosserBridge": "Embosser Bridge: If you use our local printing bridge application, your files are transmitted directly to your local embosser over your own computer/network, not over the internet. Optional Share mode accepts print jobs from other Graham Bridges on your LAN that know your share code—still with no cloud relay.",
+      "noTracking": "No Tracking: We do not use analytics, trackers, or advertising cookies. What you do in the editor is entirely your business."
+    },
+    "readFullPolicy": "Read Comprehensive Privacy Policy",
+    "effectiveDate": "Effective Date: May 2026",
+    "fullPolicy": {
+      "intro": "At Graham Braille Editor, we believe that your data is yours alone. Because our software is used to translate sensitive educational, personal, and professional documents, we have built our architecture around the principle of strict local-first processing. This Privacy Policy details exactly how your information is handled when you use our application.",
+      "section1": {
+        "heading": "1. Information We Do Not Collect",
+        "lead": "We do not collect, transmit, or store any personal information, documents, or usage data.",
+        "noAnalytics": "No Analytics: We do not use Google Analytics, tracking pixels, or any other telemetry to monitor your behavior.",
+        "noAccounts": "No Accounts: You are not required to create an account, provide an email address, or log in to use the editor.",
+        "noCloudStorage": "No Cloud Storage: We do not upload your text, translated braille, imported files, or exported STLs to any server."
+      },
+      "section2": {
+        "heading": "2. How Your Data is Processed (Client-Side Only)",
+        "body": "All core functionality of the Graham Braille Editor happens directly inside your web browser. When you type text, translate it to braille, or generate a 3D printable STL file, the computation is performed entirely by your device's processor using web technologies. Because the processing is local, your documents never leave your computer."
+      },
+      "section3": {
+        "heading": "3. Local Storage",
+        "lead": "To provide a seamless experience, we save certain data locally on your device using your browser's standard localStorage and IndexedDB capabilities. This includes:",
+        "appSettings": "Application Settings: Your selected braille tables, theme preferences (dark/light mode), and page layout configurations.",
+        "autosavedDrafts": "Autosaved Drafts: The text you are currently working on is periodically saved locally so that you do not lose your work if you accidentally close the tab. You can clear this data at any time by clearing your browser's site data or by using the \"Discard All\" functionality within the editor's Drafts menu."
+      },
+      "section4": {
+        "heading": "4. Graham Bridge Application (Optional)",
+        "lead": "If you choose to use the Graham Bridge desktop application to send print jobs to your local embosser, please note:",
+        "localServer": "By default the bridge runs a local server on your machine (binding only to 127.0.0.1) for the web editor. If you enable Share mode, it also listens on your LAN (port 8081) for authenticated jobs from other Graham Bridges that pair with your share code. There is no cloud relay.",
+        "facilitates": "It facilitates communication exclusively between your web browser (via the local Bridge) and your local or paired shared embosser.",
+        "noInternet": "The bridge application does not upload your documents to Graham cloud servers. Optional Share mode stays on your LAN and requires the shared code to pair.",
+        "shareMode": "Anyone on your local network who knows the current share code can pair and send embosser jobs until you regenerate the code or turn Share off."
+      },
+      "section5": {
+        "heading": "5. Third-Party Hosting",
+        "body": "The Graham Braille Editor is delivered to your browser via standard web hosting (such as GitHub Pages). When you visit the site to load the application, the hosting provider may collect standard server logs (such as your IP address and user agent) as part of their standard operational procedures. However, the Graham Braille Editor application itself injects no third-party tracking scripts."
+      },
+      "section6": {
+        "heading": "6. Children's Privacy and Educational Use",
+        "body": "Because our application does not collect, store, or transmit personal data, it is inherently compliant with children's privacy regulations such as COPPA (Children's Online Privacy Protection Act) and FERPA (Family Educational Rights and Privacy Act). It is safe for use in classrooms and by students of all ages."
+      },
+      "section7": {
+        "heading": "7. Changes to this Policy",
+        "body": "We may update this Privacy Policy from time to time. Any changes will be reflected in this document within the application. Because we do not collect your contact information, we cannot notify you of changes via email."
+      },
+      "section8": {
+        "heading": "8. Contact Information",
+        "body": "If you have any questions or concerns about this Privacy Policy or how your data is handled, please contact us at: grahamthetvi@icloud.com"
+      }
+    },
+    "closingLine": "Your privacy is our priority.",
+    "closeButton": "Close"
+  },
+
+  "errorBoundary": {
+    "heading": "🚨 Application Crashed",
+    "message": "We are very sorry, but the Braille Editor encountered an unexpected error. Don't worry, your work may be safe.",
+    "reload": "Reload Application",
+    "reportButton": "📧 Report To Developer",
+    "mailto": {
+      "subject": "Graham Braille Editor Crash",
+      "bodyTemplate": "Describe what you were doing before the crash:\n\n\n--- Crash details ---\nError: {{error}}\n\nStack Trace:\n{{stack}}"
+    },
+    "rescueHeading": "Rescue your untranslated text:",
+    "rescueHint": "Copy everything below to a safe place before clicking \"Reload Application\".",
+    "errorDetailsHeading": "Error Details (for developers)",
+    "unknownStack": "Unknown stack",
+    "unknownError": "Unknown error"
+  },
+
+  "restore": {
+    "ariaLabel": "Drafts",
+    "title": "Drafts (Last 30 Days)",
+    "closeAriaLabel": "Close",
+    "closeButton": "Close",
+    "empty": "No unsaved drafts found.",
+    "description": "These documents were autosaved recently. Active drafts and exported files are preserved here.",
+    "lastEditedPrefix": "Last edited: ",
+    "exported": "Exported",
+    "activeDraft": "Active Draft",
+    "discard": "Discard",
+    "restoreButton": "Restore",
+    "emptyDocument": "Empty document",
+    "confirmDiscardAll": "Are you sure you want to discard all drafts?",
+    "discardAll": "Discard All"
+  },
+
+  "perkins": {
+    "prompt": "Type in the editor or open a file to learn the Perkins Brailler keys.",
+    "currentCharacter": "Current Character",
+    "spaceLabel": "[Space]",
+    "dotLabels": {
+      "d1": "1",
+      "d2": "2",
+      "d3": "3",
+      "d4": "4",
+      "d5": "5",
+      "d6": "6",
+      "space": "SPC"
+    },
+    "title": "Graham Brailler",
+    "keyLabels": {
+      "dot1": "Dot 1",
+      "dot2": "Dot 2",
+      "dot3": "Dot 3",
+      "dot4": "Dot 4",
+      "dot5": "Dot 5",
+      "dot6": "Dot 6",
+      "space": "Space"
+    },
+    "speakAriaLabel": "Speak braille dot and finger hints for the current character",
+    "speakDots": {
+      "label": "Speak dots",
+      "title": "Read which dots to press at once, in order 1 through 6"
+    },
+    "speakFingers": {
+      "label": "Speak fingers",
+      "title": "Read which fingers to use: left pointer to ring for dots 1–3, right pointer to ring for dots 4–6"
+    },
+    "prevStep": "← Previous Step",
+    "stepOf": "Step {{current}} of {{total}}",
+    "nextStep": "Next Step →",
+    "speech": {
+      "fingerNames": {
+        "leftPointer": "left pointer",
+        "leftMiddle": "left middle",
+        "leftRing": "left ring",
+        "rightPointer": "right pointer",
+        "rightMiddle": "right middle",
+        "rightRing": "right ring"
+      },
+      "spaceDots": "Press the space bar. No letter dots for a space.",
+      "noDotsDefined": "No dots are defined for this character in the practice map.",
+      "pressDotsTogether": "Press dots {{list}} together, all at once.",
+      "spaceFingers": "Press the space bar with both thumbs.",
+      "noFingerKeys": "No finger keys for this character in the practice map.",
+      "pressTogether": "Press together: {{list}}."
+    }
+  },
+
+  "alphabetGenerator": {
+    "ariaLabel": "Alphabet Generator",
+    "title": "Alphabet & Words Generator",
+    "close": "Close",
+    "wordListType": {
+      "label": "Word List Type",
+      "simplestCvc": "Simplest CVC Words (e.g. a - ant)",
+      "standardCommon": "Standard Common Nouns (e.g. a - apple)",
+      "animals": "Animals (e.g. a - alligator)"
+    },
+    "letterCasing": {
+      "label": "Letter Casing",
+      "lowercase": "Lowercase (a - apple)",
+      "uppercase": "Uppercase (A - APPLE)",
+      "capitalized": "Capitalized (A - Apple)",
+      "bothCases": "Both Cases (Aa - apple)",
+      "spacedBothCases": "Spaced Both Cases (A a - apple)"
+    },
+    "delimiter": {
+      "label": "Delimiter Separator",
+      "hyphen": "Hyphen ( - )",
+      "colon": "Colon (: )",
+      "equals": "Equals ( = )",
+      "arrow": "Arrow ( → )",
+      "spaces": "Spaces (   )"
+    },
+    "pageBreaks": {
+      "label": "Downwards Page Breaks",
+      "none": "Continuous list (no page breaks)",
+      "everyLetter": "Page break after every letter (1 per page)",
+      "every5": "Page break every 5 letters",
+      "every10": "Page break every 10 letters"
+    },
+    "livePreview": "Live Preview",
+    "pageBreakMarker": "--- PAGE BREAK ---",
+    "cancel": "Cancel",
+    "insert": "Insert Exercises"
+  },
+
+  "stlExport": {
+    "closeAriaLabel": "Close STL export",
+    "closeButton": "Close",
+    "title": "3D Door Sign (STL)",
+    "description": "Uses BANA midpoint dimensions (mm): dot diameter, height, intra-cell, inter-cell, and line spacing. The STL is exported standing upright (Z axis is the sign height, Y is the thickness) for optimal 3D print quality. When exporting exactly one line of text, an ADA-style large print label is generated above the braille (or to the right of any optional logo). Because standing a thin plate upright can be unstable during printing, we highly recommend enabling a brim or raft in your slicer.",
+    "logo": {
+      "heading": "Optional logo (top-left)",
+      "description": "Add a tactile logo: choose an image or SVG, optionally clear a white or light paper background (non-white ink and colors stay), then prepare. SVGs are sampled at the selected STL detail quality; Download SVG wraps the prepared PNG pixels in a minimal SVG container.",
+      "chooseAriaLabel": "Choose logo image",
+      "chooseButton": "Choose image…",
+      "working": "Working…",
+      "prepareButton": "Prepare logo",
+      "downloadSvg": "Download SVG",
+      "clear": "Clear logo",
+      "clearBackground": "Clear near-white background when preparing (preserves darker colors and edges; no cloud ML)",
+      "selected": "Selected: {{filename}}",
+      "widthLabel": "Logo width on plate (mm)",
+      "status": {
+        "fileSelected": "File selected. Choose Prepare logo to rasterize (and optionally remove the background).",
+        "chooseFileFirst": "Choose an image file first.",
+        "clearingBackground": "Rasterizing and clearing near-white pixels…",
+        "rasterizing": "Rasterizing image…",
+        "ready": "Logo ready ({{width}}×{{height}} px, {{quality}} detail). It will appear as raised relief in the STL top-left; braille and large print shift to clear it. Re-prepare after changing logo width or detail quality.",
+        "prepareBeforeDownload": "Prepare a logo before downloading SVG."
+      }
+    },
+    "detail": {
+      "heading": "Raised detail quality",
+      "label": "STL detail",
+      "standard": "Standard ({{samples}} samples/mm)",
+      "high": "High ({{samples}} samples/mm)",
+      "ultra": "Ultra ({{samples}} samples/mm)"
+    },
+    "printLetterHeight": "Print letter height (mm)",
+    "detailHint": "Higher detail improves logos and print letters but produces larger STL files. Braille dot roundness still uses the BANA STL dot setting.",
+    "textSource": {
+      "heading": "Sign Text Source",
+      "custom": "Use custom text",
+      "editor": "Use text from Editor"
+    },
+    "customText": {
+      "label": "Custom Door Sign Text",
+      "placeholder": "e.g. ROOM 101"
+    },
+    "translating": "Translating to Braille...",
+    "scope": {
+      "heading": "Scope",
+      "singlePage": "Single page",
+      "allPages": "All pages (one STL per page)",
+      "pageOf": "Page (1–{{count}})"
+    },
+    "errors": {
+      "workerTerminated": "STL worker terminated unexpectedly.",
+      "workerNotReady": "STL worker is not ready.",
+      "timedOut": "STL generation timed out.",
+      "nothingToExport": "Nothing to export. Translate text and check layout first.",
+      "enterCustomText": "Please enter the custom door sign text."
+    },
+    "cancel": "Cancel",
+    "generating": "Generating…",
+    "download": "Download STL"
+  },
+
+  "gradingPrint": {
+    "closeAriaLabel": "Close grading print layout options",
+    "title": "Grading Print Layout",
+    "close": "Close",
+    "description": "Download print layout (.rtf) matching the braille wrapping with grading metrics prepended.",
+    "onAllPages": {
+      "label": "On all pages",
+      "hint": "When enabled, the grading header is repeated at the top of every page. Otherwise it appears only on the first page."
+    },
+    "cancel": "Cancel",
+    "download": "Download"
+  },
+
+  "print": {
+    "drivers": {
+      "genericFallback": "Generic Text Embosser (Fallback)",
+      "enablingTechnologies": "Enabling Technologies (Romeo/Juliet)",
+      "indexBraille": "Index Braille (Basic-D / Everest)",
+      "braillo": "Braillo (200 / 270)",
+      "aphPageBlaster": "APH PageBlaster",
+      "aphPixBlaster": "APH PixBlaster",
+      "viewPlusEmBraille": "ViewPlus EmBraille",
+      "viewPlusFamily": "ViewPlus (Rogue / Max / Premier)"
+    },
+    "errors": {
+      "enterPrinterName": "Please enter a printer name.",
+      "noContent": "No Braille content to print. Type something first.",
+      "invalidRange": "Invalid custom page range or no pages match.",
+      "unknown": "Unknown error"
+    },
+    "viewPlusNotice": {
+      "body": "Single-sheet feeding and driver margins vary by model. If you tune the layout for your paper and want to share what works, email grahamthetvi@icloud.com.",
+      "driver": "Use the official ViewPlus printer driver for your embosser."
+    },
+    "compact": {
+      "bridgeOffline": "Bridge offline",
+      "printer": "Printer:",
+      "loading": "Loading...",
+      "noPrintersFound": "No printers found",
+      "driverAriaLabel": "Embosser driver model",
+      "rangeAriaLabel": "Print range",
+      "allPages": "All Pages",
+      "custom": "Custom",
+      "customPlaceholder": "e.g. 1-3, 5",
+      "customRangeAriaLabel": "Custom page range",
+      "sending": "Sending…",
+      "selectAndPrint": "Select & Print (USB)",
+      "print": "Print",
+      "boundaryTest": {
+        "title": "Print a test page with numbered rows/columns to check print margins and limits",
+        "label": "Boundary Test"
+      },
+      "debug": {
+        "title": "Open Bridge Debug Dashboard",
+        "label": "Debug"
+      },
+      "sent": "✓ Sent"
+    },
+    "full": {
+      "webUsbHeading": "WebUSB Embossing",
+      "heading": "Print to Embosser",
+      "bridgeNotConnected": "Bridge not connected. Download and run the bridge binary to enable printing.",
+      "sharedHint": "Shared embossers appear after you pair in Bridge Settings (Open Settings from the Bridge tray).",
+      "selectSecurely": "Select your embosser securely directly from the browser window prompt.",
+      "selectPrinter": "Select Printer",
+      "noPrintersFound": "No printers found on computer",
+      "driverModel": "Embosser Driver Model",
+      "pagesToPrint": "Pages to Print",
+      "allPages": "All Pages",
+      "custom": "Custom",
+      "customPlaceholder": "e.g. 1-5, 8, 11-13",
+      "printing": "Printing...",
+      "selectEmbosserAndPrint": "Select Embosser & Print",
+      "print": "Print",
+      "printBoundaryTest": "Print Boundary Test",
+      "debugDashboard": "Debug Dashboard",
+      "sentSuccess": "Sent to embosser successfully.",
+      "errorPrefix": "Error: {{error}}"
+    }
+  },
+
+  "statusBar": {
+    "ariaLabel": "Application status",
+    "bridgeUpdateRequired": {
+      "label": "Bridge Update Required",
+      "title": "Security Update Available for Graham Bridge",
+      "ariaLabel": "Bridge update available"
+    },
+    "webUsbReady": {
+      "label": "● WebUSB Ready",
+      "title": "WebUSB Embossing Available",
+      "ariaLabel": "WebUSB ready"
+    },
+    "bridgeConnected": {
+      "label": "● Bridge Connected",
+      "title": "Bridge running on localhost:8080",
+      "ariaLabel": "Bridge connected"
+    },
+    "bridgeOffline": {
+      "label": "○ Bridge Offline",
+      "title": "Bridge not detected",
+      "ariaLabel": "Bridge offline"
+    },
+    "wordCount": {
+      "label": "{{count}} words",
+      "title": "Source word count"
+    },
+    "charCount": {
+      "label": "{{count}} chars",
+      "title": "Source character count"
+    },
+    "brfSize": {
+      "label": "BRF: {{bytes}} bytes",
+      "title": "BRF output size"
+    },
+    "translating": {
+      "label": "Translating… {{progress}}%",
+      "title": "Translation progress"
+    }
+  },
+
+  "graphics": {
+    "title": "Tactile Graphics Generator",
+    "close": "✕",
+    "graphicType": "Graphic Type",
+    "sidebar": {
+      "clock": "Clock",
+      "fraction": "Fraction",
+      "numberLine": "Number Line",
+      "base10": "Base10",
+      "manipulatives": "Manipulatives",
+      "customShapes": "Custom Shapes",
+      "shapeInventory": "Shape Inventory",
+      "photoOverlay": "Photo Overlay",
+      "raisedPrintText": "Raised Print Text",
+      "graphs": "Graphs",
+      "chart": "Chart"
+    },
+    "cancel": "Cancel",
+    "insert": "Insert Graphic",
+    "alerts": {
+      "pdfParseFailed": "Failed to parse PDF file.",
+      "pdfLibFailed": "Failed to load PDF library.",
+      "confirmClearDrawing": "Are you sure you want to clear your drawing?",
+      "fontLoadFailed": "Failed to load font file."
+    },
+    "graphs": {
+      "equationLabel": "Equation (in terms of x)",
+      "equationPlaceholder": "e.g. sin(x), x^2, 2x+3, sqrt(x)",
+      "equationHint": "Supports: sin, cos, tan, sqrt, abs, log, ln, exp, pi, e, ^, and more. Shortcuts like \"sinx\" and \"2x\" work.",
+      "xMin": "X Min:",
+      "xMax": "X Max:",
+      "yMin": "Y Min (auto if empty):",
+      "yMax": "Y Max (auto if empty):",
+      "autoPlaceholder": "auto",
+      "xTick": "X Tick Distance (0 = auto):",
+      "yTick": "Y Tick Distance (0 = auto):",
+      "gridWidth": "Grid Width (cells):",
+      "gridHeight": "Grid Height (lines):",
+      "samplePoints": "Sample Points:",
+      "titleOptional": "Title (optional):",
+      "errors": {
+        "enterEquation": "Please enter an equation.",
+        "parseError": "Could not parse equation: {{message}}",
+        "xMinMax": "X min must be less than X max.",
+        "noFiniteValues": "Equation produced no finite values in this X range."
+      },
+      "summary": {
+        "graph": "Graph: {{title}}",
+        "domain": "Domain: x from {{min}} to {{max}}",
+        "range": "Range: y from {{ymin}} to {{ymax}}",
+        "grid": "Grid: {{width}} cells wide by {{height}} lines tall",
+        "xTickSpacing": "X tick spacing: {{value}}",
+        "yTickSpacing": "Y tick spacing: {{value}}",
+        "samplePoints": "Sample points: {{value}}"
+      }
+    },
+    "photoOverlay": {
+      "photo": "Photo:",
+      "opacity": "Opacity: {{value}}%",
+      "scale": "Scale: {{value}}%",
+      "offsets": "Offsets:",
+      "xOffsetTitle": "X Offset",
+      "yOffsetTitle": "Y Offset",
+      "tool": "Tool:",
+      "tools": {
+        "pencil": "Pencil",
+        "eraser": "Eraser",
+        "line": "Line",
+        "stamp": "Stamp"
+      },
+      "brush": "Brush: {{value}}",
+      "stamps": {
+        "mask": "Mask",
+        "apple": "Apple",
+        "axe": "Axe",
+        "beach": "Beach",
+        "bed": "Bed",
+        "birdHouse": "Bird H.",
+        "bowling": "Bowling",
+        "candle": "Candle",
+        "cat": "Cat",
+        "circle": "Circle",
+        "cloud": "Cloud",
+        "cloudLightning": "Cloud+Lt",
+        "moon": "Moon",
+        "cross": "Cross",
+        "dog": "Dog",
+        "flower": "Flower",
+        "heart": "Heart",
+        "hiking": "Hiking",
+        "house": "House",
+        "skates": "Skates",
+        "lightning": "Lightning",
+        "projector": "Proj.",
+        "mustache": "Mustache",
+        "brush": "Brush",
+        "star": "Star",
+        "fangs": "Fangs"
+      },
+      "stampSizeTitle": "Stamp Size",
+      "fillTitle": "Fill",
+      "grid": "Grid:",
+      "gridWidthTitle": "Width (cells)",
+      "gridHeightTitle": "Height (lines)",
+      "gridSeparator": "×",
+      "hideGrid": "Hide Grid",
+      "showGrid": "Show Grid",
+      "clear": "Clear",
+      "invert": "Invert",
+      "defaultLayoutSize": "Default layout size: {{cells}} cells × {{lines}} lines",
+      "cross": {
+        "label": "Cross:",
+        "hLen": "H-Len:",
+        "vThick": "V-Thick:",
+        "hThick": "H-Thick:",
+        "hRatio": "H-Ratio:"
+      },
+      "overlayGuideAlt": "Overlay guide",
+      "braillePreview": "Braille Preview",
+      "dotsSize": "{{width}} × {{height}} dots",
+      "summary": "Photo Overlay Drawing ({{cells}} cells × {{lines}} lines)"
+    },
+    "shapes": {
+      "clock": {
+        "radius": "Radius:",
+        "hours": "Hours:",
+        "minutes": "Minutes:"
+      },
+      "fraction": {
+        "radius": "Radius:",
+        "numerator": "Numerator:",
+        "denominator": "Denominator:"
+      },
+      "numberLine": {
+        "length": "Length:",
+        "start": "Start:",
+        "end": "End:",
+        "step": "Step:",
+        "vertical": "Vertical"
+      },
+      "base10": {
+        "hundreds": "Hundreds:",
+        "tens": "Tens:",
+        "ones": "Ones:"
+      },
+      "manipulatives": {
+        "rows": "Rows:",
+        "columns": "Columns:",
+        "spacing": "Spacing:"
+      },
+      "inventory": {
+        "label": "Shape:",
+        "names": {
+          "actingMask": "Acting Mask",
+          "apple": "Apple",
+          "axe": "Axe",
+          "beach": "Beach",
+          "bed": "Bed",
+          "birdHouse": "Bird House",
+          "bowling": "Bowling",
+          "candle": "Candle",
+          "cat": "Cat",
+          "circle": "Circle",
+          "cloud": "Cloud",
+          "cloudLightning": "Cloud with Lightning Bolt",
+          "crescentMoon": "Crescent Moon",
+          "cross": "Cross",
+          "dog": "Dog",
+          "flower": "Flower",
+          "heart": "Heart",
+          "hiking": "Hiking",
+          "house": "House",
+          "iceSkates": "Ice Skating Skates",
+          "lightningBolt": "Lightning Bolt",
+          "movieProjector": "Movie Projector",
+          "mustache": "Mustache",
+          "paintbrush": "Paintbrush",
+          "star5": "Star (5-Pointed)",
+          "vampireFangs": "Vampire Fangs"
+        },
+        "sizeRadius": "Size (radius in dots):",
+        "filled": "Filled (solid)",
+        "crossParams": {
+          "heading": "Cross Parameters",
+          "hBarLength": "Horizontal Bar Length (dots):",
+          "vBarThickness": "Vertical Bar Thickness (dots):",
+          "hBarThickness": "Horizontal Bar Thickness (dots):",
+          "crossbarRatio": "Crossbar Height Ratio (0.1 - 0.9):"
+        }
+      },
+      "custom": {
+        "sizeRadius": "Size (radius in dots):",
+        "sides": "Sides:",
+        "rotation": "Rotation (degrees):",
+        "filled": "Filled (solid)"
+      },
+      "raisedPrint": {
+        "loadingFont": "Loading print font...",
+        "errorPrefix": "Error: {{message}}",
+        "printText": "Print Text:",
+        "fontSize": "Font Size (dots height):",
+        "letterStyle": "Letter Style:",
+        "thickBubble": "Thick Bubble Letters",
+        "thinSingleStroke": "Thin Letters (Single Stroke)",
+        "filledSolid": "Filled (Solid block letters)",
+        "loadingFontShort": "Loading font...",
+        "fontNotLoaded": "Font not loaded."
+      }
+    },
+    "summaries": {
+      "clock": "Clock showing {{hours}}:{{minutes}}",
+      "fraction": "Fraction circle showing {{numerator}} out of {{denominator}}",
+      "numberLine": "Number line from {{start}} to {{end}} with steps of {{step}}",
+      "base10": "Base-10 blocks showing {{hundreds}} hundreds, {{tens}} tens, and {{ones}} ones",
+      "manipulatives": "Array of manipulatives with {{rows}} rows and {{columns}} columns",
+      "shapeFilled": "{{label}} (size {{radius}}, filled)",
+      "shapeOutline": "{{label}} (size {{radius}}, outline)",
+      "cross": "Cross (height {{height}}, width {{width}}, vertical thickness {{vThick}}, horizontal thickness {{hThick}}, {{fillState}})",
+      "polygon": "Polygon with {{sides}} sides (size {{radius}}, {{fillState}})",
+      "raisedPrintThin": "Raised print text \"{{text}}\" (font size {{size}}, thin letters)",
+      "raisedPrintFilled": "Raised print text \"{{text}}\" (font size {{size}}, {{fillState}})",
+      "fillStateFilled": "filled",
+      "fillStateOutline": "outline"
+    }
+  },
+
+  "chart": {
+    "title": "Data-to-Braille Chart Generator",
+    "close": "Close",
+    "closeIcon": "✕",
+    "closeAriaLabel": "Close chart generator",
+    "statusPrefix": "Status: {{message}}",
+    "stepAnnouncement": "Step {{current}} of 4: {{stepName}}. Chart graphics use low-resolution 6-dot cells; a plain-text summary is inserted with each chart so exact values stay available for reading and embossing.",
+    "steps": {
+      "data": "Data",
+      "chartTypeAndGrid": "Chart type and grid",
+      "labels": "Labels",
+      "review": "Review"
+    },
+    "progressAriaLabel": "Progress",
+    "back": "Back",
+    "next": "Next",
+    "insertChartAndSummary": "Insert chart and summary",
+    "dataStep": {
+      "xValuesLabel": "X values (comma-separated, optional)",
+      "xValuesPlaceholder": "e.g. 1990, 2000, 2010 — or leave empty for 0, 1, 2, …",
+      "xValuesHint": "If provided, must have the same count as Y. Empty uses 0, 1, 2, … in order.",
+      "yValuesLabel": "Y values (comma-separated)",
+      "yValuesPlaceholder": "e.g. 10, 25, 18",
+      "pasteHint": "Optional: paste CSV — one Y per line, or two columns (X, Y) per line",
+      "pastePlaceholder": "e.g. 10, 20, 30 or two columns: 1, 10 / 2, 20",
+      "loadFromPaste": "Load from pasted text"
+    },
+    "chartTypeStep": {
+      "chartType": "Chart type",
+      "line": "Line chart",
+      "bar": "Bar chart",
+      "width": "Width (cells, 5–80)",
+      "height": "Height (lines, 5–40)",
+      "mathHeading": "LaTeX math (Nemeth vs UEB)",
+      "mathDescription": "Applies when the editor translates $$…$$ and \\(…\\). This choice is saved for the app and used for the whole document. With Nemeth, numeric lines use $$…$$ blocks (kind and title stay literary), and a form feed places the graphic on the following page; with UEB math, the summary stays plain prose above the chart on the same page sequence.",
+      "mathAriaLabel": "Math braille code for LaTeX",
+      "nemeth": "Nemeth — US math notation (often wrapped for UEB literary context)",
+      "uebMath": "UEB math — Unified English Braille math"
+    },
+    "labelsStep": {
+      "titleOptional": "Title (optional)",
+      "xAxisLabel": "X-axis label (optional)",
+      "yAxisLabel": "Y-axis label (optional)"
+    },
+    "reviewStep": {
+      "heading": "Review — text summary to insert",
+      "nemethNote": "Nemeth layout below: kind and title lines are literary; grid, range, axes, and each value pair use $$…$$. The chart starts on the next page after a form feed. LaTeX math elsewhere uses Nemeth (set on step 2).",
+      "uebNote": "Plain English below will appear above the tactile chart and will be translated with your literary table like the rest of the document. LaTeX math in the file uses UEB math (set on step 2).",
+      "fixDataHint": "Fix data on step 1 before inserting."
+    },
+    "messages": {
+      "dataOk": "Data OK. {{count}} points.",
+      "twoColumnsLoaded": "{{count}} points loaded (two columns: X, Y).",
+      "xyFromEachLine": "{{count}} points loaded (X, Y from each line).",
+      "yOnlyLoaded": "{{count}} Y values loaded from {{rows}} row(s). X left empty (0, 1, 2, …).",
+      "noNumbersFound": "No numbers found in pasted text.",
+      "countMismatch": "X has {{xCount}} number(s) and Y has {{yCount}}. Counts must match, or leave X empty for 0, 1, 2, …",
+      "addAtLeastOnePoint": "Add at least one data point.",
+      "tooManyPoints": "Too many points (maximum 512).",
+      "xyCountMismatch": "X and Y must have the same number of values.",
+      "invalidYAt": "Invalid Y value at position {{index}}.",
+      "invalidXAt": "Invalid X value at position {{index}}.",
+      "widthRange": "Width must be between 5 and 80 cells.",
+      "heightRange": "Height must be between 5 and 40 lines.",
+      "invalidNumber": "Invalid number: \"{{value}}\".",
+      "noNumericValues": "No numeric values found in pasted text.",
+      "multiColumnWarning": "That paste looks like multiple columns. Use one Y value per line, one line of comma-separated Y values, or two columns (X, Y) on every line."
+    },
+    "summary": {
+      "lineChart": "Line chart",
+      "barChart": "Bar chart",
+      "lineChartTitled": "Line chart: {{title}}",
+      "barChartTitled": "Bar chart: {{title}}",
+      "grid": "Grid {{width}} cells wide by {{height}} lines tall. {{count}} point(s).",
+      "range": "Range: minimum {{min}}, maximum {{max}}.",
+      "yAxis": "Y-axis: {{label}}.",
+      "xAxis": "X-axis: {{label}}.",
+      "valuesHeading": "Values (x, y):",
+      "valueRow": "  {{x}}: {{y}}"
+    },
+    "nemeth": {
+      "kindLine": "{{kind}}:",
+      "grid": "$$Grid {{width}} cells wide by {{height}} lines tall. {{count}} point(s).$$",
+      "range": "$$Range: minimum {{min}}, maximum {{max}}.$$",
+      "axis": "$${{axisParts}}.$$",
+      "valuesHeading": "Values (x, y):",
+      "valueRow": "  $${{x}}: {{y}}$$"
+    }
+  }
+}
