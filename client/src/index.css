@@ -94,7 +94,7 @@
 .skip-link {
   position: absolute;
   top: -100%;
-  left: 0;
+  inset-inline-start: 0;
   padding: 0.5rem 1rem;
   background: var(--accent);
   color: var(--accent-text);
@@ -104,6 +104,10 @@
   border-radius: 0 0 4px 0;
   text-decoration: none;
   transition: top 0.1s;
+}
+
+[dir='rtl'] .skip-link {
+  border-radius: 0 0 0 4px;
 }
 
 .skip-link:focus {

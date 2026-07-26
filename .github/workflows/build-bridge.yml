@@ -27,7 +27,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc libgtk-3-dev libayatana-appindicator3-dev rpm
 
-    - name: Build Bridge (Linux)
+    - name: Build Bridge (Linux amd64)
       if: runner.os == 'Linux'
       run: |
         cd bridge
@@ -90,8 +90,37 @@ jobs:
         name: bridge-macos
         path: bridge/graham-bridge-macos.zip
 
+  build-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24.7'
+        cache-dependency-path: bridge/go.sum
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc libgtk-3-dev libayatana-appindicator3-dev
+
+    - name: Build Bridge (Linux arm64)
+      run: |
+        cd bridge
+        go build -ldflags="-X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-linux-arm64 .
+        zip -r graham-bridge-linux-arm64.zip graham-bridge-linux-arm64 graham-bridge.desktop
+        ls -la ./*.zip
+
+    - name: Upload Artifact (Linux arm64)
+      uses: actions/upload-artifact@v4
+      with:
+        name: bridge-linux-arm64
+        path: bridge/graham-bridge-linux-arm64.zip
+
   release:
-    needs: build
+    needs: [build, build-linux-arm64]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -101,6 +130,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bridge-linux
+          path: out
+
+      - name: Download Linux arm64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bridge-linux-arm64
           path: out
 
       - name: Download Windows Artifact
@@ -134,15 +169,16 @@ jobs:
             | Platform | File |
             |---|---|
             | 🪟 Windows | `graham-bridge-windows.zip` → run `graham-bridge-windows.exe` |
-            | 🐧 Linux (ZIP) | `graham-bridge-linux.zip` → run `graham-bridge-linux-amd64` + install `.desktop` |
+            | 🐧 Linux amd64 (ZIP) | `graham-bridge-linux.zip` → run `graham-bridge-linux-amd64` + install `.desktop` |
+            | 🥧 Linux arm64 / Raspberry Pi (ZIP) | `graham-bridge-linux-arm64.zip` → run `graham-bridge-linux-arm64` + install `.desktop` |
             | 🐧 Linux (Fedora RPM) | `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` → `sudo dnf install ./graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm` |
             | 🍎 macOS | `graham-bridge-macos.zip` → open `Graham Bridge.app` |
 
             ### What's New
+            - **Share mode:** Pair Bridges on the LAN (Pi embosser host + teacher PC) with a share code; editor still uses local Bridge on `127.0.0.1:8080`
+            - **linux-arm64** build for Raspberry Pi
             - **v3.3.0:** Debug dashboard themes (dark / light / high contrast) match Graham Braille Editor; macOS bundle version aligned
-            - **${{ github.ref_name }}:** Fedora RPM `graham-bridge-${{ steps.meta.outputs.semver }}-linux-fedora.x86_64.rpm`; `/status` → `"version":"${{ steps.meta.outputs.semver }}"`
             - **RPM:** Fedora/RHEL-family `dnf` install; RPM package name remains `graham-bridge`
-            - **v3.2.1:** Debug dashboard shows Live immediately (SSE stream opens even before the first print job)
             - Debug dashboard at `http://localhost:8080/debug` — live print job log, BRF text preview, hex dump, printer list, and test print button
-            - Renamed from "Braille Vibe Bridge" to "Graham Bridge"
+            - Settings at `http://localhost:8080/settings` — Share mode and Connect to a shared Bridge
           files: out/*

@@ -3,13 +3,16 @@
 // A small HTTP server that runs locally on the user's machine and provides
 // raw print access to Braille embossers (especially ViewPlus devices).
 //
-// Endpoints:
+// Endpoints (loopback 127.0.0.1:8080 — editor-facing):
 //
 //	GET  /status  → 200 {"status":"ok"}
-//	POST /print   → {"printer":"Name","data":"<base64 BRF>"}
+//	POST /print   → {"printer":"Name|target-id","data":"<base64>"}
+//	GET  /printers → [{id,name,kind,printer,...}]
+//
+// Optional share listener (0.0.0.0:8081) when Share mode is enabled — Bridge-to-Bridge only.
 //
 // CORS allows only trusted Graham Braille Editor web origins (plus local dev URLs).
-// The server binds to 127.0.0.1 only (not 0.0.0.0).
+// The editor-facing server binds to 127.0.0.1 only (not 0.0.0.0).
 package main
 
 import (
@@ -49,7 +52,7 @@ func withCORS(next http.HandlerFunc) http.HandlerFunc {
 
 		origin := r.Header.Get("Origin")
 
-		// Only allow specific trusted origins to prevent Cross-Site Request Forgery (CSRF). 
+		// Only allow specific trusted origins to prevent Cross-Site Request Forgery (CSRF).
 		// An empty string origin ("") is often sent for same-origin requests or curl commands.
 		allowedOrigins := map[string]bool{
 			"https://grahamthetvi.github.io":      true,
@@ -104,11 +107,13 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	resp := map[string]string{
-		"status":  "ok",
-		"app":     "graham-bridge",
-		"version": "3.4.1",
-		"build":   BuildNumber,
+	c := getConfig()
+	resp := map[string]any{
+		"status":       "ok",
+		"app":          "graham-bridge",
+		"version":      "3.5.0",
+		"build":        BuildNumber,
+		"shareEnabled": c.ShareEnabled,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -117,11 +122,12 @@ func statusHandler(w http.ResponseWriter, r *http.Request) {
 
 // printRequest is the JSON body for the /print endpoint.
 type printRequest struct {
-	Printer string `json:"printer"` // OS printer name
+	Printer string `json:"printer"` // OS printer name or target id
 	Data    string `json:"data"`    // Base64-encoded BRF content
+	Target  string `json:"target,omitempty"`
 }
 
-// printHandler decodes the request and sends raw bytes to the printer.
+// printHandler decodes the request and sends raw bytes to the printer (local or peer).
 func printHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -138,22 +144,29 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Printer == "" {
+	targetID := req.Target
+	if targetID == "" {
+		targetID = req.Printer
+	}
+	if targetID == "" {
 		http.Error(w, "printer name is required", http.StatusBadRequest)
 		return
 	}
-	if len(req.Printer) > 255 {
-		http.Error(w, "printer name is too long", http.StatusBadRequest)
-		return
-	}
-	for _, char := range req.Printer {
-		if char < 32 || char == 127 { // Reject control characters and DEL
-			http.Error(w, "invalid characters in printer name", http.StatusBadRequest)
-			return
-		}
-	}
 	if req.Data == "" {
 		http.Error(w, "data is required", http.StatusBadRequest)
+		return
+	}
+
+	kind, peerID, printerName := parseTargetID(targetID)
+	if printerName == "" && kind == "local" {
+		printerName = targetID
+	}
+	if err := validatePrinterName(printerName); err != nil && kind == "local" {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if kind == "peer" && printerName == "" {
+		http.Error(w, "shared printer is unreachable or not selected", http.StatusBadRequest)
 		return
 	}
 
@@ -163,20 +176,30 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("print request: printer=%q bytes=%d", req.Printer, len(rawBytes))
+	log.Printf("print request: target=%q kind=%s printer=%q bytes=%d", targetID, kind, printerName, len(rawBytes))
 
-	// Capture BRF text (first 4 KB) and hex dump before sending.
 	brfText := string(rawBytes)
 	if len(brfText) > 4096 {
 		brfText = brfText[:4096]
 	}
 
-	printErr := sendToPrinter(req.Printer, rawBytes)
+	var printErr error
+	displayPrinter := printerName
+	if kind == "peer" {
+		peer, ok := findPeer(peerID)
+		if !ok {
+			http.Error(w, "unknown shared Bridge", http.StatusBadRequest)
+			return
+		}
+		displayPrinter = peer.Name + " / " + printerName
+		printErr = relayPrintToPeer(peer, printerName, req.Data)
+	} else {
+		printErr = sendToPrinter(printerName, rawBytes)
+	}
 
-	// Record the job event for the debug UI.
 	e := JobEvent{
 		Time:    time.Now(),
-		Printer: req.Printer,
+		Printer: displayPrinter,
 		Bytes:   len(rawBytes),
 		BRFText: brfText,
 		HexDump: hexDump(rawBytes),
@@ -201,14 +224,23 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 func main() {
+	loadConfig()
+	startPeerServerIfNeeded()
+
 	go func() {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/status", withCORS(statusHandler))
 		mux.HandleFunc("/print", withCORS(printHandler))
 		mux.HandleFunc("/debug", withCORS(handleDebugPage))
 		mux.HandleFunc("/log-stream", withCORS(handleLogStream))
-		mux.HandleFunc("/printers", withCORS(handlePrinters))
+		mux.HandleFunc("/printers", withCORS(handlePrintersExtended))
 		mux.HandleFunc("/testprint", withCORS(handleTestPrint))
+		mux.HandleFunc("/settings", withCORS(handleSettingsPage))
+		mux.HandleFunc("/settings/api", withCORS(handleSettingsGet))
+		mux.HandleFunc("/settings/share", withCORS(handleSettingsShare))
+		mux.HandleFunc("/settings/regenerate-code", withCORS(handleSettingsRegenerateCode))
+		mux.HandleFunc("/settings/pair", withCORS(handleSettingsPair))
+		mux.HandleFunc("/settings/unpair", withCORS(handleSettingsUnpair))
 
 		log.Printf("Graham Bridge listening on http://%s", listenAddr)
 		if err := http.ListenAndServe(listenAddr, mux); err != nil {
@@ -224,10 +256,15 @@ func onReady() {
 	systray.SetTitle("Graham Bridge")
 	systray.SetTooltip("Graham Bridge – HTTP Print Server")
 
-	mStatus := systray.AddMenuItem("Status: Running on port 8080", "Bridge is running")
+	statusLabel := "Status: Running on port 8080"
+	if getConfig().ShareEnabled {
+		statusLabel = "Status: Sharing on port 8081"
+	}
+	mStatus := systray.AddMenuItem(statusLabel, "Bridge is running")
 	mStatus.Disable()
 
 	systray.AddSeparator()
+	mSettings := systray.AddMenuItem("Open Settings", "Share mode and connect to a shared Bridge")
 	mDebug := systray.AddMenuItem("Open Debug Page", "View print logs and test the embosser")
 	mOpen := systray.AddMenuItem("Open Graham Bridge Editor", "Launch the web app")
 	mQuit := systray.AddMenuItem("Quit", "Quit the bridge")
@@ -235,6 +272,8 @@ func onReady() {
 	go func() {
 		for {
 			select {
+			case <-mSettings.ClickedCh:
+				openBrowser("http://" + listenAddr + "/settings")
 			case <-mDebug.ClickedCh:
 				openBrowser("http://" + listenAddr + "/debug")
 			case <-mOpen.ClickedCh:
@@ -247,7 +286,7 @@ func onReady() {
 }
 
 func onExit() {
-	// cleanup if necessary
+	stopPeerServer()
 	log.Println("Shutting down Graham Bridge...")
 }
 

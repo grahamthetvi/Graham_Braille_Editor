@@ -16,6 +16,7 @@
     "@fontsource/open-sans": "^5.2.7",
     "@monaco-editor/react": "^4.7.0",
     "earcut": "^3.0.2",
+    "i18next": "^26.3.6",
     "katex": "^0.16.28",
     "liblouis-js": "^0.2.0",
     "mathjs": "^15.2.0",
@@ -23,6 +24,7 @@
     "opentype.js": "^2.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-i18next": "^17.0.11",
     "speech-rule-engine": "^5.0.0-beta.6"
   },
   "devDependencies": {

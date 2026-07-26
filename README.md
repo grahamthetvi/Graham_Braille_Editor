@@ -17,7 +17,8 @@ The Bridge app is pre-compiled for Windows, macOS, and Linux. You do **not** nee
 Go to the **[Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases)** tab on GitHub and download the build for your operating system:
 - `graham-bridge-windows.zip` (for Windows)
 - `graham-bridge-macos.zip` (for macOS Intel & Apple Silicon)
-- `graham-bridge-linux.zip` (generic Linux: extract and run the binary)
+- `graham-bridge-linux.zip` (generic Linux amd64: extract and run the binary)
+- `graham-bridge-linux-arm64.zip` (Raspberry Pi / aarch64 Linux: extract and run `graham-bridge-linux-arm64`)
 - `graham-bridge-<version>-linux-fedora.x86_64.rpm` (Fedora / RPM-based Linux: install with `dnf`; see below — e.g. `graham-bridge-3.3.0-linux-fedora.x86_64.rpm`)
 
 ---
@@ -84,14 +85,40 @@ If you prefer to set up files manually:
    ```
 3. Launch **Graham Braille Editor Bridge** from the application menu, or run `graham-bridge` from a terminal.
 
+### 🥧 Shared Bridge on Raspberry Pi
+
+Use a dedicated Pi (including **Pi Zero 2W**) next to an embosser so teachers can print from their own machines on the same network.
+
+**Requirements**
+- Raspberry Pi OS **Desktop** (systray needs a desktop session)
+- USB (or OS-recognized) embosser set up in CUPS / system printers
+- Download **`graham-bridge-linux-arm64`** from [Releases](https://github.com/grahamthetvi/Graham_Braille_Editor/releases) (also works on other aarch64 Linux boards)
+
+**On the Pi (share host)**
+1. Install and launch Graham Bridge.
+2. Tray → **Open Settings** → choose **Share on this network** → set a display name → **Save share settings**.
+3. Note the **6-digit share code** and the Pi’s IP address (or DNS name).
+4. Ask IT to: reserve a static IP/DNS for the Pi; allow device-to-device traffic (disable client isolation or use a print VLAN); allow **TCP 8081** to the Pi from teacher machines.
+
+**On the teacher PC**
+1. Install Graham Bridge locally (still required — the hosted HTTPS editor only talks to `127.0.0.1:8080`).
+2. Tray → **Open Settings** → **Connect to a shared Bridge** → enter the Pi’s host/IP and share code → **Pair**.
+3. In the editor Print panel, choose the shared embosser (shown as `Name / printer`).
+
+**Troubleshooting**
+- Cannot pair: ping the Pi; confirm Share is on; confirm TCP 8081 is open; verify the code.
+- Wrong code: regenerate the code on the Pi (teachers must pair again).
+- Printer missing: ensure CUPS lists the embosser on the Pi; refresh printers in the editor after pairing.
+
 ---
 
 ## ⚙️ How It Works
 
 Once running, the bridge operates silently in the background and places an icon in your system tray. 
-- Right-clicking the tray icon allows you to check its status, easily open the Graham Braille Editor in your browser, or cleanly quit the background process.
-- The HTTP server listens only on **`127.0.0.1:8080`** (not exposed to the LAN). Web pages in other browsers or on other machines cannot reach it directly over the network.
-- **Browser security (CORS):** Cross-origin requests must come from allowed Graham Braille Editor origins (the official GitHub Pages site, **grahambrailleeditor.com**, local dev servers such as Vite on port 5173, and the bridge’s own debug page on port 8080). Other `Origin` values receive **403 Forbidden**. Same-origin and tools without an `Origin` header (such as `curl`) are still allowed for local troubleshooting.
+- Right-clicking the tray icon allows you to check its status, open **Settings** (Share / Connect), open the Graham Braille Editor, open the debug page, or quit.
+- The editor-facing HTTP server listens only on **`127.0.0.1:8080`**. Web pages cannot reach LAN addresses directly from the hosted HTTPS site; local Bridge relays to a shared Bridge when configured.
+- **Optional Share mode:** when enabled, a second listener on **`0.0.0.0:8081`** accepts Bridge-to-Bridge pairing and print jobs authenticated with the share token (obtained via the share code). This is not the browser CORS API.
+- **Browser security (CORS):** Cross-origin requests on port 8080 must come from allowed Graham Braille Editor origins (the official GitHub Pages site, **grahambrailleeditor.com**, local dev servers such as Vite on port 5173, and the bridge’s own pages on port 8080). Other `Origin` values receive **403 Forbidden**. Same-origin and tools without an `Origin` header (such as `curl`) are still allowed for local troubleshooting.
 - **Print payload limits:** `POST /print` accepts at most **5 MB** of JSON body to reduce abuse and accidental huge uploads.
 - Make sure your Braille embosser is physically connected (USB/Network) and recognized by your operating system's printer settings!
 
@@ -109,6 +136,14 @@ The Graham Braille Editor natively supports generating hardware-specific command
 ## 🎨 Editor Features & Tools
 
 Beyond standard text translation, the Graham Braille Editor provides advanced layout and multi-sensory learning utilities:
+
+### UI language & braille table pairing
+Under the **Languages & Codes** tab you can:
+1. Choose a **braille translation table** (liblouis).
+2. Choose the **website language**: English, Arabic, French, German, Spanish, Portuguese, Chinese (Simplified), Russian, or Urdu. Arabic and Urdu use right-to-left layout.
+3. Toggle **Auto-pair**: when on, changing the website language also selects that language’s default braille table; when off, language and table stay independent.
+
+All chrome, dialogs, and help text are translated for those locales. Braille table display names stay in English for technical clarity.
 
 ### 1. Large-Print (Jumbo) Braille
 For combined print/braille production or low-vision readers, you can insert large-print sections in your document. 
