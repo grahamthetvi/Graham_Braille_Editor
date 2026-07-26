@@ -1032,6 +1032,76 @@ body {
   outline-offset: 2px;
 }
 
+.music-braille-guide-modal {
+  max-width: 680px;
+}
+
+.music-braille-guide-footer {
+  align-items: flex-end;
+}
+
+.music-braille-guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.music-braille-guide-modal kbd {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.78rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .music-braille-guide-overlay,
+  .music-braille-guide-overlay * {
+    visibility: visible !important;
+  }
+
+  .music-braille-guide-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .music-braille-guide-modal {
+    max-width: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #000 !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
+
+  .music-braille-guide-modal .welcome-close,
+  .music-braille-guide-modal .music-braille-guide-actions {
+    display: none !important;
+  }
+
+  .music-braille-guide-modal .welcome-header,
+  .music-braille-guide-modal .welcome-footer {
+    border-color: #ccc !important;
+  }
+
+  .music-braille-guide-modal .welcome-body {
+    overflow: visible !important;
+  }
+}
+
 /* ── Status Bar ──────────────────────────────────────────────────────────── */
 
 .status-bar {

@@ -197,7 +197,25 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
             </div>
           </section>
 
-          {/* 7. Tactile Graphics & 3D Printing */}
+          {/* 7. Music Braille */}
+          <section className="welcome-section">
+            <div>
+              <h3>Music Braille</h3>
+              <p>
+                Graham does not yet convert sheet music into Music Braille automatically.
+                For Music Braille, open <strong>Music Braille</strong> under{' '}
+                <strong>Teaching Tools</strong> or <strong>Music Braille Guide</strong> under{' '}
+                <strong>Help &amp; Support</strong>. We recommend creating or exporting{' '}
+                <strong>MusicXML</strong> in <strong>MuseScore</strong>, converting it with{' '}
+                <strong>Sao Mai Braille (SMB)</strong>, then optionally importing the{' '}
+                <code>.brf</code> here to preview or emboss. You can also{' '}
+                <strong>Add to translation page</strong> so the instructions themselves can be
+                embossed as braille.
+              </p>
+            </div>
+          </section>
+
+          {/* 8. Tactile Graphics & 3D Printing */}
           <section className="welcome-section">
             <div>
               <h3>Tactile Graphics &amp; 3D Printing</h3>
