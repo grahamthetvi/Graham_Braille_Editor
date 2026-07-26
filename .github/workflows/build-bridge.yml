@@ -97,10 +97,7 @@ jobs:
       shell: pwsh
       run: |
         cd bridge
-        $iss = Get-Content -Raw packaging\graham-bridge.iss
-        $iss = $iss -replace '#define MyAppVersion ".*"','#define MyAppVersion "' + $env:VERSION + '"'
-        Set-Content -Path packaging\graham-bridge.iss -Value $iss -NoNewline
-        & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\graham-bridge.iss
+        & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:VERSION" packaging\graham-bridge.iss
         Move-Item -Force packaging\Output\graham-bridge-windows-setup.exe .\graham-bridge-windows-setup.exe
         Get-ChildItem graham-bridge-windows*.exe, graham-bridge-windows.zip
 
