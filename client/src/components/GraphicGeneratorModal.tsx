@@ -165,6 +165,7 @@ export function GraphicGeneratorModal({
   const [isDrawingMode, setIsDrawingMode] = useState(true); // true = draw, false = erase
   const [lineStart, setLineStart] = useState<{ x: number; y: number } | null>(null);
   const [mouseHoverGrid, setMouseHoverGrid] = useState<{ x: number; y: number } | null>(null);
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -252,6 +253,29 @@ export function GraphicGeneratorModal({
       return newGrid;
     });
   }, [photoWidthCells, photoHeightCells]);
+
+  // Keep canvas backing store in sync with the (now flexible) overlay size
+  useEffect(() => {
+    if (graphicType !== 'photo') return;
+    const canvas = canvasRef.current;
+    const parent = canvas?.parentElement;
+    if (!parent) return;
+
+    const updateSize = (width: number, height: number) => {
+      const w = Math.round(width);
+      const h = Math.round(height);
+      setCanvasSize(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+
+    updateSize(parent.clientWidth, parent.clientHeight);
+    const ro = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (!entry) return;
+      updateSize(entry.contentRect.width, entry.contentRect.height);
+    });
+    ro.observe(parent);
+    return () => ro.disconnect();
+  }, [graphicType]);
 
   const applyBrush = (grid: boolean[][], gridX: number, gridY: number, val: boolean) => {
     const cols = photoWidthCells * 2;
@@ -434,7 +458,8 @@ export function GraphicGeneratorModal({
     photoStampSize,
     photoStampFilled,
     photoStampCrossParams,
-    photoBrushSize
+    photoBrushSize,
+    canvasSize,
   ]);
 
   const getGridCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -695,16 +720,23 @@ export function GraphicGeneratorModal({
       <div 
         className="welcome-modal" 
         onClick={e => e.stopPropagation()} 
-        style={{ maxWidth: '1000px', display: 'flex', flexDirection: 'column' }}
+        style={{
+          maxWidth: graphicType === 'photo' ? 'min(1400px, 98vw)' : '1000px',
+          width: graphicType === 'photo' ? '98vw' : undefined,
+          maxHeight: graphicType === 'photo' ? '96dvh' : undefined,
+          height: graphicType === 'photo' ? '96dvh' : undefined,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
       >
         <header className="welcome-header">
           <h2>Tactile Graphics Generator</h2>
           <button className="welcome-close" onClick={onClose}>✕</button>
         </header>
 
-        <div style={{ display: 'flex', flex: 1, minHeight: '400px' }}>
+        <div style={{ display: 'flex', flex: 1, minHeight: graphicType === 'photo' ? 0 : '400px', overflow: 'hidden' }}>
           {/* Sidebar */}
-          <div style={{ width: '200px', borderRight: '1px solid var(--border-color)', padding: '1rem' }}>
+          <div style={{ width: '200px', borderRight: '1px solid var(--border-color)', padding: '1rem', overflowY: 'auto', flexShrink: 0 }}>
             <h3 style={{ marginTop: 0 }}>Graphic Type</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {(
@@ -845,12 +877,12 @@ export function GraphicGeneratorModal({
               )}
             </div>
           ) : graphicType === 'photo' ? (
-            <div style={{ flex: 1, padding: '1rem', display: 'flex', gap: '1.5rem', overflowY: 'auto' }}>
+            <div style={{ flex: 1, padding: '1rem', display: 'flex', gap: '1.5rem', overflow: 'hidden', minHeight: 0 }}>
               {/* Left Column: Controls & Canvas */}
-              <div style={{ flex: 1.2, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0 }}>
+              <div style={{ flex: 1.6, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
                 
                 {/* Condensed Control Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', border: '1px solid var(--border-color)', padding: '0.5rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.8rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.5rem', border: '1px solid var(--border-color)', padding: '0.5rem', borderRadius: '6px', background: 'var(--bg-card)', fontSize: '0.8rem', flexShrink: 0 }}>
                   {/* File Upload */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>Photo:</span>
@@ -1008,7 +1040,7 @@ export function GraphicGeneratorModal({
                       max={60} 
                       value={photoWidthCells} 
                       onChange={e => setPhotoWidthCells(parseInt(e.target.value, 10) || 40)}
-                      style={{ width: '30px', padding: '1px 2px', fontSize: '0.75rem' }}
+                      style={{ width: '52px', padding: '1px 2px 1px 4px', fontSize: '0.75rem' }}
                       title="Width (cells)"
                     />
                     <span>×</span>
@@ -1018,7 +1050,7 @@ export function GraphicGeneratorModal({
                       max={40} 
                       value={photoHeightCells} 
                       onChange={e => setPhotoHeightCells(parseInt(e.target.value, 10) || 20)}
-                      style={{ width: '30px', padding: '1px 2px', fontSize: '0.75rem' }}
+                      style={{ width: '52px', padding: '1px 2px 1px 4px', fontSize: '0.75rem' }}
                       title="Height (lines)"
                     />
                   </div>
@@ -1053,7 +1085,7 @@ export function GraphicGeneratorModal({
                 </div>
 
                 {/* Subtitle / Extra Parameters Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '-0.25rem', padding: '0 0.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '-0.25rem', padding: '0 0.25rem', flexShrink: 0 }}>
                   <div>
                     Default layout size: {defaultCellsPerRow} cells × {defaultLinesPerPage} lines
                   </div>
@@ -1069,7 +1101,7 @@ export function GraphicGeneratorModal({
                 </div>
 
                 {/* Drawing Canvas Container */}
-                <div style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '500px', border: '1px solid var(--border-color)', borderRadius: '6px', background: '#333', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
+                <div style={{ position: 'relative', overflow: 'hidden', width: '100%', flex: 1, minHeight: 0, border: '1px solid var(--border-color)', borderRadius: '6px', background: '#333', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)' }}>
                   {photoImage && (
                     <img 
                       src={photoImage} 
@@ -1111,7 +1143,7 @@ export function GraphicGeneratorModal({
               </div>
 
               {/* Right Column: Preview */}
-              <div style={{ flex: 0.8, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0 }}>
+              <div style={{ flex: 0.7, display: 'flex', flexDirection: 'column', gap: '0.75rem', minWidth: 0, minHeight: 0 }}>
                 <h4 style={{ margin: 0, fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Braille Preview</span>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{photoWidthCells * 2} × {photoHeightCells * 3} dots</span>
