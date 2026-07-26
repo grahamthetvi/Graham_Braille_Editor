@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useBraille, type MathCode } from '../hooks/useBraille';
 import { asciiToUnicodeBraille } from '../utils/braille';
 import {
   defaultStlFilename,
   maxLogoEdgePxForReliefQuality,
-  reliefSamplesPerMmForQuality,
   type BuildBrailleStlOptions,
   type StlReliefQuality,
 } from '../utils/brailleStl';
@@ -48,6 +48,7 @@ export function StlExportDialog({
   selectedTable,
   mathCode,
 }: StlExportDialogProps) {
+  const { t } = useTranslation();
   const titleId = useId();
   const workerRef = useRef<Worker | null>(null);
   const nextIdRef = useRef(1);
@@ -119,11 +120,12 @@ export function StlExportDialog({
       pendingRef.current = new Map();
       for (const [, pend] of pendingSnapshot) {
         clearTimeout(pend.timer);
-        pend.reject(new Error('STL worker terminated'));
+        pend.reject(new Error(t('stlExport.errors.workerTerminated')));
       }
       w.terminate();
       workerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -147,20 +149,21 @@ export function StlExportDialog({
   const runBuildInWorker = useCallback((payload: BuildBrailleStlOptions): Promise<ArrayBuffer> => {
     const w = workerRef.current;
     if (!w) {
-      return Promise.reject(new Error('STL worker not ready'));
+      return Promise.reject(new Error(t('stlExport.errors.workerNotReady')));
     }
     const id = nextIdRef.current++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         if (pendingRef.current.has(id)) {
           pendingRef.current.delete(id);
-          reject(new Error('STL generation timed out'));
+          reject(new Error(t('stlExport.errors.timedOut')));
         }
       }, 120_000);
       pendingRef.current.set(id, { resolve, reject, timer });
       const req: StlWorkerRequest = { type: 'BUILD', id, payload };
       w.postMessage(req);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const triggerDownload = (buffer: ArrayBuffer, filename: string) => {
@@ -185,7 +188,7 @@ export function StlExportDialog({
     setPickedLabel(f.name);
     setLogoRaster(null);
     setLogoPngBlob(null);
-    setLogoMessage('File selected. Choose Prepare logo to rasterize (and optionally remove the background).');
+    setLogoMessage(t('stlExport.logo.status.fileSelected'));
   };
 
   const clearLogo = () => {
@@ -202,11 +205,11 @@ export function StlExportDialog({
 
   const prepareLogo = async () => {
     if (!pendingFile) {
-      setLogoMessage('Choose an image file first.');
+      setLogoMessage(t('stlExport.logo.status.chooseFileFirst'));
       return;
     }
     setLogoBusy(true);
-    setLogoMessage(removeNearWhite ? 'Rasterizing and clearing near-white pixels…' : 'Rasterizing image…');
+    setLogoMessage(removeNearWhite ? t('stlExport.logo.status.clearingBackground') : t('stlExport.logo.status.rasterizing'));
     try {
       const maxEdgePx = maxLogoEdgePxForReliefQuality(reliefQuality, logoTargetWidthMm);
       const isSvg = pendingFile.type === 'image/svg+xml' || pendingFile.name.toLowerCase().endsWith('.svg');
@@ -218,7 +221,7 @@ export function StlExportDialog({
       setLogoRaster(raster);
       setLogoPngBlob(pngBlob);
       setLogoMessage(
-        `Logo ready (${raster.width}×${raster.height} px, ${reliefQuality} detail). It will appear as raised relief in the STL top-left; braille and large print shift to clear it. Re-prepare after changing logo width or detail quality.`,
+        t('stlExport.logo.status.ready', { width: raster.width, height: raster.height, quality: reliefQuality }),
       );
     } catch (err) {
       setLogoRaster(null);
@@ -231,7 +234,7 @@ export function StlExportDialog({
 
   const downloadLogoSvg = async () => {
     if (!logoRaster || !logoPngBlob) {
-      setLogoMessage('Prepare a logo before downloading SVG.');
+      setLogoMessage(t('stlExport.logo.status.prepareBeforeDownload'));
       return;
     }
     try {
@@ -251,11 +254,11 @@ export function StlExportDialog({
   const handleExport = async () => {
     setError('');
     if (textSource === 'editor' && (disabled || pageCount < 1 || unicodePages.length === 0)) {
-      setError('Nothing to export. Translate text and check layout first.');
+      setError(t('stlExport.errors.nothingToExport'));
       return;
     }
     if (textSource === 'custom' && !customText.trim()) {
-      setError('Please enter the custom door sign text.');
+      setError(t('stlExport.errors.enterCustomText'));
       return;
     }
     setBusy(true);
@@ -332,7 +335,7 @@ export function StlExportDialog({
       onClick={() => {
         if (!busy && !logoBusy) onClose();
       }}
-      aria-label="Close STL export"
+      aria-label={t('stlExport.closeAriaLabel')}
     >
       <div
         className="stl-export-panel"
@@ -342,29 +345,28 @@ export function StlExportDialog({
         onClick={e => e.stopPropagation()}
       >
         <header className="stl-export-header">
-          <h2 id={titleId}>3D Door Sign (STL)</h2>
-          <button type="button" className="stl-export-close" onClick={() => !busy && !logoBusy && onClose()} aria-label="Close">
+          <h2 id={titleId}>{t('stlExport.title')}</h2>
+          <button type="button" className="stl-export-close" onClick={() => !busy && !logoBusy && onClose()} aria-label={t('stlExport.closeButton')}>
             ✕
           </button>
         </header>
 
         <div className="stl-export-body">
           <p className="stl-export-hint">
-            Uses BANA midpoint dimensions (mm): dot diameter, height, intra-cell, inter-cell, and line spacing.
-            The STL is exported standing upright (Z axis is the sign height, Y is the thickness) for optimal 3D print quality. When exporting exactly one line of text, an ADA-style large print label is generated above the braille (or to the right of any optional logo). Because standing a thin plate upright can be unstable during printing, we highly recommend enabling a brim or raft in your slicer.
+            {t('stlExport.description')}
           </p>
 
           <fieldset className="stl-export-field stl-export-logo-field">
-            <legend>Optional logo (top-left)</legend>
+            <legend>{t('stlExport.logo.heading')}</legend>
             <p className="stl-export-logo-intro">
-              Add a tactile logo: choose an image or SVG, optionally clear a white or light paper background (non-white ink and colors stay), then prepare. SVGs are sampled at the selected STL detail quality; Download SVG wraps the prepared PNG pixels in a minimal SVG container.
+              {t('stlExport.logo.description')}
             </p>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*,.svg,image/svg+xml"
               className="stl-export-file-input"
-              aria-label="Choose logo image"
+              aria-label={t('stlExport.logo.chooseAriaLabel')}
               disabled={logoBusy || busy}
               onChange={handleFileChange}
             />
@@ -375,7 +377,7 @@ export function StlExportDialog({
                 disabled={logoBusy || busy}
                 onClick={() => fileInputRef.current?.click()}
               >
-                Choose image…
+                {t('stlExport.logo.chooseButton')}
               </button>
               <button
                 type="button"
@@ -383,13 +385,13 @@ export function StlExportDialog({
                 disabled={!pendingFile || logoBusy || busy}
                 onClick={() => void prepareLogo()}
               >
-                {logoBusy ? 'Working…' : 'Prepare logo'}
+                {logoBusy ? t('stlExport.logo.working') : t('stlExport.logo.prepareButton')}
               </button>
               <button type="button" className="toolbar-btn" disabled={!logoRaster || busy} onClick={() => void downloadLogoSvg()}>
-                Download SVG
+                {t('stlExport.logo.downloadSvg')}
               </button>
               <button type="button" className="toolbar-btn" disabled={(!pendingFile && !logoRaster) || logoBusy || busy} onClick={clearLogo}>
-                Clear logo
+                {t('stlExport.logo.clear')}
               </button>
             </div>
             <label className="stl-export-logo-check">
@@ -399,16 +401,16 @@ export function StlExportDialog({
                 onChange={e => setRemoveNearWhite(e.target.checked)}
                 disabled={logoBusy || busy}
               />
-              Clear near-white background when preparing (preserves darker colors and edges; no cloud ML)
+              {t('stlExport.logo.clearBackground')}
             </label>
-            {pickedLabel ? <p className="stl-export-logo-file">Selected: {pickedLabel}</p> : null}
+            {pickedLabel ? <p className="stl-export-logo-file">{t('stlExport.logo.selected', { filename: pickedLabel })}</p> : null}
             {previewUrl ? (
               <div className="stl-export-logo-preview-wrap">
                 <img className="stl-export-logo-preview" src={previewUrl} alt="" />
               </div>
             ) : null}
             <label className="stl-export-field stl-export-logo-width">
-              Logo width on plate (mm)
+              {t('stlExport.logo.widthLabel')}
               <input
                 type="number"
                 min={4}
@@ -423,21 +425,21 @@ export function StlExportDialog({
           </fieldset>
 
           <fieldset className="stl-export-field">
-            <legend>Raised detail quality</legend>
+            <legend>{t('stlExport.detail.heading')}</legend>
             <label className="stl-export-field">
-              STL detail
+              {t('stlExport.detail.label')}
               <select
                 value={reliefQuality}
                 onChange={e => setReliefQuality(e.target.value as StlReliefQuality)}
                 disabled={busy || logoBusy}
               >
-                <option value="standard">Standard ({reliefSamplesPerMmForQuality('standard')} samples/mm)</option>
-                <option value="high">High ({reliefSamplesPerMmForQuality('high')} samples/mm)</option>
-                <option value="ultra">Ultra ({reliefSamplesPerMmForQuality('ultra')} samples/mm)</option>
+                <option value="standard">{t('stlExport.detail.standard')}</option>
+                <option value="high">{t('stlExport.detail.high')}</option>
+                <option value="ultra">{t('stlExport.detail.ultra')}</option>
               </select>
             </label>
             <label className="stl-export-field stl-export-print-height">
-              Print letter height (mm)
+              {t('stlExport.printLetterHeight')}
               <input
                 type="number"
                 min={6}
@@ -449,12 +451,12 @@ export function StlExportDialog({
               />
             </label>
             <p className="stl-export-logo-status">
-              Higher detail improves logos and print letters but produces larger STL files. Braille dot roundness still uses the BANA STL dot setting.
+              {t('stlExport.detailHint')}
             </p>
           </fieldset>
 
           <fieldset className="stl-export-field">
-            <legend>Sign Text Source</legend>
+            <legend>{t('stlExport.textSource.heading')}</legend>
             <label className="stl-export-radio">
               <input
                 type="radio"
@@ -463,7 +465,7 @@ export function StlExportDialog({
                 onChange={() => setTextSource('custom')}
                 disabled={busy}
               />
-              Use custom text
+              {t('stlExport.textSource.custom')}
             </label>
             <label className="stl-export-radio">
               <input
@@ -473,31 +475,31 @@ export function StlExportDialog({
                 onChange={() => setTextSource('editor')}
                 disabled={busy}
               />
-              Use text from Editor
+              {t('stlExport.textSource.editor')}
             </label>
           </fieldset>
 
           {textSource === 'custom' ? (
             <label className="stl-export-field">
-              Custom Door Sign Text
+              {t('stlExport.customText.label')}
               <input
                 type="text"
                 value={customText}
                 onChange={e => setCustomText(e.target.value)}
-                placeholder="e.g. ROOM 101"
+                placeholder={t('stlExport.customText.placeholder')}
                 disabled={busy}
                 style={{ width: '100%', maxWidth: 'none', boxSizing: 'border-box', marginTop: '0.35rem', padding: '0.4rem' }}
               />
               {isTranslating && (
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginTop: '0.2rem' }}>
-                  Translating to Braille...
+                  {t('stlExport.translating')}
                 </span>
               )}
             </label>
           ) : (
             <>
               <fieldset className="stl-export-field">
-                <legend>Scope</legend>
+                <legend>{t('stlExport.scope.heading')}</legend>
                 <label className="stl-export-radio">
                   <input
                     type="radio"
@@ -506,7 +508,7 @@ export function StlExportDialog({
                     onChange={() => setScope('one')}
                     disabled={busy}
                   />
-                  Single page
+                  {t('stlExport.scope.singlePage')}
                 </label>
                 <label className="stl-export-radio">
                   <input
@@ -516,13 +518,13 @@ export function StlExportDialog({
                     onChange={() => setScope('all')}
                     disabled={busy}
                   />
-                  All pages (one STL per page)
+                  {t('stlExport.scope.allPages')}
                 </label>
               </fieldset>
 
               {scope === 'one' && (
                 <label className="stl-export-field">
-                  Page (1–{pageCount})
+                  {t('stlExport.scope.pageOf', { count: pageCount })}
                   <input
                     type="number"
                     min={1}
@@ -544,7 +546,7 @@ export function StlExportDialog({
 
           <div className="stl-export-actions">
             <button type="button" className="toolbar-btn" onClick={onClose} disabled={busy || logoBusy}>
-              Cancel
+              {t('stlExport.cancel')}
             </button>
             <button
               type="button"
@@ -557,7 +559,7 @@ export function StlExportDialog({
                 (textSource === 'custom' && (!customText.trim() || isTranslating))
               }
             >
-              {busy ? 'Generating…' : 'Download STL'}
+              {busy ? t('stlExport.generating') : t('stlExport.download')}
             </button>
           </div>
         </div>

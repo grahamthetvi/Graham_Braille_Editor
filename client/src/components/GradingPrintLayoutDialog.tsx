@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type GradingPrintLayoutDialogProps = {
   onClose: () => void;
@@ -15,6 +16,7 @@ export function GradingPrintLayoutDialog({
   onGradingSheetOnAllPagesChange,
   disabled,
 }: GradingPrintLayoutDialogProps) {
+  const { t } = useTranslation();
   const titleId = useId();
   const downloadBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -39,7 +41,7 @@ export function GradingPrintLayoutDialog({
     <div
       className="stl-export-overlay"
       onClick={onClose}
-      aria-label="Close grading print layout options"
+      aria-label={t('gradingPrint.closeAriaLabel')}
     >
       <div
         className="stl-export-panel"
@@ -49,15 +51,15 @@ export function GradingPrintLayoutDialog({
         onClick={e => e.stopPropagation()}
       >
         <header className="stl-export-header">
-          <h2 id={titleId}>Grading Print Layout</h2>
-          <button type="button" className="stl-export-close" onClick={onClose} aria-label="Close">
+          <h2 id={titleId}>{t('gradingPrint.title')}</h2>
+          <button type="button" className="stl-export-close" onClick={onClose} aria-label={t('gradingPrint.close')}>
             ✕
           </button>
         </header>
 
         <div className="stl-export-body">
           <p className="stl-export-hint">
-            Download print layout (.rtf) matching the braille wrapping with grading metrics prepended.
+            {t('gradingPrint.description')}
           </p>
 
           <label className="stl-export-radio settings-field" style={{ cursor: 'pointer' }}>
@@ -67,15 +69,15 @@ export function GradingPrintLayoutDialog({
               onChange={e => onGradingSheetOnAllPagesChange(e.target.checked)}
               style={{ cursor: 'pointer' }}
             />
-            <span>On all pages</span>
+            <span>{t('gradingPrint.onAllPages.label')}</span>
           </label>
           <p className="stl-export-hint" style={{ marginTop: '0.5rem', marginBottom: 0 }}>
-            When enabled, the grading header is repeated at the top of every page. Otherwise it appears only on the first page.
+            {t('gradingPrint.onAllPages.hint')}
           </p>
 
           <div className="stl-export-actions">
             <button type="button" className="toolbar-btn" onClick={onClose}>
-              Cancel
+              {t('gradingPrint.cancel')}
             </button>
             <button
               ref={downloadBtnRef}
@@ -84,7 +86,7 @@ export function GradingPrintLayoutDialog({
               disabled={disabled}
               onClick={handleDownload}
             >
-              Download
+              {t('gradingPrint.download')}
             </button>
           </div>
         </div>

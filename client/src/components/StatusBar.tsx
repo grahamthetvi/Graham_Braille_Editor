@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface StatusBarProps {
   bridgeConnected: boolean;
   bridgeUpdateAvailable?: boolean;
@@ -28,12 +30,14 @@ export function StatusBar({
   isLoading,
   progress,
 }: StatusBarProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       className="status-bar"
       role="status"
       aria-live="polite"
-      aria-label="Application status"
+      aria-label={t('statusBar.ariaLabel')}
     >
       {bridgeUpdateAvailable ? (
         <a
@@ -41,42 +45,42 @@ export function StatusBar({
           target="_blank"
           rel="noopener noreferrer"
           className="bridge-indicator update-available"
-          title="Security Update Available for Graham Bridge"
-          aria-label="Bridge update available"
+          title={t('statusBar.bridgeUpdateRequired.title')}
+          aria-label={t('statusBar.bridgeUpdateRequired.ariaLabel')}
           style={{ backgroundColor: '#d03f00', color: '#fff', textDecoration: 'none' }}
         >
-          Bridge Update Required
+          {t('statusBar.bridgeUpdateRequired.label')}
         </a>
       ) : (
         <span
           className={`bridge-indicator ${bridgeConnected ? 'connected' : 'disconnected'}`}
-          title={useWebUSB ? 'WebUSB Embossing Available' : bridgeConnected ? 'Bridge running on localhost:8080' : 'Bridge not detected'}
-          aria-label={useWebUSB ? 'WebUSB ready' : bridgeConnected ? 'Bridge connected' : 'Bridge offline'}
+          title={useWebUSB ? t('statusBar.webUsbReady.title') : bridgeConnected ? t('statusBar.bridgeConnected.title') : t('statusBar.bridgeOffline.title')}
+          aria-label={useWebUSB ? t('statusBar.webUsbReady.ariaLabel') : bridgeConnected ? t('statusBar.bridgeConnected.ariaLabel') : t('statusBar.bridgeOffline.ariaLabel')}
         >
-          {useWebUSB ? '● WebUSB Ready' : bridgeConnected ? '● Bridge Connected' : '○ Bridge Offline'}
+          {useWebUSB ? t('statusBar.webUsbReady.label') : bridgeConnected ? t('statusBar.bridgeConnected.label') : t('statusBar.bridgeOffline.label')}
         </span>
       )}
 
       {charCount > 0 && (
         <>
-          <span className="status-stat" title="Source word count">
-            {wordCount.toLocaleString()} words
+          <span className="status-stat" title={t('statusBar.wordCount.title')}>
+            {t('statusBar.wordCount.label', { count: wordCount.toLocaleString() })}
           </span>
-          <span className="status-stat" title="Source character count">
-            {charCount.toLocaleString()} chars
+          <span className="status-stat" title={t('statusBar.charCount.title')}>
+            {t('statusBar.charCount.label', { count: charCount.toLocaleString() })}
           </span>
         </>
       )}
 
       {brfLength > 0 && (
-        <span className="status-stat" title="BRF output size">
-          BRF: {brfLength.toLocaleString()} bytes
+        <span className="status-stat" title={t('statusBar.brfSize.title')}>
+          {t('statusBar.brfSize.label', { bytes: brfLength.toLocaleString() })}
         </span>
       )}
 
       {isLoading && progress > 0 && progress < 100 && (
-        <span className="status-progress" title="Translation progress">
-          Translating… {progress}%
+        <span className="status-progress" title={t('statusBar.translating.title')}>
+          {t('statusBar.translating.label', { progress })}
         </span>
       )}
     </div>

@@ -72,6 +72,7 @@ export const TABLE_GROUPS: BrailleTableGroup[] = [
   {
     group: 'Spanish & Portuguese',
     tables: [
+      { name: 'Spanish — Grade 1', file: 'es-g1.ctb' },
       { name: 'Portuguese — Portugal Grade 2', file: 'pt-pt-g2.ctb' },
       { name: 'Portuguese — Computer (8-dot)', file: 'pt-pt-comp8.ctb' },
     ],
