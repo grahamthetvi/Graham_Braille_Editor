@@ -34,6 +34,10 @@ via WebAssembly — no server-side translation component is required.
 │  │  Download    │ ── translatedText (.brf) ──▶ browser download  │
 │  │  BRF button  │                                                │
 │  └──────────────┘                                                │
+│  ┌──────────────┐                                                │
+│  │  Download    │ ── inputText → Kitten / eSpeak / Piper → MP3   │
+│  │  MP3 button  │     (client-side; models cached in browser)    │
+│  └──────────────┘                                                │
 └─────────────────────────────────────────────────────────────────┘
              │  HTTP POST /print (optional)
              ▼

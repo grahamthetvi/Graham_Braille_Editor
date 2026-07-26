@@ -13,13 +13,18 @@
     "setup:liblouis": "node scripts/setup-liblouis.js"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@fontsource/open-sans": "^5.2.7",
+    "@mintplex-labs/piper-tts-web": "^1.0.4",
     "@monaco-editor/react": "^4.7.0",
     "earcut": "^3.0.2",
+    "espeak-ng": "^1.0.2",
     "katex": "^0.16.28",
+    "kitten-tts-js": "^0.1.2",
     "liblouis-js": "^0.2.0",
     "mathjs": "^15.2.0",
     "monaco-editor": "^0.52.2",
+    "onnxruntime-web": "^1.27.0",
     "opentype.js": "^2.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
