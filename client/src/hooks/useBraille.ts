@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
 import type { WordMapData } from '../workers/braille.worker';
 
-export type BrailleTable = 'en-ueb-g2.ctb' | 'en-ueb-g1.ctb' | 'en-us-g1.ctb' | 'en-us-g2.ctb';
+export type BrailleTable = string;
 export type MathCode = 'nemeth' | 'ueb';
 
 export type BackTranslateBrfResult = { plainText: string; brf: string };

@@ -58,12 +58,21 @@ export interface WordMapData {
 }
 
 interface LiblouisModule {
-  calledRun: boolean;
+  calledRun?: boolean;
   onRuntimeInitialized?: () => void;
-  FS: object;
-  Runtime: object;
+  FS: {
+    lookup: unknown;
+    createLazyFile: (...args: unknown[]) => unknown;
+  };
   ccall: (...args: unknown[]) => unknown;
+  addFunction?: (...args: unknown[]) => number;
+  removeFunction?: (...args: unknown[]) => void;
 }
+
+type LiblouisFactory = (moduleArg?: {
+  wasmBinary?: ArrayBuffer;
+  locateFile?: (path: string, prefix: string) => string;
+}) => Promise<LiblouisModule>;
 
 // ─── Chunking constants ───────────────────────────────────────────────────────
 
@@ -142,13 +151,13 @@ let ready = false;
 let liblouis: LiblouisEasyApi | undefined;
 
 async function init(): Promise<void> {
-  // ── Step 1: detect & load WASM or asm.js build ──────────────────────────
+  // ── Step 1: load real WASM via MODULARIZE factory ────────────────────────
   const wasmUrl = `${BASE}/wasm/liblouis.wasm`;
   const wasmResp = await fetch(wasmUrl);
   if (!wasmResp.ok) {
     throw new Error(
       `Cannot load liblouis build from ${wasmUrl} (HTTP ${wasmResp.status}). ` +
-      `Run "npm run setup:liblouis" first.`
+        `Run "./client/scripts/build-liblouis/build.sh --install" first.`
     );
   }
 
@@ -160,22 +169,26 @@ async function init(): Promise<void> {
     header[2] === 0x73 &&
     header[3] === 0x6d;
 
-  if (isRealWasm) {
-    (self as unknown as Record<string, unknown>)['Module'] = { wasmBinary: rawBuffer };
-    await execRemoteScript(`${BASE}/wasm/liblouis.js`);
-  } else {
-    const src = new TextDecoder().decode(rawBuffer);
-    // new Function executes in global scope so the asm.js IIFE lands on `self`
-    new Function(src).call(self);
+  if (!isRealWasm) {
+    throw new Error(
+      'public/wasm/liblouis.wasm is not a WebAssembly binary. ' +
+        'Rebuild with ./client/scripts/build-liblouis/build.sh --install'
+    );
   }
 
-  // Wait for Emscripten runtime to complete initialisation.
-  const capi = (self as unknown as Record<string, unknown>)['liblouis_emscripten'] as LiblouisModule;
-  if (capi && !capi.calledRun) {
-    await new Promise<void>((resolve) => {
-      capi.onRuntimeInitialized = resolve;
-    });
+  await execRemoteScript(`${BASE}/wasm/liblouis.js`);
+
+  const factory = (self as unknown as Record<string, unknown>)[
+    'liblouis_emscripten'
+  ] as LiblouisFactory | undefined;
+  if (typeof factory !== 'function') {
+    throw new Error('liblouis.js did not expose liblouis_emscripten factory');
   }
+
+  const capi = await factory({
+    wasmBinary: rawBuffer,
+    locateFile: (path) => `${BASE}/wasm/${path}`,
+  });
 
   // ── Step 2: load the Easy API wrapper ───────────────────────────────────
   await execRemoteScript(`${BASE}/wasm/easy-api.js`);
@@ -190,14 +203,14 @@ async function init(): Promise<void> {
     throw new Error('easy-api.js did not expose a full liblouis instance on self');
   }
 
-  if (capi) liblouis.setLiblouisBuild(capi);
+  liblouis.setLiblouisBuild(capi);
 
   liblouis.setLogLevel(30000); // suppress debug noise; keep WARN+
   liblouis.enableOnDemandTableLoading(`${BASE}/tables/`);
 
   ready = true;
   self.postMessage({ type: 'READY' });
-  console.info('[braille-worker] ready (isRealWasm =', isRealWasm, ')');
+  console.info('[braille-worker] ready (liblouis WASM)');
 }
 
 // ─── KaTeX & SRE Imports ──────────────────────────────────────────────────────

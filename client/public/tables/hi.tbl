@@ -1,4 +1,7 @@
-#+locale:hi
+#-index-name: Hindi
+#-display-name: Hindi braille
+
+#+language:hi
 #+type:literary
 #+grade:1
 

@@ -10,7 +10,8 @@
     "test": "vitest run",
     "preview": "vite preview",
     "postinstall": "node scripts/setup-liblouis.js && node scripts/setup-onnx-wasm.js",
-    "setup:liblouis": "node scripts/setup-liblouis.js"
+    "setup:liblouis": "node scripts/setup-liblouis.js",
+    "build:liblouis": "bash scripts/build-liblouis/build.sh --install"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",
@@ -22,7 +23,6 @@
     "i18next": "^26.3.6",
     "katex": "^0.16.28",
     "kitten-tts-js": "^0.1.2",
-    "liblouis-js": "^0.2.0",
     "mathjs": "^15.2.0",
     "monaco-editor": "^0.52.2",
     "onnxruntime-web": "^1.27.0",

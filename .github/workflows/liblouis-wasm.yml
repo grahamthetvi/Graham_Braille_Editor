@@ -1,0 +1,58 @@
+name: Liblouis WASM
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'client/scripts/build-liblouis/**'
+      - 'client/scripts/setup-liblouis.js'
+      - 'client/scripts/liblouis-easy-api.template.js'
+      - '.github/workflows/liblouis-wasm.yml'
+  pull_request:
+    paths:
+      - 'client/scripts/build-liblouis/**'
+      - 'client/scripts/setup-liblouis.js'
+      - 'client/scripts/liblouis-easy-api.template.js'
+      - 'client/public/wasm/**'
+      - '.github/workflows/liblouis-wasm.yml'
+
+jobs:
+  rebuild-and-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build liblouis WASM (pinned VERSION)
+        run: ./client/scripts/build-liblouis/build.sh
+
+      - name: Diff committed wasm/glue against rebuild
+        run: |
+          set -euo pipefail
+          cmp -s client/vendor/liblouis/out/liblouis.wasm client/public/wasm/liblouis.wasm \
+            || { echo "liblouis.wasm drift — run build.sh --install and commit"; exit 1; }
+          # Glue may contain absolute path noise; compare size + EXPORT_NAME presence
+          test -f client/public/wasm/liblouis.js
+          grep -q 'liblouis_emscripten' client/public/wasm/liblouis.js
+          grep -q 'liblouis_emscripten' client/vendor/liblouis/out/liblouis.js
+          # Size should match within a small tolerance (path embedding)
+          pub=$(wc -c < client/public/wasm/liblouis.js)
+          vend=$(wc -c < client/vendor/liblouis/out/liblouis.js)
+          diff=$(( pub > vend ? pub - vend : vend - pub ))
+          if [ "$diff" -gt 64 ]; then
+            echo "liblouis.js size drift: public=$pub vendor=$vend"
+            exit 1
+          fi
+          node client/scripts/setup-liblouis.js --check
+          echo "OK: WASM artifacts match pin $(cat client/scripts/build-liblouis/VERSION)"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install and smoke-test
+        run: |
+          npm ci
+          npm test --workspace=client -- src/utils/tableRegistry.test.ts src/utils/liblouisVersion.smoke.test.ts

@@ -1,4 +1,7 @@
-#+locale:cy
+#-index-name: Welsh, contracted
+#-display-name: Welsh contracted braille
+
+#+language:cy
 #+type:literary
 #+contraction:full
 #+grade:2

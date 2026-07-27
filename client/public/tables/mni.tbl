@@ -1,4 +1,7 @@
-#+locale:mni
+#-index-name: Manipuri
+#-display-name: Manipuri braille
+
+#+language:mni
 #+type:literary
 #+grade:1
 
@@ -11,6 +14,5 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
-include spaces.ctb
 include mn-in-g1.utb
 include braille-patterns.cti

@@ -87,7 +87,7 @@ midendword anda 12346-1 panda
 midword :// 156-34-34
 midword angh = Shanghai
 begword anted =
-always anterior 1-1345-2345-23456-24-135-1235
+always anterior 1-1345-2345-12456-24-135-1235
 begword anter =
 begword aqued = aqueduct
 always ar 345
@@ -1068,7 +1068,8 @@ always \s\x2014\s 36-36 # em dash
 # nobreak 6-46-56-e,6-46-56
 
 # Problems handled with context
-noback context $U2-20[]"'"$l @6-3
+# removed: context rule conflicted with endword apostrophe rules (see #1608)
+# noback context $U2-20[]"'"$l @6-3
 noback context _$l["."]$l @256 U.S.
 noback context _$d["a"] @56-1
 noback context _$d["A"] @56-1

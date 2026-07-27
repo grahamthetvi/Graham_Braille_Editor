@@ -1,6 +1,13 @@
-#+locale:lv
+#-index-name: Latvian
+#-display-name: Latvian braille
+
+#+language:lv
 #+type:literary
+#+dots:6
 #+grade:1
+# Marked as "direction:forward" by Bue Vester-Andersen
+# as tests only run forward.
+#+direction:forward
 
 # TODO: Please correct the metadata above. It is not meant to be
 # accurate nor complete. It hasn't been verified by the table

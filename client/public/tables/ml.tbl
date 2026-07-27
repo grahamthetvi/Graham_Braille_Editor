@@ -1,6 +1,12 @@
-#+locale:ml
+#-index-name: Malayalam
+#-display-name: Malayalam braille
+
+#+language:ml
 #+type:literary
 #+grade:1
+# Marked as "direction:both" by Bue Vester-Andersen
+# as tests run both forward and backward
+#+direction:both
 
 # TODO: Please correct the metadata above. It is not meant to be
 # accurate nor complete. It hasn't been verified by the table
@@ -11,6 +17,5 @@
 # the implemented braille code. Preferably submit the documents
 # to https://github.com/liblouis/braille-specs.
 
-include spaces.ctb
 include ml-in-g1.utb
 include braille-patterns.cti

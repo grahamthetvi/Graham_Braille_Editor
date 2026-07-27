@@ -20,9 +20,9 @@ export interface UiLocale {
 
 export const UI_LOCALES: readonly UiLocale[] = [
   { id: 'en', nativeLabel: 'English', dir: 'ltr', defaultTable: 'en-ueb-g1.ctb', htmlLang: 'en' },
-  { id: 'ar', nativeLabel: 'العربية', dir: 'rtl', defaultTable: 'ar.tbl', htmlLang: 'ar' },
-  { id: 'fr', nativeLabel: 'Français', dir: 'ltr', defaultTable: 'Fr-Fr-g2.ctb', htmlLang: 'fr' },
-  { id: 'de', nativeLabel: 'Deutsch', dir: 'ltr', defaultTable: 'de-de-g1.ctb', htmlLang: 'de' },
+  { id: 'ar', nativeLabel: 'العربية', dir: 'rtl', defaultTable: 'ar-ar-g1.utb', htmlLang: 'ar' },
+  { id: 'fr', nativeLabel: 'Français', dir: 'ltr', defaultTable: 'fr-bfu-g2.ctb', htmlLang: 'fr' },
+  { id: 'de', nativeLabel: 'Deutsch', dir: 'ltr', defaultTable: 'de-g1.ctb', htmlLang: 'de' },
   { id: 'es', nativeLabel: 'Español', dir: 'ltr', defaultTable: 'es-g1.ctb', htmlLang: 'es' },
   { id: 'pt', nativeLabel: 'Português', dir: 'ltr', defaultTable: 'pt-pt-g2.ctb', htmlLang: 'pt' },
   { id: 'zh', nativeLabel: '中文', dir: 'ltr', defaultTable: 'zh-chn.ctb', htmlLang: 'zh-CN' },

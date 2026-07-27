@@ -1,6 +1,12 @@
-#+locale:sl
+#-index-name: Slovenian
+#-display-name: Slovenian braille
+
+#+language:sl
 #+type:literary
 #+grade:1
+# Marked as "direction:forward" by Bue Vester-Andersen
+# as tests only run forward.
+#+direction:forward
 
 # TODO: Please correct the metadata above. It is not meant to be
 # accurate nor complete. It hasn't been verified by the table
@@ -12,4 +18,3 @@
 # to https://github.com/liblouis/braille-specs.
 
 include sl-si-g1.utb
-include braille-patterns.cti

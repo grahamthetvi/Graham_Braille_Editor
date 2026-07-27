@@ -177,12 +177,14 @@ Graham_Braille_Editor/
 ├── client/                  ← Vite + React application
 │   ├── public/
 │   │   ├── wasm/
-│   │   │   ├── liblouis.wasm    ← compiled liblouis (WASM or asm.js fallback)
-│   │   │   ├── liblouis.js      ← Emscripten JS glue
-│   │   │   └── easy-api.js      ← patched liblouis Easy API wrapper
-│   │   └── tables/              ← 290+ liblouis braille tables (all languages)
+│   │   │   ├── liblouis.wasm    ← real liblouis WASM (pinned VERSION)
+│   │   │   ├── liblouis.js      ← Emscripten MODULARIZE glue (liblouis_emscripten)
+│   │   │   └── easy-api.js      ← patched Easy API (from scripts/liblouis-easy-api.template.js)
+│   │   └── tables/              ← liblouis tables matching the WASM pin (+ math from liblouisutdml)
 │   ├── scripts/
-│   │   └── setup-liblouis.js    ← copies WASM + tables from node_modules
+│   │   ├── build-liblouis/      ← Docker/podman emcc pipeline (VERSION pin)
+│   │   ├── setup-liblouis.js    ← installs vendor build → public/ (or refreshes Easy API)
+│   │   └── liblouis-easy-api.template.js
 │   └── src/
 │       ├── App.tsx              ← root component (toolbar, layout, locale)
 │       ├── App.css
@@ -197,11 +199,12 @@ Graham_Braille_Editor/
 │       │   └── bridge-client.ts ← HTTP client for Go bridge
 │       ├── utils/
 │       │   ├── braille.ts       ← ASCII BRF → Unicode braille converter
-│       │   └── tableRegistry.ts ← curated table name → filename registry
+│       │   └── tableRegistry.ts ← curated table name → filename registry (+ renames)
 │       └── workers/
-│           └── braille.worker.ts ← liblouis WASM loader + chunked translator
+│           └── braille.worker.ts ← liblouis WASM factory + chunked translator
 └── .github/workflows/
-    └── Pages_Workflow.yaml  ← GitHub Actions: build + deploy to Pages
+    ├── Pages_Workflow.yaml      ← GitHub Actions: build + deploy to Pages
+    └── liblouis-wasm.yml        ← rebuild WASM + drift check + smoke tests
 ```
 
 ---
@@ -217,6 +220,11 @@ By running liblouis as WASM in the browser, translation is:
 - **Free to deploy** — static hosting (GitHub Pages) is sufficient.
 - **Offline-capable** — once the page is loaded, translation works without
   a network connection (tables are fetched once and cached by the browser).
+
+The WASM binary and matching tables are **committed** under `client/public/`
+so Pages deploys stay static. Rebuild with
+`./client/scripts/build-liblouis/build.sh --install` when bumping
+`client/scripts/build-liblouis/VERSION`.
 
 ### Why a Web Worker?
 

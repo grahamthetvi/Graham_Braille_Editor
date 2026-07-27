@@ -151,6 +151,29 @@ Under the **Languages & Codes** tab you can:
 
 All chrome, dialogs, and help text are translated for those locales. Braille table display names stay in English for technical clarity.
 
+### Updating liblouis (developers)
+
+Braille translation uses a **real WebAssembly** build of liblouis (pinned in
+[`client/scripts/build-liblouis/VERSION`](client/scripts/build-liblouis/VERSION);
+currently **3.38.0**). Artifacts live in `client/public/wasm/` and tables in
+`client/public/tables/` (math tables `nemeth`/`marburg`/`ukmaths`/`wiskunde`
+are pulled from [liblouisutdml](https://github.com/liblouis/liblouisutdml)).
+
+To bump the engine:
+
+1. Edit `client/scripts/build-liblouis/VERSION` to the new liblouis release tag (e.g. `3.39.0`).
+2. Rebuild and install into `public/`:
+   ```bash
+   ./client/scripts/build-liblouis/build.sh --install
+   # or: cd client && npm run build:liblouis
+   ```
+3. Update [`client/src/utils/tableRegistry.ts`](client/src/utils/tableRegistry.ts) for any new/renamed/removed tables (and `TABLE_RENAMES` for localStorage migration).
+4. Run smoke tests: `cd client && npm test -- src/utils/tableRegistry.test.ts src/utils/liblouisVersion.smoke.test.ts`
+5. Commit `public/wasm/*`, `public/tables/*`, registry, and VERSION together.
+
+Requires **podman** or **docker** (pulls `emscripten/emsdk`). CI workflow
+`.github/workflows/liblouis-wasm.yml` rebuilds and fails if committed WASM drifts.
+
 ### 1. Large-Print (Jumbo) Braille
 For combined print/braille production or low-vision readers, you can insert large-print sections in your document. 
 - Use the **Large Print** tool under the **Tools** tab to insert blocks like `:::jumbo size=48\nText\n:::`.

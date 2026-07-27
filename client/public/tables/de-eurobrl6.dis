@@ -70,7 +70,7 @@ display 6 1246
 display 7 12456
 display 8 1256
 display 9 246
-display W 2456
+display w 2456
 display , 2
 display ; 23
 display : 25
@@ -96,3 +96,6 @@ display $ 46
 display _ 456 
 display < 56
 display ' 6
+
+# non braking space as defined in de-chardefs6.cti
+display \s a

@@ -53,7 +53,7 @@ import {
   buildPlainTextToMatchBrailleWrap,
   convertToRtf,
 } from './utils/brailleFormat';
-import { TABLE_GROUPS, DEFAULT_TABLE } from './utils/tableRegistry';
+import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
@@ -197,7 +197,9 @@ export default function App() {
   const [selectedTable, setSelectedTable] = useState(() => {
     try {
       const v = localStorage.getItem('graham-braille-selected-table');
-      return v || DEFAULT_TABLE;
+      if (!v) return DEFAULT_TABLE;
+      const migrated = migrateTableFilename(v);
+      return isKnownTable(migrated) ? migrated : DEFAULT_TABLE;
     } catch {
       return DEFAULT_TABLE;
     }
