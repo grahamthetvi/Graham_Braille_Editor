@@ -10,10 +10,25 @@ import {
   generateCustomShape,
   generateInventoryShape,
   generateRaisedPrintTextGraphic,
+  paintInventoryShape,
   GraphicCanvas,
   type GraphicResult,
   type InventoryShapeKind
 } from '../utils/graphicBraille';
+import {
+  DRAWING_TOOLS,
+  MATH_TOOLS,
+  SHAPE_CATEGORY_LABELS,
+  SHAPES_SECTION_CATEGORIES,
+  getShapeEntry,
+  searchGraphicsCatalog,
+  searchHitChip,
+  searchHitLabel,
+  shapesInCategory,
+  type GraphicsSection,
+  type SearchHit,
+  type ShapeCatalogCategory,
+} from '../utils/shapeCatalog';
 import { generateEquationGraph } from '../utils/graphEquation';
 import { asciiToUnicodeBraille } from '../utils/braille';
 import { BrailleCell } from './BrailleCell';
@@ -51,6 +66,9 @@ export function GraphicGeneratorModal({
   onClose
 }: GraphicGeneratorModalProps) {
   const [graphicType, setGraphicType] = useState<GraphicType>('clock');
+  const [section, setSection] = useState<GraphicsSection>('math');
+  const [shapesCategory, setShapesCategory] = useState<Exclude<ShapeCatalogCategory, 'math'>>('basics');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Clock state
   const [clockRadius, setClockRadius] = useState(20);
@@ -388,51 +406,16 @@ export function GraphicGeneratorModal({
 
     if (photoTool === 'stamp' && mouseHoverGrid) {
       const previewCanvas = new GraphicCanvas(Math.ceil(cols / 2), Math.ceil(rows / 3));
-      const cx = mouseHoverGrid.x;
-      const cy = mouseHoverGrid.y;
-      const size = photoStampSize;
-      const filled = photoStampFilled;
-      
-      switch (photoStampShape) {
-        case 'actingMask': previewCanvas.drawActingMask(cx, cy, size, filled); break;
-        case 'apple': previewCanvas.drawApple(cx, cy, size, filled); break;
-        case 'axe': previewCanvas.drawAxe(cx, cy, size, filled); break;
-        case 'beach': previewCanvas.drawBeach(cx, cy, size, filled); break;
-        case 'bed': previewCanvas.drawBed(cx, cy, size, filled); break;
-        case 'birdHouse': previewCanvas.drawBirdHouse(cx, cy, size, filled); break;
-        case 'bowling': previewCanvas.drawBowling(cx, cy, size, filled); break;
-        case 'candle': previewCanvas.drawCandle(cx, cy, size, filled); break;
-        case 'cat': previewCanvas.drawCat(cx, cy, size, filled); break;
-        case 'circle': previewCanvas.drawCircle(cx, cy, size, filled); break;
-        case 'cloud': previewCanvas.drawCloud(cx, cy, size, filled); break;
-        case 'cloudLightning': previewCanvas.drawCloudLightning(cx, cy, size, filled); break;
-        case 'moon': previewCanvas.drawCrescentMoon(cx, cy, size, filled); break;
-        case 'cross':
-          previewCanvas.drawCross(
-            cx,
-            cy,
-            size,
-            photoStampCrossParams.lengthHorizontal,
-            photoStampCrossParams.thicknessVertical,
-            photoStampCrossParams.thicknessHorizontal,
-            photoStampCrossParams.heightRatio,
-            filled
-          );
-          break;
-        case 'dog': previewCanvas.drawDog(cx, cy, size, filled); break;
-        case 'flower': previewCanvas.drawFlower(cx, cy, size, filled); break;
-        case 'heart': previewCanvas.drawHeart(cx, cy, size, filled); break;
-        case 'hiking': previewCanvas.drawHiking(cx, cy, size, filled); break;
-        case 'house': previewCanvas.drawHouse(cx, cy, size, filled); break;
-        case 'iceSkates': previewCanvas.drawIceSkates(cx, cy, size, filled); break;
-        case 'lightning': previewCanvas.drawLightningBolt(cx, cy, size, filled); break;
-        case 'movieProjector': previewCanvas.drawMovieProjector(cx, cy, size, filled); break;
-        case 'mustache': previewCanvas.drawMustache(cx, cy, size, filled); break;
-        case 'paintbrush': previewCanvas.drawPaintbrush(cx, cy, size, filled); break;
-        case 'star': previewCanvas.drawStar(cx, cy, size, filled); break;
-        case 'vampireFangs': previewCanvas.drawVampireFangs(cx, cy, size, filled); break;
-      }
-      
+      paintInventoryShape(
+        previewCanvas,
+        photoStampShape,
+        mouseHoverGrid.x,
+        mouseHoverGrid.y,
+        photoStampSize,
+        photoStampFilled,
+        photoStampCrossParams
+      );
+
       ctx.fillStyle = 'rgba(255, 75, 75, 0.5)';
       for (let y = 0; y < rows; y++) {
         for (let x = 0; x < cols; x++) {
@@ -627,6 +610,85 @@ export function GraphicGeneratorModal({
     setLineStart(null);
   };
 
+
+  const searchHits = useMemo(() => searchGraphicsCatalog(searchQuery), [searchQuery]);
+
+  const selectMathTool = (id: (typeof MATH_TOOLS)[number]['id']) => {
+    setSection('math');
+    setGraphicType(id);
+    setSearchQuery('');
+  };
+
+  const selectMathQuickShape = (kind: InventoryShapeKind) => {
+    setSection('math');
+    setGraphicType('shapeInventory');
+    setInventoryShape(kind);
+    setSearchQuery('');
+  };
+
+  const selectShapesCategory = (cat: Exclude<ShapeCatalogCategory, 'math'>) => {
+    setSection('shapes');
+    setShapesCategory(cat);
+    setGraphicType('shapeInventory');
+    const first = shapesInCategory(cat)[0];
+    if (first && getShapeEntry(inventoryShape)?.category !== cat) {
+      setInventoryShape(first.kind);
+    }
+    setSearchQuery('');
+  };
+
+  const selectCustomShape = () => {
+    setSection('shapes');
+    setGraphicType('customShape');
+    setSearchQuery('');
+  };
+
+  const selectDrawingTool = (id: (typeof DRAWING_TOOLS)[number]['id']) => {
+    setSection('drawing');
+    setGraphicType(id);
+    setSearchQuery('');
+  };
+
+  const applySearchHit = (hit: SearchHit) => {
+    switch (hit.kind) {
+      case 'mathTool':
+        selectMathTool(hit.tool.id);
+        break;
+      case 'mathQuickShape':
+        selectMathQuickShape(hit.shape.kind);
+        break;
+      case 'shape':
+        if (hit.shape.category === 'math') {
+          selectMathQuickShape(hit.shape.kind);
+        } else {
+          setSection('shapes');
+          setShapesCategory(hit.shape.category as Exclude<ShapeCatalogCategory, 'math'>);
+          setGraphicType('shapeInventory');
+          setInventoryShape(hit.shape.kind);
+          setSearchQuery('');
+        }
+        break;
+      case 'customShape':
+        selectCustomShape();
+        break;
+      case 'drawing':
+        selectDrawingTool(hit.tool.id);
+        break;
+    }
+  };
+
+  const mathQuickShapes = shapesInCategory('math');
+  const shapesCatalogForSection = shapesInCategory(shapesCategory);
+  const showingMathQuickShapes = section === 'math' && graphicType === 'shapeInventory';
+  const showingShapesCatalog = section === 'shapes' && graphicType === 'shapeInventory';
+
+  const navBtnStyle = (active: boolean): React.CSSProperties => ({
+    textAlign: 'left',
+    textTransform: 'none',
+    fontWeight: active ? 700 : 500,
+    opacity: active ? 1 : 0.9,
+  });
+
   // Graph equation preview (memoised so it only re-evaluates when inputs change)
   const graphPreview = useMemo(() => {
     if (graphicType !== 'graph') return null;
@@ -729,53 +791,143 @@ export function GraphicGeneratorModal({
           flexDirection: 'column',
         }}
       >
-        <header className="welcome-header">
-          <h2>Tactile Graphics Generator</h2>
+        <header className="welcome-header" style={{ flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+          <h2 style={{ margin: 0, flex: '1 1 auto' }}>Tactile Graphics Generator</h2>
+          <label style={{ flex: '1 1 220px', display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '360px' }}>
+            <span className="visually-hidden">Search graphics</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search tools and shapes…"
+              aria-label="Search tools and shapes"
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-card)',
+                color: 'var(--text-color)',
+                boxSizing: 'border-box',
+              }}
+            />
+          </label>
           <button className="welcome-close" onClick={onClose}>✕</button>
+          {searchQuery.trim() && (
+            <div
+              role="listbox"
+              aria-label="Search results"
+              style={{
+                flex: '1 1 100%',
+                maxHeight: '160px',
+                overflowY: 'auto',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                background: 'var(--bg-card)',
+                padding: '0.35rem',
+              }}
+            >
+              {searchHits.length === 0 ? (
+                <div style={{ padding: '0.5rem', opacity: 0.75 }}>No matches</div>
+              ) : (
+                searchHits.map((hit, i) => (
+                  <button
+                    key={`${searchHitChip(hit)}-${searchHitLabel(hit)}-${i}`}
+                    type="button"
+                    role="option"
+                    className="toolbar-btn"
+                    onClick={() => applySearchHit(hit)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      marginBottom: '0.25rem',
+                      textTransform: 'none',
+                    }}
+                  >
+                    <span>{searchHitLabel(hit)}</span>
+                    <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{searchHitChip(hit)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </header>
 
         <div style={{ display: 'flex', flex: 1, minHeight: graphicType === 'photo' ? 0 : '400px', overflow: 'hidden' }}>
-          {/* Sidebar */}
-          <div style={{ width: '200px', borderRight: '1px solid var(--border-color)', padding: '1rem', overflowY: 'auto', flexShrink: 0 }}>
-            <h3 style={{ marginTop: 0 }}>Graphic Type</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {(
-                [
-                  'clock',
-                  'fraction',
-                  'numberLine',
-                  'base10',
-                  'manipulatives',
-                  'customShape',
-                  'shapeInventory',
-                  'photo',
-                  'raisedPrintText',
-                  'graph',
-                  'chart'
-                ] as GraphicType[]
-              ).map(type => {
-                let label = type.replace(/([A-Z])/g, ' $1').trim();
-                if (type === 'customShape') {
-                  label = 'Custom Shapes';
-                } else if (type === 'shapeInventory') {
-                  label = 'Shape Inventory';
-                } else if (type === 'graph') {
-                  label = 'Graphs';
-                } else if (type === 'photo') {
-                  label = 'Photo Overlay';
-                }
-                return (
+          {/* Sidebar: Math / Shapes / Drawing */}
+          <div style={{ width: '220px', borderRight: '1px solid var(--border-color)', padding: '1rem', overflowY: 'auto', flexShrink: 0 }}>
+            <section style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.75 }}>Math</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {MATH_TOOLS.map(tool => (
                   <button
-                    key={type}
-                    className={`toolbar-btn ${graphicType === type ? 'toolbar-btn--active' : ''}`}
-                    onClick={() => setGraphicType(type)}
-                    style={{ textAlign: 'left', textTransform: 'capitalize' }}
+                    key={tool.id}
+                    type="button"
+                    className={`toolbar-btn ${section === 'math' && graphicType === tool.id ? 'toolbar-btn--active' : ''}`}
+                    onClick={() => selectMathTool(tool.id)}
+                    style={navBtnStyle(section === 'math' && graphicType === tool.id)}
                   >
-                    {label}
+                    {tool.label}
                   </button>
-                );
-              })}
-            </div>
+                ))}
+                <button
+                  type="button"
+                  className={`toolbar-btn ${showingMathQuickShapes ? 'toolbar-btn--active' : ''}`}
+                  onClick={() => {
+                    const current = getShapeEntry(inventoryShape);
+                    selectMathQuickShape(current?.category === 'math' ? inventoryShape : 'triangle');
+                  }}
+                  style={navBtnStyle(showingMathQuickShapes)}
+                >
+                  Quick shapes
+                </button>
+              </div>
+            </section>
+
+            <section style={{ marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.75 }}>Shapes</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {SHAPES_SECTION_CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`toolbar-btn ${showingShapesCatalog && shapesCategory === cat ? 'toolbar-btn--active' : ''}`}
+                    onClick={() => selectShapesCategory(cat)}
+                    style={navBtnStyle(showingShapesCatalog && shapesCategory === cat)}
+                  >
+                    {SHAPE_CATEGORY_LABELS[cat]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`toolbar-btn ${section === 'shapes' && graphicType === 'customShape' ? 'toolbar-btn--active' : ''}`}
+                  onClick={selectCustomShape}
+                  style={navBtnStyle(section === 'shapes' && graphicType === 'customShape')}
+                >
+                  Custom polygon
+                </button>
+              </div>
+            </section>
+
+            <section>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '0.85rem', letterSpacing: '0.04em', textTransform: 'uppercase', opacity: 0.75 }}>Drawing</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                {DRAWING_TOOLS.map(tool => (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    className={`toolbar-btn ${section === 'drawing' && graphicType === tool.id ? 'toolbar-btn--active' : ''}`}
+                    onClick={() => selectDrawingTool(tool.id)}
+                    style={navBtnStyle(section === 'drawing' && graphicType === tool.id)}
+                  >
+                    {tool.label}
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
 
           {/* Main Area */}
@@ -983,73 +1135,13 @@ export function GraphicGeneratorModal({
                         onChange={e => setPhotoStampShape(e.target.value as InventoryShapeKind)}
                         style={{ padding: '1px 3px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', maxWidth: '90px' }}
                       >
-                        <optgroup label="Basics">
-                          <option value="circle">Circle</option>
-                          <option value="heart">Heart</option>
-                          <option value="star">Star</option>
-                          <option value="cross">Cross</option>
-                          <option value="moon">Moon</option>
-                          <option value="cloud">Cloud</option>
-                          <option value="cloudLightning">Cloud+Lt</option>
-                          <option value="lightning">Lightning</option>
-                        </optgroup>
-                        <optgroup label="Science">
-                          <option value="atom">Atom</option>
-                          <option value="dna">DNA</option>
-                          <option value="leaf">Leaf</option>
-                          <option value="fish">Fish</option>
-                          <option value="butterfly">Butterfly</option>
-                          <option value="earth">Earth</option>
-                          <option value="sun">Sun</option>
-                          <option value="volcano">Volcano</option>
-                          <option value="magnet">Magnet</option>
-                          <option value="thermometer">Therm.</option>
-                          <option value="beaker">Beaker</option>
-                          <option value="microscope">Micro.</option>
-                        </optgroup>
-                        <optgroup label="History">
-                          <option value="pyramid">Pyramid</option>
-                          <option value="greekColumn">Column</option>
-                          <option value="castle">Castle</option>
-                          <option value="shipSail">Ship</option>
-                          <option value="compassRose">Compass</option>
-                          <option value="scroll">Scroll</option>
-                          <option value="libertyBell">Bell</option>
-                          <option value="flag">Flag</option>
-                          <option value="timeline">Timeline</option>
-                        </optgroup>
-                        <optgroup label="Math">
-                          <option value="triangle">Triangle</option>
-                          <option value="square">Square</option>
-                          <option value="hexagon">Hexagon</option>
-                          <option value="cube">Cube</option>
-                          <option value="cone">Cone</option>
-                          <option value="cylinder">Cylinder</option>
-                          <option value="rightTriangle">Rt Tri</option>
-                          <option value="angle">Angle</option>
-                          <option value="coordinateAxes">Axes</option>
-                          <option value="pieChart">Pie</option>
-                        </optgroup>
-                        <optgroup label="Everyday">
-                          <option value="actingMask">Mask</option>
-                          <option value="apple">Apple</option>
-                          <option value="axe">Axe</option>
-                          <option value="beach">Beach</option>
-                          <option value="bed">Bed</option>
-                          <option value="birdHouse">Bird H.</option>
-                          <option value="bowling">Bowling</option>
-                          <option value="candle">Candle</option>
-                          <option value="cat">Cat</option>
-                          <option value="dog">Dog</option>
-                          <option value="flower">Flower</option>
-                          <option value="hiking">Hiking</option>
-                          <option value="house">House</option>
-                          <option value="iceSkates">Skates</option>
-                          <option value="movieProjector">Proj.</option>
-                          <option value="mustache">Mustache</option>
-                          <option value="paintbrush">Brush</option>
-                          <option value="vampireFangs">Fangs</option>
-                        </optgroup>
+                        {(['basics', 'science', 'history', 'math', 'everyday'] as const).map(cat => (
+                          <optgroup key={cat} label={SHAPE_CATEGORY_LABELS[cat]}>
+                            {shapesInCategory(cat).map(s => (
+                              <option key={s.kind} value={s.kind}>{s.shortLabel}</option>
+                            ))}
+                          </optgroup>
+                        ))}
                       </select>
                       <input 
                         type="number" 
@@ -1260,81 +1352,43 @@ export function GraphicGeneratorModal({
               )}
               {graphicType === 'shapeInventory' && (
                 <>
-                  <label style={{ gridColumn: '1 / -1' }}>
-                    Shape:{' '}
-                    <select
-                      value={inventoryShape}
-                      onChange={e => setInventoryShape(e.target.value as InventoryShapeKind)}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>
+                      {showingMathQuickShapes
+                        ? 'Math · Quick shapes'
+                        : `Shapes · ${SHAPE_CATEGORY_LABELS[shapesCategory]}`}
+                    </div>
+                    <div
+                      role="listbox"
+                      aria-label={showingMathQuickShapes ? 'Math quick shapes' : `${SHAPE_CATEGORY_LABELS[shapesCategory]} shapes`}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                        gap: '0.4rem',
+                      }}
                     >
-                      <optgroup label="Basics">
-                        <option value="circle">Circle</option>
-                        <option value="heart">Heart</option>
-                        <option value="star">Star (5-Pointed)</option>
-                        <option value="cross">Cross</option>
-                        <option value="moon">Crescent Moon</option>
-                        <option value="cloud">Cloud</option>
-                        <option value="cloudLightning">Cloud with Lightning Bolt</option>
-                        <option value="lightning">Lightning Bolt</option>
-                      </optgroup>
-                      <optgroup label="Science">
-                        <option value="atom">Atom</option>
-                        <option value="dna">DNA Helix</option>
-                        <option value="leaf">Leaf</option>
-                        <option value="fish">Fish</option>
-                        <option value="butterfly">Butterfly</option>
-                        <option value="earth">Earth / Globe</option>
-                        <option value="sun">Sun</option>
-                        <option value="volcano">Volcano</option>
-                        <option value="magnet">Horseshoe Magnet</option>
-                        <option value="thermometer">Thermometer</option>
-                        <option value="beaker">Lab Beaker</option>
-                        <option value="microscope">Microscope</option>
-                      </optgroup>
-                      <optgroup label="History">
-                        <option value="pyramid">Pyramid</option>
-                        <option value="greekColumn">Greek Column</option>
-                        <option value="castle">Castle</option>
-                        <option value="shipSail">Sailing Ship</option>
-                        <option value="compassRose">Compass Rose</option>
-                        <option value="scroll">Scroll</option>
-                        <option value="libertyBell">Liberty Bell</option>
-                        <option value="flag">Flag</option>
-                        <option value="timeline">Timeline</option>
-                      </optgroup>
-                      <optgroup label="Math">
-                        <option value="triangle">Triangle</option>
-                        <option value="square">Square</option>
-                        <option value="hexagon">Hexagon</option>
-                        <option value="cube">Cube</option>
-                        <option value="cone">Cone</option>
-                        <option value="cylinder">Cylinder</option>
-                        <option value="rightTriangle">Right Triangle</option>
-                        <option value="angle">Angle</option>
-                        <option value="coordinateAxes">Coordinate Axes</option>
-                        <option value="pieChart">Pie Chart</option>
-                      </optgroup>
-                      <optgroup label="Everyday">
-                        <option value="actingMask">Acting Mask</option>
-                        <option value="apple">Apple</option>
-                        <option value="axe">Axe</option>
-                        <option value="beach">Beach</option>
-                        <option value="bed">Bed</option>
-                        <option value="birdHouse">Bird House</option>
-                        <option value="bowling">Bowling</option>
-                        <option value="candle">Candle</option>
-                        <option value="cat">Cat</option>
-                        <option value="dog">Dog</option>
-                        <option value="flower">Flower</option>
-                        <option value="hiking">Hiking</option>
-                        <option value="house">House</option>
-                        <option value="iceSkates">Ice Skating Skates</option>
-                        <option value="movieProjector">Movie Projector</option>
-                        <option value="mustache">Mustache</option>
-                        <option value="paintbrush">Paintbrush</option>
-                        <option value="vampireFangs">Vampire Fangs</option>
-                      </optgroup>
-                    </select>
-                  </label>
+                      {(showingMathQuickShapes ? mathQuickShapes : shapesCatalogForSection).map(shape => {
+                        const active = inventoryShape === shape.kind;
+                        return (
+                          <button
+                            key={shape.kind}
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            className={`toolbar-btn ${active ? 'toolbar-btn--active' : ''}`}
+                            onClick={() => setInventoryShape(shape.kind)}
+                            style={{ textTransform: 'none', textAlign: 'center', padding: '0.45rem 0.35rem' }}
+                          >
+                            {shape.shortLabel}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                      Selected: {getShapeEntry(inventoryShape)?.label ?? inventoryShape}
+                      {getShapeEntry(inventoryShape) ? ` · ${SHAPE_CATEGORY_LABELS[getShapeEntry(inventoryShape)!.category]}` : ''}
+                    </div>
+                  </div>
                   <label>
                     Size (radius in dots):{' '}
                     <input
@@ -1566,77 +1620,7 @@ function stampShapeOnGrid(
   const cellsH = Math.ceil(rows / 3);
   
   const canvas = new GraphicCanvas(cellsW, cellsH);
-  
-  switch (shape) {
-    case 'actingMask': canvas.drawActingMask(cx, cy, size, filled); break;
-    case 'apple': canvas.drawApple(cx, cy, size, filled); break;
-    case 'axe': canvas.drawAxe(cx, cy, size, filled); break;
-    case 'beach': canvas.drawBeach(cx, cy, size, filled); break;
-    case 'bed': canvas.drawBed(cx, cy, size, filled); break;
-    case 'birdHouse': canvas.drawBirdHouse(cx, cy, size, filled); break;
-    case 'bowling': canvas.drawBowling(cx, cy, size, filled); break;
-    case 'candle': canvas.drawCandle(cx, cy, size, filled); break;
-    case 'cat': canvas.drawCat(cx, cy, size, filled); break;
-    case 'circle': canvas.drawCircle(cx, cy, size, filled); break;
-    case 'cloud': canvas.drawCloud(cx, cy, size, filled); break;
-    case 'cloudLightning': canvas.drawCloudLightning(cx, cy, size, filled); break;
-    case 'moon': canvas.drawCrescentMoon(cx, cy, size, filled); break;
-    case 'cross':
-      canvas.drawCross(
-        cx,
-        cy,
-        size,
-        crossParams.lengthHorizontal,
-        crossParams.thicknessVertical,
-        crossParams.thicknessHorizontal,
-        crossParams.heightRatio,
-        filled
-      );
-      break;
-    case 'dog': canvas.drawDog(cx, cy, size, filled); break;
-    case 'flower': canvas.drawFlower(cx, cy, size, filled); break;
-    case 'heart': canvas.drawHeart(cx, cy, size, filled); break;
-    case 'hiking': canvas.drawHiking(cx, cy, size, filled); break;
-    case 'house': canvas.drawHouse(cx, cy, size, filled); break;
-    case 'iceSkates': canvas.drawIceSkates(cx, cy, size, filled); break;
-    case 'lightning': canvas.drawLightningBolt(cx, cy, size, filled); break;
-    case 'movieProjector': canvas.drawMovieProjector(cx, cy, size, filled); break;
-    case 'mustache': canvas.drawMustache(cx, cy, size, filled); break;
-    case 'paintbrush': canvas.drawPaintbrush(cx, cy, size, filled); break;
-    case 'star': canvas.drawStar(cx, cy, size, filled); break;
-    case 'vampireFangs': canvas.drawVampireFangs(cx, cy, size, filled); break;
-    case 'atom': canvas.drawAtom(cx, cy, size, filled); break;
-    case 'dna': canvas.drawDna(cx, cy, size, filled); break;
-    case 'leaf': canvas.drawLeaf(cx, cy, size, filled); break;
-    case 'fish': canvas.drawFish(cx, cy, size, filled); break;
-    case 'butterfly': canvas.drawButterfly(cx, cy, size, filled); break;
-    case 'earth': canvas.drawEarth(cx, cy, size, filled); break;
-    case 'sun': canvas.drawSun(cx, cy, size, filled); break;
-    case 'volcano': canvas.drawVolcano(cx, cy, size, filled); break;
-    case 'magnet': canvas.drawMagnet(cx, cy, size, filled); break;
-    case 'thermometer': canvas.drawThermometer(cx, cy, size, filled); break;
-    case 'beaker': canvas.drawBeaker(cx, cy, size, filled); break;
-    case 'microscope': canvas.drawMicroscope(cx, cy, size, filled); break;
-    case 'pyramid': canvas.drawPyramid(cx, cy, size, filled); break;
-    case 'greekColumn': canvas.drawGreekColumn(cx, cy, size, filled); break;
-    case 'castle': canvas.drawCastle(cx, cy, size, filled); break;
-    case 'shipSail': canvas.drawShipSail(cx, cy, size, filled); break;
-    case 'compassRose': canvas.drawCompassRose(cx, cy, size, filled); break;
-    case 'scroll': canvas.drawScroll(cx, cy, size, filled); break;
-    case 'libertyBell': canvas.drawLibertyBell(cx, cy, size, filled); break;
-    case 'flag': canvas.drawFlag(cx, cy, size, filled); break;
-    case 'timeline': canvas.drawTimeline(cx, cy, size, filled); break;
-    case 'triangle': canvas.drawTriangle(cx, cy, size, filled); break;
-    case 'square': canvas.drawSquare(cx, cy, size, filled); break;
-    case 'hexagon': canvas.drawHexagon(cx, cy, size, filled); break;
-    case 'cube': canvas.drawCube(cx, cy, size, filled); break;
-    case 'cone': canvas.drawCone(cx, cy, size, filled); break;
-    case 'cylinder': canvas.drawCylinder(cx, cy, size, filled); break;
-    case 'rightTriangle': canvas.drawRightTriangle(cx, cy, size, filled); break;
-    case 'angle': canvas.drawAngle(cx, cy, size, filled); break;
-    case 'coordinateAxes': canvas.drawCoordinateAxes(cx, cy, size, filled); break;
-    case 'pieChart': canvas.drawPieChart(cx, cy, size, filled); break;
-  }
+  paintInventoryShape(canvas, shape, cx, cy, size, filled, crossParams);
 
   const newGrid = grid.map(row => [...row]);
   for (let y = 0; y < rows; y++) {

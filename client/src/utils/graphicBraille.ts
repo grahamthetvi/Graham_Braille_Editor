@@ -3164,114 +3164,23 @@ function clampSides(sides: number): number {
   return Number.isFinite(n) && n >= 3 ? n : 3;
 }
 
-export function generateInventoryShape(
+export type InventoryCrossParams = {
+  lengthHorizontal: number;
+  thicknessVertical: number;
+  thicknessHorizontal: number;
+  heightRatio: number;
+};
+
+/** Paint an inventory shape onto an existing canvas. Returns the display label. */
+export function paintInventoryShape(
+  canvas: GraphicCanvas,
   kind: InventoryShapeKind,
-  radius: number,
+  cx: number,
+  cy: number,
+  r: number,
   filled: boolean,
-  crossParams?: {
-    lengthHorizontal: number;
-    thicknessVertical: number;
-    thicknessHorizontal: number;
-    heightRatio: number;
-  }
-): GraphicResult {
-  const r = clampRadius(radius);
-  let spanX = r * 2;
-  let spanY = r * 2;
-
-  if (kind === 'actingMask') {
-    spanX = r * 2.4;
-    spanY = r * 2.4;
-  } else if (kind === 'apple') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'axe') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'beach') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'bed') {
-    spanX = r * 2.4;
-    spanY = r * 2.0;
-  } else if (kind === 'birdHouse') {
-    spanX = r * 1.8;
-    spanY = r * 2.6;
-  } else if (kind === 'bowling') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'candle') {
-    spanX = r * 2.4;
-    spanY = r * 2.6;
-  } else if (kind === 'cat') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'cloud') {
-    spanX = r * 2.6;
-    spanY = r * 2.0;
-  } else if (kind === 'cloudLightning') {
-    spanX = r * 2.8;
-    spanY = r * 2.8;
-  } else if (kind === 'cross') {
-    const lenHoriz = crossParams?.lengthHorizontal ?? 30;
-    const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
-    spanX = rHoriz * 2;
-    spanY = r * 2;
-  } else if (kind === 'dog') {
-    spanX = r * 2.2;
-    spanY = r * 2.0;
-  } else if (kind === 'flower') {
-    spanX = r * 2.2;
-    spanY = r * 2.6;
-  } else if (kind === 'heart') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'hiking') {
-    spanX = r * 2.4;
-    spanY = r * 2.4;
-  } else if (kind === 'house') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'iceSkates') {
-    spanX = r * 2.8;
-    spanY = r * 2.6;
-  } else if (kind === 'moon') {
-    spanX = r * 2.4;
-    spanY = r * 2.2;
-  } else if (kind === 'movieProjector') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'mustache') {
-    spanX = r * 2.4;
-    spanY = r * 1.8;
-  } else if (kind === 'paintbrush') {
-    spanX = r * 1.8;
-    spanY = r * 3.6;
-  } else if (kind === 'vampireFangs') {
-    spanX = r * 2.2;
-    spanY = r * 2.8;
-  } else if (kind === 'atom' || kind === 'earth' || kind === 'sun' || kind === 'compassRose' || kind === 'pieChart'
-    || kind === 'triangle' || kind === 'square' || kind === 'hexagon' || kind === 'cube' || kind === 'cone'
-    || kind === 'cylinder' || kind === 'rightTriangle' || kind === 'angle' || kind === 'coordinateAxes'
-    || kind === 'magnet' || kind === 'leaf' || kind === 'fish' || kind === 'butterfly' || kind === 'volcano'
-    || kind === 'beaker' || kind === 'microscope' || kind === 'pyramid' || kind === 'castle' || kind === 'shipSail'
-    || kind === 'scroll' || kind === 'libertyBell' || kind === 'flag') {
-    spanX = r * 2.2;
-    spanY = r * 2.2;
-  } else if (kind === 'dna' || kind === 'thermometer' || kind === 'greekColumn') {
-    spanX = r * 1.8;
-    spanY = r * 2.6;
-  } else if (kind === 'timeline') {
-    spanX = r * 2.4;
-    spanY = r * 1.8;
-  }
-
-  const cellsW = Math.ceil(spanX / 2) + 2;
-  const cellsH = Math.ceil(spanY / 3) + 2;
-  const canvas = new GraphicCanvas(cellsW, cellsH);
-  const cx = cellsW;
-  const cy = cellsH * 1.5;
-
+  crossParams?: InventoryCrossParams
+): string {
   let label = '';
   switch (kind) {
     case 'actingMask':
@@ -3508,6 +3417,119 @@ export function generateInventoryShape(
       label = 'Pie Chart';
       break;
   }
+  return label;
+}
+
+export function generateInventoryShape(
+  kind: InventoryShapeKind,
+  radius: number,
+  filled: boolean,
+  crossParams?: {
+    lengthHorizontal: number;
+    thicknessVertical: number;
+    thicknessHorizontal: number;
+    heightRatio: number;
+  }
+): GraphicResult {
+  const r = clampRadius(radius);
+  let spanX = r * 2;
+  let spanY = r * 2;
+
+  if (kind === 'actingMask') {
+    spanX = r * 2.4;
+    spanY = r * 2.4;
+  } else if (kind === 'apple') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'axe') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'beach') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'bed') {
+    spanX = r * 2.4;
+    spanY = r * 2.0;
+  } else if (kind === 'birdHouse') {
+    spanX = r * 1.8;
+    spanY = r * 2.6;
+  } else if (kind === 'bowling') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'candle') {
+    spanX = r * 2.4;
+    spanY = r * 2.6;
+  } else if (kind === 'cat') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'cloud') {
+    spanX = r * 2.6;
+    spanY = r * 2.0;
+  } else if (kind === 'cloudLightning') {
+    spanX = r * 2.8;
+    spanY = r * 2.8;
+  } else if (kind === 'cross') {
+    const lenHoriz = crossParams?.lengthHorizontal ?? 30;
+    const rHoriz = Math.max(1, Math.round(lenHoriz / 2));
+    spanX = rHoriz * 2;
+    spanY = r * 2;
+  } else if (kind === 'dog') {
+    spanX = r * 2.2;
+    spanY = r * 2.0;
+  } else if (kind === 'flower') {
+    spanX = r * 2.2;
+    spanY = r * 2.6;
+  } else if (kind === 'heart') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'hiking') {
+    spanX = r * 2.4;
+    spanY = r * 2.4;
+  } else if (kind === 'house') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'iceSkates') {
+    spanX = r * 2.8;
+    spanY = r * 2.6;
+  } else if (kind === 'moon') {
+    spanX = r * 2.4;
+    spanY = r * 2.2;
+  } else if (kind === 'movieProjector') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'mustache') {
+    spanX = r * 2.4;
+    spanY = r * 1.8;
+  } else if (kind === 'paintbrush') {
+    spanX = r * 1.8;
+    spanY = r * 3.6;
+  } else if (kind === 'vampireFangs') {
+    spanX = r * 2.2;
+    spanY = r * 2.8;
+  } else if (kind === 'atom' || kind === 'earth' || kind === 'sun' || kind === 'compassRose' || kind === 'pieChart'
+    || kind === 'triangle' || kind === 'square' || kind === 'hexagon' || kind === 'cube' || kind === 'cone'
+    || kind === 'cylinder' || kind === 'rightTriangle' || kind === 'angle' || kind === 'coordinateAxes'
+    || kind === 'magnet' || kind === 'leaf' || kind === 'fish' || kind === 'butterfly' || kind === 'volcano'
+    || kind === 'beaker' || kind === 'microscope' || kind === 'pyramid' || kind === 'castle' || kind === 'shipSail'
+    || kind === 'scroll' || kind === 'libertyBell' || kind === 'flag') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'dna' || kind === 'thermometer' || kind === 'greekColumn') {
+    spanX = r * 1.8;
+    spanY = r * 2.6;
+  } else if (kind === 'timeline') {
+    spanX = r * 2.4;
+    spanY = r * 1.8;
+  }
+
+  const cellsW = Math.ceil(spanX / 2) + 2;
+  const cellsH = Math.ceil(spanY / 3) + 2;
+  const canvas = new GraphicCanvas(cellsW, cellsH);
+  const cx = cellsW;
+  const cy = cellsH * 1.5;
+
+  const label = paintInventoryShape(canvas, kind, cx, cy, r, filled, crossParams);
+
 
   const fillNote = filled ? ', filled' : ', outline';
   let summary = `${label} (size ${r}${fillNote})`;
