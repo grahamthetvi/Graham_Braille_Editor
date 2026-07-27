@@ -2256,14 +2256,770 @@ export class GraphicCanvas extends GridCanvas {
       this.drawLine(px1, py1, px1, py2);
       this.drawLine(px2, py1, px2, py2);
 
+
       // Blanket crease/fold line
       const foldX = cx + r * 0.1;
       this.drawLine(foldX, my1, foldX, my2);
     }
   }
+
+  /** Stroke a closed polygon; optionally fill first. */
+  private strokeClosedPoly(verts: { x: number; y: number }[], filled: boolean) {
+    if (verts.length < 2) return;
+    if (filled) this.fillPolygonInterior(verts);
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i];
+      const b = verts[(i + 1) % verts.length];
+      this.drawLine(a.x, a.y, b.x, b.y);
+    }
+  }
+
+  // ── Educational inventory shapes (middle-school science / history / math) ──
+
+  drawAtom(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const nucleusR = Math.max(2, Math.round(radius * 0.18));
+    this.drawCircle(Math.round(cx), Math.round(cy), nucleusR, filled);
+    const orbits = [
+      { a: radius * 0.95, b: radius * 0.38, rot: 0 },
+      { a: radius * 0.95, b: radius * 0.38, rot: Math.PI / 3 },
+      { a: radius * 0.95, b: radius * 0.38, rot: -Math.PI / 3 },
+    ];
+    for (const o of orbits) {
+      const steps = Math.max(36, Math.ceil(radius * 4));
+      let prevX = 0;
+      let prevY = 0;
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * 2 * Math.PI;
+        const lx = o.a * Math.cos(t);
+        const ly = o.b * Math.sin(t);
+        const x = cx + lx * Math.cos(o.rot) - ly * Math.sin(o.rot);
+        const y = cy + lx * Math.sin(o.rot) + ly * Math.cos(o.rot);
+        if (i > 0) this.drawLine(prevX, prevY, x, y);
+        prevX = x;
+        prevY = y;
+      }
+      // Electron dot on each orbit
+      const ex = cx + o.a * Math.cos(o.rot);
+      const ey = cy + o.a * Math.sin(o.rot);
+      this.drawCircle(Math.round(ex), Math.round(ey), Math.max(1, Math.round(radius * 0.08)), true);
+    }
+  }
+
+  drawDna(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const halfH = radius * 1.15;
+    const amp = radius * 0.45;
+    const turns = 2.5;
+    const steps = Math.max(40, Math.ceil(radius * 5));
+    let p1x = 0, p1y = 0, p2x = 0, p2y = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const y = cy - halfH + t * 2 * halfH;
+      const phase = t * turns * 2 * Math.PI;
+      const x1 = cx + amp * Math.sin(phase);
+      const x2 = cx - amp * Math.sin(phase);
+      if (i > 0) {
+        this.drawLine(p1x, p1y, x1, y);
+        this.drawLine(p2x, p2y, x2, y);
+      }
+      // Ladder rungs every few steps
+      if (i % Math.max(4, Math.floor(steps / 8)) === 0) {
+        this.drawLine(x1, y, x2, y);
+        if (filled) {
+          this.setPoint(Math.round((x1 + x2) / 2), Math.round(y));
+        }
+      }
+      p1x = x1; p1y = y; p2x = x2; p2y = y;
+    }
+  }
+
+  drawLeaf(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const a = radius * 0.95;
+    const b = radius * 0.48;
+    const isInside = (x: number, y: number): boolean => {
+      const dx = x - cx;
+      const dy = y - cy;
+      // Tip points upward slightly rotated
+      const lx = dx * 0.95 + dy * 0.3;
+      const ly = -dx * 0.3 + dy * 0.95;
+      return (lx / a) ** 2 + (ly / b) ** 2 <= 1;
+    };
+    this.drawImplicitShape(cx - radius * 1.1, cx + radius * 1.1, cy - radius * 1.1, cy + radius * 1.1, isInside, filled);
+    // Midrib
+    this.drawLine(cx - radius * 0.15, cy + radius * 0.85, cx + radius * 0.55, cy - radius * 0.75);
+    // Side veins
+    this.drawLine(cx + radius * 0.05, cy + radius * 0.2, cx - radius * 0.45, cy - radius * 0.05);
+    this.drawLine(cx + radius * 0.2, cy - radius * 0.15, cx - radius * 0.2, cy - radius * 0.45);
+  }
+
+  drawFish(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const body = [
+      { x: cx + radius * 0.85, y: cy },
+      { x: cx + radius * 0.45, y: cy - radius * 0.45 },
+      { x: cx - radius * 0.15, y: cy - radius * 0.5 },
+      { x: cx - radius * 0.55, y: cy - radius * 0.25 },
+      { x: cx - radius * 0.55, y: cy + radius * 0.25 },
+      { x: cx - radius * 0.15, y: cy + radius * 0.5 },
+      { x: cx + radius * 0.45, y: cy + radius * 0.45 },
+    ];
+    this.strokeClosedPoly(body, filled);
+    // Tail
+    const tail = [
+      { x: cx - radius * 0.55, y: cy },
+      { x: cx - radius * 0.95, y: cy - radius * 0.45 },
+      { x: cx - radius * 0.75, y: cy },
+      { x: cx - radius * 0.95, y: cy + radius * 0.45 },
+    ];
+    this.strokeClosedPoly(tail, filled);
+    // Eye
+    this.drawCircle(Math.round(cx + radius * 0.45), Math.round(cy - radius * 0.08), Math.max(1, Math.round(radius * 0.08)), true);
+    // Fin
+    this.drawLine(cx - radius * 0.05, cy - radius * 0.5, cx + radius * 0.1, cy - radius * 0.85);
+    this.drawLine(cx + radius * 0.1, cy - radius * 0.85, cx + radius * 0.25, cy - radius * 0.45);
+  }
+
+  drawButterfly(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const wing = (sx: number) => {
+      const upper = [
+        { x: cx, y: cy - radius * 0.15 },
+        { x: cx + sx * radius * 0.55, y: cy - radius * 0.95 },
+        { x: cx + sx * radius * 0.95, y: cy - radius * 0.45 },
+        { x: cx + sx * radius * 0.7, y: cy - radius * 0.05 },
+        { x: cx + sx * radius * 0.2, y: cy },
+      ];
+      const lower = [
+        { x: cx, y: cy + radius * 0.05 },
+        { x: cx + sx * radius * 0.25, y: cy + radius * 0.05 },
+        { x: cx + sx * radius * 0.7, y: cy + radius * 0.35 },
+        { x: cx + sx * radius * 0.55, y: cy + radius * 0.85 },
+        { x: cx + sx * radius * 0.15, y: cy + radius * 0.45 },
+      ];
+      this.strokeClosedPoly(upper, filled);
+      this.strokeClosedPoly(lower, filled);
+    };
+    wing(1);
+    wing(-1);
+    // Body
+    this.drawLine(cx, cy - radius * 0.55, cx, cy + radius * 0.7);
+    this.drawCircle(Math.round(cx), Math.round(cy - radius * 0.55), Math.max(1, Math.round(radius * 0.1)), filled);
+    // Antennae
+    this.drawLine(cx, cy - radius * 0.55, cx - radius * 0.25, cy - radius * 0.95);
+    this.drawLine(cx, cy - radius * 0.55, cx + radius * 0.25, cy - radius * 0.95);
+  }
+
+  drawEarth(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), filled);
+    // Equator
+    this.drawLine(cx - radius, cy, cx + radius, cy);
+    // Tropics
+    const trop = radius * 0.45;
+    this.drawLine(cx - Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy - trop,
+      cx + Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy - trop);
+    this.drawLine(cx - Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy + trop,
+      cx + Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy + trop);
+    // Meridians (ellipses approximated)
+    for (const scale of [0.55, 0.9]) {
+      const a = radius * scale;
+      const b = radius;
+      const steps = Math.max(24, Math.ceil(radius * 3));
+      let px = 0, py = 0;
+      for (let i = 0; i <= steps; i++) {
+        const t = -Math.PI / 2 + (i / steps) * Math.PI;
+        const x = cx + a * Math.sin(t);
+        const y = cy + b * Math.cos(t);
+        if (i > 0) this.drawLine(px, py, x, y);
+        px = x; py = y;
+      }
+    }
+  }
+
+  drawSun(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const coreR = Math.round(radius * 0.45);
+    this.drawCircle(Math.round(cx), Math.round(cy), coreR, filled);
+    const rays = 8;
+    for (let i = 0; i < rays; i++) {
+      const theta = (i * 2 * Math.PI) / rays - Math.PI / 2;
+      const x1 = cx + Math.cos(theta) * radius * 0.58;
+      const y1 = cy + Math.sin(theta) * radius * 0.58;
+      const x2 = cx + Math.cos(theta) * radius;
+      const y2 = cy + Math.sin(theta) * radius;
+      this.drawLine(x1, y1, x2, y2);
+    }
+  }
+
+  drawVolcano(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const mountain = [
+      { x: cx - radius, y: cy + radius * 0.85 },
+      { x: cx - radius * 0.25, y: cy - radius * 0.15 },
+      { x: cx + radius * 0.25, y: cy - radius * 0.15 },
+      { x: cx + radius, y: cy + radius * 0.85 },
+    ];
+    this.strokeClosedPoly(mountain, filled);
+    // Crater lip
+    this.drawLine(cx - radius * 0.25, cy - radius * 0.15, cx + radius * 0.25, cy - radius * 0.15);
+    // Eruption plume
+    const plume = [
+      { x: cx - radius * 0.08, y: cy - radius * 0.15 },
+      { x: cx - radius * 0.35, y: cy - radius * 0.55 },
+      { x: cx - radius * 0.15, y: cy - radius * 0.7 },
+      { x: cx, y: cy - radius * 0.95 },
+      { x: cx + radius * 0.2, y: cy - radius * 0.65 },
+      { x: cx + radius * 0.35, y: cy - radius * 0.5 },
+      { x: cx + radius * 0.08, y: cy - radius * 0.15 },
+    ];
+    this.strokeClosedPoly(plume, filled);
+  }
+
+  drawMagnet(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const outer = [
+      { x: cx - radius * 0.7, y: cy - radius * 0.85 },
+      { x: cx - radius * 0.35, y: cy - radius * 0.85 },
+      { x: cx - radius * 0.35, y: cy + radius * 0.15 },
+      { x: cx + radius * 0.35, y: cy + radius * 0.15 },
+      { x: cx + radius * 0.35, y: cy - radius * 0.85 },
+      { x: cx + radius * 0.7, y: cy - radius * 0.85 },
+      { x: cx + radius * 0.7, y: cy + radius * 0.45 },
+      { x: cx, y: cy + radius * 0.95 },
+      { x: cx - radius * 0.7, y: cy + radius * 0.45 },
+    ];
+    this.strokeClosedPoly(outer, filled);
+    // Inner U cutout (outline only when filled: clear a channel)
+    if (filled) {
+      const clearInner = (x: number, y: number) => {
+        const ix = Math.round(x);
+        const iy = Math.round(y);
+        if (ix >= 0 && ix < this.width && iy >= 0 && iy < this.height) this.data[iy][ix] = false;
+      };
+      for (let y = Math.round(cy - radius * 0.75); y <= Math.round(cy + radius * 0.05); y++) {
+        for (let x = Math.round(cx - radius * 0.2); x <= Math.round(cx + radius * 0.2); x++) {
+          clearInner(x, y);
+        }
+      }
+      // redraw outer edges near cut
+      this.drawLine(cx - radius * 0.35, cy - radius * 0.85, cx - radius * 0.35, cy + radius * 0.15);
+      this.drawLine(cx + radius * 0.35, cy - radius * 0.85, cx + radius * 0.35, cy + radius * 0.15);
+      this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx + radius * 0.35, cy + radius * 0.15);
+    } else {
+      this.drawLine(cx - radius * 0.35, cy - radius * 0.85, cx - radius * 0.35, cy + radius * 0.15);
+      this.drawLine(cx + radius * 0.35, cy - radius * 0.85, cx + radius * 0.35, cy + radius * 0.15);
+      this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx + radius * 0.35, cy + radius * 0.15);
+    }
+    // N / S tick marks on poles
+    this.drawLine(cx - radius * 0.55, cy - radius * 0.7, cx - radius * 0.5, cy - radius * 0.55);
+    this.drawLine(cx + radius * 0.55, cy - radius * 0.7, cx + radius * 0.5, cy - radius * 0.55);
+  }
+
+  drawThermometer(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const bulbR = Math.max(2, Math.round(radius * 0.28));
+    const tubeW = Math.max(1, Math.round(radius * 0.14));
+    const top = cy - radius * 0.95;
+    const bulbCy = cy + radius * 0.65;
+    const tubeBottom = bulbCy - bulbR * 0.5;
+    // Tube
+    const tube = [
+      { x: cx - tubeW, y: top },
+      { x: cx + tubeW, y: top },
+      { x: cx + tubeW, y: tubeBottom },
+      { x: cx - tubeW, y: tubeBottom },
+    ];
+    this.strokeClosedPoly(tube, filled);
+    // Bulb is always filled so the reservoir reads clearly by touch.
+    this.drawCircle(Math.round(cx), Math.round(bulbCy), bulbR, true);
+    // Mercury column
+    this.drawLine(cx, bulbCy - bulbR, cx, cy + radius * 0.05);
+    // Tick marks
+    for (let i = 0; i < 5; i++) {
+      const y = top + (tubeBottom - top) * (0.15 + i * 0.15);
+      this.drawLine(cx + tubeW, y, cx + tubeW + radius * 0.18, y);
+    }
+  }
+
+  drawBeaker(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const verts = [
+      { x: cx - radius * 0.55, y: cy - radius * 0.85 },
+      { x: cx - radius * 0.7, y: cy - radius * 0.7 },
+      { x: cx - radius * 0.7, y: cy + radius * 0.85 },
+      { x: cx + radius * 0.7, y: cy + radius * 0.85 },
+      { x: cx + radius * 0.7, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.55, y: cy - radius * 0.85 },
+    ];
+    this.strokeClosedPoly(verts, false);
+    // Liquid level
+    const liquidY = cy + radius * 0.15;
+    if (filled) {
+      const liquid = [
+        { x: cx - radius * 0.7, y: liquidY },
+        { x: cx + radius * 0.7, y: liquidY },
+        { x: cx + radius * 0.7, y: cy + radius * 0.85 },
+        { x: cx - radius * 0.7, y: cy + radius * 0.85 },
+      ];
+      this.fillPolygonInterior(liquid);
+      this.strokeClosedPoly(verts, false);
+    } else {
+      this.drawLine(cx - radius * 0.7, liquidY, cx + radius * 0.7, liquidY);
+    }
+    // Graduation marks
+    for (let i = 0; i < 3; i++) {
+      const y = cy - radius * 0.35 + i * radius * 0.35;
+      this.drawLine(cx - radius * 0.7, y, cx - radius * 0.45, y);
+    }
+  }
+
+  drawMicroscope(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Base
+    const base = [
+      { x: cx - radius * 0.7, y: cy + radius * 0.75 },
+      { x: cx + radius * 0.7, y: cy + radius * 0.75 },
+      { x: cx + radius * 0.7, y: cy + radius * 0.95 },
+      { x: cx - radius * 0.7, y: cy + radius * 0.95 },
+    ];
+    this.strokeClosedPoly(base, filled);
+    // Arm / stand
+    this.drawLine(cx + radius * 0.35, cy + radius * 0.75, cx + radius * 0.35, cy - radius * 0.35);
+    this.drawLine(cx + radius * 0.35, cy - radius * 0.35, cx, cy - radius * 0.55);
+    // Eyepiece tube
+    const tube = [
+      { x: cx - radius * 0.12, y: cy - radius * 0.95 },
+      { x: cx + radius * 0.12, y: cy - radius * 0.95 },
+      { x: cx + radius * 0.12, y: cy - radius * 0.35 },
+      { x: cx - radius * 0.12, y: cy - radius * 0.35 },
+    ];
+    this.strokeClosedPoly(tube, filled);
+    // Objective / nose
+    this.drawCircle(Math.round(cx), Math.round(cy - radius * 0.15), Math.max(2, Math.round(radius * 0.14)), filled);
+    // Stage
+    this.drawLine(cx - radius * 0.45, cy + radius * 0.15, cx + radius * 0.45, cy + radius * 0.15);
+    // Stage clip posts
+    this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx - radius * 0.35, cy + radius * 0.75);
+  }
+
+  drawPyramid(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const baseL = { x: cx - radius, y: cy + radius * 0.75 };
+    const baseR = { x: cx + radius * 0.55, y: cy + radius * 0.75 };
+    const apex = { x: cx - radius * 0.1, y: cy - radius * 0.9 };
+    const ridge = { x: cx + radius * 0.35, y: cy - radius * 0.15 };
+    // Front face
+    this.strokeClosedPoly([baseL, apex, baseR], filled);
+    // Side face
+    this.strokeClosedPoly([apex, ridge, baseR], filled);
+    this.drawLine(apex.x, apex.y, ridge.x, ridge.y);
+  }
+
+  drawGreekColumn(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Capital
+    const capital = [
+      { x: cx - radius * 0.7, y: cy - radius * 0.95 },
+      { x: cx + radius * 0.7, y: cy - radius * 0.95 },
+      { x: cx + radius * 0.7, y: cy - radius * 0.7 },
+      { x: cx - radius * 0.7, y: cy - radius * 0.7 },
+    ];
+    this.strokeClosedPoly(capital, filled);
+    // Shaft
+    const shaft = [
+      { x: cx - radius * 0.35, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.35, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.4, y: cy + radius * 0.65 },
+      { x: cx - radius * 0.4, y: cy + radius * 0.65 },
+    ];
+    this.strokeClosedPoly(shaft, filled);
+    // Fluting lines
+    this.drawLine(cx - radius * 0.12, cy - radius * 0.65, cx - radius * 0.15, cy + radius * 0.6);
+    this.drawLine(cx + radius * 0.12, cy - radius * 0.65, cx + radius * 0.15, cy + radius * 0.6);
+    // Base
+    const base = [
+      { x: cx - radius * 0.75, y: cy + radius * 0.65 },
+      { x: cx + radius * 0.75, y: cy + radius * 0.65 },
+      { x: cx + radius * 0.75, y: cy + radius * 0.95 },
+      { x: cx - radius * 0.75, y: cy + radius * 0.95 },
+    ];
+    this.strokeClosedPoly(base, filled);
+  }
+
+  drawCastle(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Main keep
+    const keep = [
+      { x: cx - radius * 0.55, y: cy - radius * 0.2 },
+      { x: cx + radius * 0.55, y: cy - radius * 0.2 },
+      { x: cx + radius * 0.55, y: cy + radius * 0.85 },
+      { x: cx - radius * 0.55, y: cy + radius * 0.85 },
+    ];
+    this.strokeClosedPoly(keep, filled);
+    // Battlements
+    for (let i = -2; i <= 2; i++) {
+      const bx = cx + i * radius * 0.22;
+      this.drawLine(bx - radius * 0.08, cy - radius * 0.2, bx - radius * 0.08, cy - radius * 0.4);
+      this.drawLine(bx + radius * 0.08, cy - radius * 0.2, bx + radius * 0.08, cy - radius * 0.4);
+      this.drawLine(bx - radius * 0.08, cy - radius * 0.4, bx + radius * 0.08, cy - radius * 0.4);
+    }
+    // Towers
+    const tower = (tx: number) => {
+      const t = [
+        { x: tx - radius * 0.22, y: cy - radius * 0.55 },
+        { x: tx + radius * 0.22, y: cy - radius * 0.55 },
+        { x: tx + radius * 0.22, y: cy + radius * 0.85 },
+        { x: tx - radius * 0.22, y: cy + radius * 0.85 },
+      ];
+      this.strokeClosedPoly(t, filled);
+      this.drawLine(tx - radius * 0.22, cy - radius * 0.55, tx, cy - radius * 0.9);
+      this.drawLine(tx + radius * 0.22, cy - radius * 0.55, tx, cy - radius * 0.9);
+    };
+    tower(cx - radius * 0.75);
+    tower(cx + radius * 0.75);
+    // Gate
+    this.drawLine(cx - radius * 0.18, cy + radius * 0.85, cx - radius * 0.18, cy + radius * 0.25);
+    this.drawLine(cx + radius * 0.18, cy + radius * 0.85, cx + radius * 0.18, cy + radius * 0.25);
+    this.drawLine(cx - radius * 0.18, cy + radius * 0.25, cx + radius * 0.18, cy + radius * 0.25);
+  }
+
+  drawShipSail(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Hull
+    const hull = [
+      { x: cx - radius * 0.95, y: cy + radius * 0.35 },
+      { x: cx + radius * 0.95, y: cy + radius * 0.35 },
+      { x: cx + radius * 0.65, y: cy + radius * 0.85 },
+      { x: cx - radius * 0.65, y: cy + radius * 0.85 },
+    ];
+    this.strokeClosedPoly(hull, filled);
+    // Mast
+    this.drawLine(cx, cy + radius * 0.35, cx, cy - radius * 0.95);
+    // Mainsail
+    const sail = [
+      { x: cx, y: cy - radius * 0.85 },
+      { x: cx + radius * 0.7, y: cy - radius * 0.15 },
+      { x: cx, y: cy + radius * 0.25 },
+    ];
+    this.strokeClosedPoly(sail, filled);
+    // Foresail
+    const fore = [
+      { x: cx, y: cy - radius * 0.55 },
+      { x: cx - radius * 0.55, y: cy + radius * 0.05 },
+      { x: cx, y: cy + radius * 0.25 },
+    ];
+    this.strokeClosedPoly(fore, filled);
+  }
+
+  drawCompassRose(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius * 0.35), false);
+    const dirs = [
+      { angle: -Math.PI / 2, major: true },  // N
+      { angle: 0, major: true },             // E
+      { angle: Math.PI / 2, major: true },   // S
+      { angle: Math.PI, major: true },       // W
+      { angle: -Math.PI / 4, major: false },
+      { angle: Math.PI / 4, major: false },
+      { angle: (3 * Math.PI) / 4, major: false },
+      { angle: (-3 * Math.PI) / 4, major: false },
+    ];
+    for (const d of dirs) {
+      const len = d.major ? radius : radius * 0.65;
+      const tipX = cx + Math.cos(d.angle) * len;
+      const tipY = cy + Math.sin(d.angle) * len;
+      const perp = d.angle + Math.PI / 2;
+      const halfW = d.major ? radius * 0.14 : radius * 0.08;
+      const base = radius * 0.2;
+      const bx = cx + Math.cos(d.angle) * base;
+      const by = cy + Math.sin(d.angle) * base;
+      const left = { x: bx + Math.cos(perp) * halfW, y: by + Math.sin(perp) * halfW };
+      const right = { x: bx - Math.cos(perp) * halfW, y: by - Math.sin(perp) * halfW };
+      this.strokeClosedPoly([{ x: tipX, y: tipY }, left, right], filled && d.major);
+    }
+    // North marker tick
+    this.drawLine(cx, cy - radius * 0.35, cx, cy - radius * 0.5);
+  }
+
+  drawScroll(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Main parchment rectangle
+    const page = [
+      { x: cx - radius * 0.55, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.55, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.55, y: cy + radius * 0.7 },
+      { x: cx - radius * 0.55, y: cy + radius * 0.7 },
+    ];
+    this.strokeClosedPoly(page, filled);
+    // Top roll
+    this.drawCircle(Math.round(cx - radius * 0.55), Math.round(cy - radius * 0.7), Math.max(2, Math.round(radius * 0.18)), filled);
+    this.drawCircle(Math.round(cx + radius * 0.55), Math.round(cy - radius * 0.7), Math.max(2, Math.round(radius * 0.18)), filled);
+    this.drawLine(cx - radius * 0.55, cy - radius * 0.88, cx + radius * 0.55, cy - radius * 0.88);
+    this.drawLine(cx - radius * 0.55, cy - radius * 0.52, cx + radius * 0.55, cy - radius * 0.52);
+    // Bottom roll
+    this.drawCircle(Math.round(cx - radius * 0.55), Math.round(cy + radius * 0.7), Math.max(2, Math.round(radius * 0.18)), filled);
+    this.drawCircle(Math.round(cx + radius * 0.55), Math.round(cy + radius * 0.7), Math.max(2, Math.round(radius * 0.18)), filled);
+    this.drawLine(cx - radius * 0.55, cy + radius * 0.52, cx + radius * 0.55, cy + radius * 0.52);
+    this.drawLine(cx - radius * 0.55, cy + radius * 0.88, cx + radius * 0.55, cy + radius * 0.88);
+    // Text lines
+    for (let i = 0; i < 3; i++) {
+      const y = cy - radius * 0.25 + i * radius * 0.25;
+      this.drawLine(cx - radius * 0.35, y, cx + radius * 0.35, y);
+    }
+  }
+
+  drawLibertyBell(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Yoke / hanger
+    this.drawLine(cx - radius * 0.35, cy - radius * 0.85, cx + radius * 0.35, cy - radius * 0.85);
+    this.drawLine(cx, cy - radius * 0.95, cx, cy - radius * 0.7);
+    // Bell body
+    const bell = [
+      { x: cx - radius * 0.35, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.35, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.75, y: cy + radius * 0.55 },
+      { x: cx + radius * 0.65, y: cy + radius * 0.75 },
+      { x: cx - radius * 0.65, y: cy + radius * 0.75 },
+      { x: cx - radius * 0.75, y: cy + radius * 0.55 },
+    ];
+    this.strokeClosedPoly(bell, filled);
+    // Crack
+    this.drawLine(cx + radius * 0.05, cy - radius * 0.35, cx + radius * 0.2, cy + radius * 0.55);
+    this.drawLine(cx + radius * 0.2, cy + radius * 0.55, cx + radius * 0.05, cy + radius * 0.75);
+    // Clapper hint
+    this.drawLine(cx, cy + radius * 0.75, cx, cy + radius * 0.95);
+    this.drawCircle(Math.round(cx), Math.round(cy + radius * 0.95), Math.max(1, Math.round(radius * 0.08)), true);
+  }
+
+  drawFlag(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Pole
+    this.drawLine(cx - radius * 0.7, cy - radius * 0.95, cx - radius * 0.7, cy + radius * 0.95);
+    // Flag cloth
+    const cloth = [
+      { x: cx - radius * 0.7, y: cy - radius * 0.85 },
+      { x: cx + radius * 0.85, y: cy - radius * 0.7 },
+      { x: cx + radius * 0.7, y: cy + radius * 0.15 },
+      { x: cx - radius * 0.7, y: cy },
+    ];
+    this.strokeClosedPoly(cloth, filled);
+    // Stripe
+    this.drawLine(cx - radius * 0.7, cy - radius * 0.4, cx + radius * 0.78, cy - radius * 0.28);
+  }
+
+  drawTimeline(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Main axis
+    this.drawLine(cx - radius, cy, cx + radius, cy);
+    // Arrow heads
+    this.drawLine(cx + radius, cy, cx + radius * 0.85, cy - radius * 0.15);
+    this.drawLine(cx + radius, cy, cx + radius * 0.85, cy + radius * 0.15);
+    // Event ticks + markers
+    const ticks = [-0.7, -0.25, 0.25, 0.7];
+    for (let i = 0; i < ticks.length; i++) {
+      const x = cx + ticks[i] * radius;
+      this.drawLine(x, cy - radius * 0.25, x, cy + radius * 0.25);
+      const markerR = Math.max(1, Math.round(radius * 0.1));
+      const my = i % 2 === 0 ? cy - radius * 0.55 : cy + radius * 0.55;
+      this.drawCircle(Math.round(x), Math.round(my), markerR, filled || true);
+      this.drawLine(x, i % 2 === 0 ? cy - radius * 0.25 : cy + radius * 0.25, x, my);
+    }
+  }
+
+  drawTriangle(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawPolygon(cx, cy, radius, 3, -90, filled);
+  }
+
+  drawSquare(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawPolygon(cx, cy, radius, 4, 45, filled);
+  }
+
+  drawHexagon(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawPolygon(cx, cy, radius, 6, 0, filled);
+  }
+
+  drawCube(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const s = radius * 0.7;
+    const dx = radius * 0.35;
+    const dy = radius * 0.28;
+    // Front face
+    const f = [
+      { x: cx - s, y: cy - s * 0.3 },
+      { x: cx + s * 0.4, y: cy - s * 0.3 },
+      { x: cx + s * 0.4, y: cy + s * 0.9 },
+      { x: cx - s, y: cy + s * 0.9 },
+    ];
+    this.strokeClosedPoly(f, filled);
+    // Top face
+    const t = [
+      { x: cx - s, y: cy - s * 0.3 },
+      { x: cx - s + dx, y: cy - s * 0.3 - dy },
+      { x: cx + s * 0.4 + dx, y: cy - s * 0.3 - dy },
+      { x: cx + s * 0.4, y: cy - s * 0.3 },
+    ];
+    this.strokeClosedPoly(t, false);
+    // Side face
+    const side = [
+      { x: cx + s * 0.4, y: cy - s * 0.3 },
+      { x: cx + s * 0.4 + dx, y: cy - s * 0.3 - dy },
+      { x: cx + s * 0.4 + dx, y: cy + s * 0.9 - dy },
+      { x: cx + s * 0.4, y: cy + s * 0.9 },
+    ];
+    this.strokeClosedPoly(side, false);
+  }
+
+  drawCone(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const apex = { x: cx, y: cy - radius };
+    const left = { x: cx - radius * 0.75, y: cy + radius * 0.55 };
+    const right = { x: cx + radius * 0.75, y: cy + radius * 0.55 };
+    this.drawLine(apex.x, apex.y, left.x, left.y);
+    this.drawLine(apex.x, apex.y, right.x, right.y);
+    // Base ellipse
+    const a = radius * 0.75;
+    const b = radius * 0.28;
+    const steps = Math.max(24, Math.ceil(radius * 3));
+    let px = 0, py = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const x = cx + a * Math.cos(t);
+      const y = cy + radius * 0.55 + b * Math.sin(t);
+      if (i > 0) this.drawLine(px, py, x, y);
+      px = x; py = y;
+    }
+    if (filled) {
+      this.fillPolygonInterior([apex, left, right]);
+    }
+  }
+
+  drawCylinder(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const a = radius * 0.7;
+    const b = radius * 0.25;
+    const topY = cy - radius * 0.7;
+    const botY = cy + radius * 0.7;
+    // Side lines
+    this.drawLine(cx - a, topY, cx - a, botY);
+    this.drawLine(cx + a, topY, cx + a, botY);
+    // Top ellipse
+    let px = 0, py = 0;
+    const steps = Math.max(24, Math.ceil(radius * 3));
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const x = cx + a * Math.cos(t);
+      const y = topY + b * Math.sin(t);
+      if (i > 0) this.drawLine(px, py, x, y);
+      px = x; py = y;
+    }
+    // Bottom ellipse (full)
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const x = cx + a * Math.cos(t);
+      const y = botY + b * Math.sin(t);
+      if (i > 0) this.drawLine(px, py, x, y);
+      px = x; py = y;
+    }
+    if (filled) {
+      for (let y = Math.round(topY); y <= Math.round(botY); y++) {
+        this.drawLine(cx - a + 1, y, cx + a - 1, y);
+      }
+    }
+  }
+
+  drawRightTriangle(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const verts = [
+      { x: cx - radius * 0.85, y: cy + radius * 0.7 },
+      { x: cx + radius * 0.85, y: cy + radius * 0.7 },
+      { x: cx - radius * 0.85, y: cy - radius * 0.7 },
+    ];
+    this.strokeClosedPoly(verts, filled);
+    // Right-angle square mark
+    const s = radius * 0.18;
+    this.drawLine(cx - radius * 0.85 + s, cy + radius * 0.7, cx - radius * 0.85 + s, cy + radius * 0.7 - s);
+    this.drawLine(cx - radius * 0.85 + s, cy + radius * 0.7 - s, cx - radius * 0.85, cy + radius * 0.7 - s);
+  }
+
+  drawAngle(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const vertex = { x: cx - radius * 0.6, y: cy + radius * 0.5 };
+    this.drawLine(vertex.x, vertex.y, cx + radius * 0.9, cy + radius * 0.5);
+    this.drawLine(vertex.x, vertex.y, cx + radius * 0.55, cy - radius * 0.85);
+    // Arc
+    const arcR = radius * 0.4;
+    const start = 0;
+    const end = -Math.PI * 0.55;
+    const steps = 16;
+    let px = 0, py = 0;
+    for (let i = 0; i <= steps; i++) {
+      const t = start + (end - start) * (i / steps);
+      const x = vertex.x + arcR * Math.cos(t);
+      const y = vertex.y + arcR * Math.sin(t);
+      if (i > 0) this.drawLine(px, py, x, y);
+      px = x; py = y;
+    }
+    if (filled) {
+      // Small wedge fill
+      const mid = (start + end) / 2;
+      for (let r = 2; r < arcR; r += 2) {
+        this.setPoint(
+          Math.round(vertex.x + r * Math.cos(mid)),
+          Math.round(vertex.y + r * Math.sin(mid))
+        );
+      }
+    }
+  }
+
+  drawCoordinateAxes(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // X axis
+    this.drawLine(cx - radius, cy, cx + radius, cy);
+    this.drawLine(cx + radius, cy, cx + radius * 0.85, cy - radius * 0.12);
+    this.drawLine(cx + radius, cy, cx + radius * 0.85, cy + radius * 0.12);
+    // Y axis
+    this.drawLine(cx, cy + radius, cx, cy - radius);
+    this.drawLine(cx, cy - radius, cx - radius * 0.12, cy - radius * 0.85);
+    this.drawLine(cx, cy - radius, cx + radius * 0.12, cy - radius * 0.85);
+    // Tick marks
+    for (const t of [-0.5, 0.5]) {
+      this.drawLine(cx + t * radius, cy - radius * 0.1, cx + t * radius, cy + radius * 0.1);
+      this.drawLine(cx - radius * 0.1, cy + t * radius, cx + radius * 0.1, cy + t * radius);
+    }
+    if (filled) {
+      this.drawCircle(Math.round(cx), Math.round(cy), Math.max(1, Math.round(radius * 0.08)), true);
+    } else {
+      this.setPoint(Math.round(cx), Math.round(cy));
+    }
+  }
+
+  drawPieChart(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), false);
+    // Three sectors: 50% / 30% / 20%
+    const cuts = [-Math.PI / 2, -Math.PI / 2 + Math.PI, -Math.PI / 2 + Math.PI * 1.6];
+    for (const theta of cuts) {
+      this.drawLine(cx, cy, cx + radius * Math.cos(theta), cy + radius * Math.sin(theta));
+    }
+    if (filled) {
+      // Dot-fill first sector (largest)
+      const mid = -Math.PI / 2 + Math.PI / 2;
+      for (let r = 2; r < radius - 1; r += 2) {
+        this.setPoint(Math.round(cx + r * Math.cos(mid)), Math.round(cy + r * Math.sin(mid)));
+        this.setPoint(Math.round(cx + r * Math.cos(mid + 0.35)), Math.round(cy + r * Math.sin(mid + 0.35)));
+        this.setPoint(Math.round(cx + r * Math.cos(mid - 0.35)), Math.round(cy + r * Math.sin(mid - 0.35)));
+      }
+    }
+  }
 }
 
 export interface GraphicResult {
+
   brf: string;
   summary: string;
 }
@@ -2339,7 +3095,64 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
   };
 }
 
-export type InventoryShapeKind = 'actingMask' | 'apple' | 'axe' | 'beach' | 'bed' | 'birdHouse' | 'bowling' | 'candle' | 'cat' | 'circle' | 'cloud' | 'cloudLightning' | 'cross' | 'dog' | 'flower' | 'heart' | 'hiking' | 'house' | 'iceSkates' | 'lightning' | 'moon' | 'movieProjector' | 'mustache' | 'paintbrush' | 'star' | 'vampireFangs';
+export type InventoryShapeKind =
+  | 'actingMask'
+  | 'angle'
+  | 'apple'
+  | 'atom'
+  | 'axe'
+  | 'beach'
+  | 'beaker'
+  | 'bed'
+  | 'birdHouse'
+  | 'bowling'
+  | 'butterfly'
+  | 'candle'
+  | 'castle'
+  | 'cat'
+  | 'circle'
+  | 'cloud'
+  | 'cloudLightning'
+  | 'compassRose'
+  | 'cone'
+  | 'coordinateAxes'
+  | 'cross'
+  | 'cube'
+  | 'cylinder'
+  | 'dna'
+  | 'dog'
+  | 'earth'
+  | 'fish'
+  | 'flag'
+  | 'flower'
+  | 'greekColumn'
+  | 'heart'
+  | 'hexagon'
+  | 'hiking'
+  | 'house'
+  | 'iceSkates'
+  | 'leaf'
+  | 'libertyBell'
+  | 'lightning'
+  | 'magnet'
+  | 'microscope'
+  | 'moon'
+  | 'movieProjector'
+  | 'mustache'
+  | 'paintbrush'
+  | 'pieChart'
+  | 'pyramid'
+  | 'rightTriangle'
+  | 'scroll'
+  | 'shipSail'
+  | 'square'
+  | 'star'
+  | 'sun'
+  | 'thermometer'
+  | 'timeline'
+  | 'triangle'
+  | 'vampireFangs'
+  | 'volcano';
 
 function clampRadius(radius: number): number {
   const r = Math.round(Number(radius));
@@ -2437,6 +3250,20 @@ export function generateInventoryShape(
   } else if (kind === 'vampireFangs') {
     spanX = r * 2.2;
     spanY = r * 2.8;
+  } else if (kind === 'atom' || kind === 'earth' || kind === 'sun' || kind === 'compassRose' || kind === 'pieChart'
+    || kind === 'triangle' || kind === 'square' || kind === 'hexagon' || kind === 'cube' || kind === 'cone'
+    || kind === 'cylinder' || kind === 'rightTriangle' || kind === 'angle' || kind === 'coordinateAxes'
+    || kind === 'magnet' || kind === 'leaf' || kind === 'fish' || kind === 'butterfly' || kind === 'volcano'
+    || kind === 'beaker' || kind === 'microscope' || kind === 'pyramid' || kind === 'castle' || kind === 'shipSail'
+    || kind === 'scroll' || kind === 'libertyBell' || kind === 'flag') {
+    spanX = r * 2.2;
+    spanY = r * 2.2;
+  } else if (kind === 'dna' || kind === 'thermometer' || kind === 'greekColumn') {
+    spanX = r * 1.8;
+    spanY = r * 2.6;
+  } else if (kind === 'timeline') {
+    spanX = r * 2.4;
+    spanY = r * 1.8;
   }
 
   const cellsW = Math.ceil(spanX / 2) + 2;
@@ -2555,6 +3382,130 @@ export function generateInventoryShape(
     case 'vampireFangs':
       canvas.drawVampireFangs(cx, cy, r, filled);
       label = 'Vampire Fangs';
+      break;
+    case 'atom':
+      canvas.drawAtom(cx, cy, r, filled);
+      label = 'Atom';
+      break;
+    case 'dna':
+      canvas.drawDna(cx, cy, r, filled);
+      label = 'DNA Helix';
+      break;
+    case 'leaf':
+      canvas.drawLeaf(cx, cy, r, filled);
+      label = 'Leaf';
+      break;
+    case 'fish':
+      canvas.drawFish(cx, cy, r, filled);
+      label = 'Fish';
+      break;
+    case 'butterfly':
+      canvas.drawButterfly(cx, cy, r, filled);
+      label = 'Butterfly';
+      break;
+    case 'earth':
+      canvas.drawEarth(cx, cy, r, filled);
+      label = 'Earth / Globe';
+      break;
+    case 'sun':
+      canvas.drawSun(cx, cy, r, filled);
+      label = 'Sun';
+      break;
+    case 'volcano':
+      canvas.drawVolcano(cx, cy, r, filled);
+      label = 'Volcano';
+      break;
+    case 'magnet':
+      canvas.drawMagnet(cx, cy, r, filled);
+      label = 'Horseshoe Magnet';
+      break;
+    case 'thermometer':
+      canvas.drawThermometer(cx, cy, r, filled);
+      label = 'Thermometer';
+      break;
+    case 'beaker':
+      canvas.drawBeaker(cx, cy, r, filled);
+      label = 'Lab Beaker';
+      break;
+    case 'microscope':
+      canvas.drawMicroscope(cx, cy, r, filled);
+      label = 'Microscope';
+      break;
+    case 'pyramid':
+      canvas.drawPyramid(cx, cy, r, filled);
+      label = 'Pyramid';
+      break;
+    case 'greekColumn':
+      canvas.drawGreekColumn(cx, cy, r, filled);
+      label = 'Greek Column';
+      break;
+    case 'castle':
+      canvas.drawCastle(cx, cy, r, filled);
+      label = 'Castle';
+      break;
+    case 'shipSail':
+      canvas.drawShipSail(cx, cy, r, filled);
+      label = 'Sailing Ship';
+      break;
+    case 'compassRose':
+      canvas.drawCompassRose(cx, cy, r, filled);
+      label = 'Compass Rose';
+      break;
+    case 'scroll':
+      canvas.drawScroll(cx, cy, r, filled);
+      label = 'Scroll';
+      break;
+    case 'libertyBell':
+      canvas.drawLibertyBell(cx, cy, r, filled);
+      label = 'Liberty Bell';
+      break;
+    case 'flag':
+      canvas.drawFlag(cx, cy, r, filled);
+      label = 'Flag';
+      break;
+    case 'timeline':
+      canvas.drawTimeline(cx, cy, r, filled);
+      label = 'Timeline';
+      break;
+    case 'triangle':
+      canvas.drawTriangle(cx, cy, r, filled);
+      label = 'Triangle';
+      break;
+    case 'square':
+      canvas.drawSquare(cx, cy, r, filled);
+      label = 'Square';
+      break;
+    case 'hexagon':
+      canvas.drawHexagon(cx, cy, r, filled);
+      label = 'Hexagon';
+      break;
+    case 'cube':
+      canvas.drawCube(cx, cy, r, filled);
+      label = 'Cube';
+      break;
+    case 'cone':
+      canvas.drawCone(cx, cy, r, filled);
+      label = 'Cone';
+      break;
+    case 'cylinder':
+      canvas.drawCylinder(cx, cy, r, filled);
+      label = 'Cylinder';
+      break;
+    case 'rightTriangle':
+      canvas.drawRightTriangle(cx, cy, r, filled);
+      label = 'Right Triangle';
+      break;
+    case 'angle':
+      canvas.drawAngle(cx, cy, r, filled);
+      label = 'Angle';
+      break;
+    case 'coordinateAxes':
+      canvas.drawCoordinateAxes(cx, cy, r, filled);
+      label = 'Coordinate Axes';
+      break;
+    case 'pieChart':
+      canvas.drawPieChart(cx, cy, r, filled);
+      label = 'Pie Chart';
       break;
   }
 

@@ -983,32 +983,73 @@ export function GraphicGeneratorModal({
                         onChange={e => setPhotoStampShape(e.target.value as InventoryShapeKind)}
                         style={{ padding: '1px 3px', fontSize: '0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', maxWidth: '90px' }}
                       >
-                        <option value="actingMask">Mask</option>
-                        <option value="apple">Apple</option>
-                        <option value="axe">Axe</option>
-                        <option value="beach">Beach</option>
-                        <option value="bed">Bed</option>
-                        <option value="birdHouse">Bird H.</option>
-                        <option value="bowling">Bowling</option>
-                        <option value="candle">Candle</option>
-                        <option value="cat">Cat</option>
-                        <option value="circle">Circle</option>
-                        <option value="cloud">Cloud</option>
-                        <option value="cloudLightning">Cloud+Lt</option>
-                        <option value="moon">Moon</option>
-                        <option value="cross">Cross</option>
-                        <option value="dog">Dog</option>
-                        <option value="flower">Flower</option>
-                        <option value="heart">Heart</option>
-                        <option value="hiking">Hiking</option>
-                        <option value="house">House</option>
-                        <option value="iceSkates">Skates</option>
-                        <option value="lightning">Lightning</option>
-                        <option value="movieProjector">Proj.</option>
-                        <option value="mustache">Mustache</option>
-                        <option value="paintbrush">Brush</option>
-                        <option value="star">Star</option>
-                        <option value="vampireFangs">Fangs</option>
+                        <optgroup label="Basics">
+                          <option value="circle">Circle</option>
+                          <option value="heart">Heart</option>
+                          <option value="star">Star</option>
+                          <option value="cross">Cross</option>
+                          <option value="moon">Moon</option>
+                          <option value="cloud">Cloud</option>
+                          <option value="cloudLightning">Cloud+Lt</option>
+                          <option value="lightning">Lightning</option>
+                        </optgroup>
+                        <optgroup label="Science">
+                          <option value="atom">Atom</option>
+                          <option value="dna">DNA</option>
+                          <option value="leaf">Leaf</option>
+                          <option value="fish">Fish</option>
+                          <option value="butterfly">Butterfly</option>
+                          <option value="earth">Earth</option>
+                          <option value="sun">Sun</option>
+                          <option value="volcano">Volcano</option>
+                          <option value="magnet">Magnet</option>
+                          <option value="thermometer">Therm.</option>
+                          <option value="beaker">Beaker</option>
+                          <option value="microscope">Micro.</option>
+                        </optgroup>
+                        <optgroup label="History">
+                          <option value="pyramid">Pyramid</option>
+                          <option value="greekColumn">Column</option>
+                          <option value="castle">Castle</option>
+                          <option value="shipSail">Ship</option>
+                          <option value="compassRose">Compass</option>
+                          <option value="scroll">Scroll</option>
+                          <option value="libertyBell">Bell</option>
+                          <option value="flag">Flag</option>
+                          <option value="timeline">Timeline</option>
+                        </optgroup>
+                        <optgroup label="Math">
+                          <option value="triangle">Triangle</option>
+                          <option value="square">Square</option>
+                          <option value="hexagon">Hexagon</option>
+                          <option value="cube">Cube</option>
+                          <option value="cone">Cone</option>
+                          <option value="cylinder">Cylinder</option>
+                          <option value="rightTriangle">Rt Tri</option>
+                          <option value="angle">Angle</option>
+                          <option value="coordinateAxes">Axes</option>
+                          <option value="pieChart">Pie</option>
+                        </optgroup>
+                        <optgroup label="Everyday">
+                          <option value="actingMask">Mask</option>
+                          <option value="apple">Apple</option>
+                          <option value="axe">Axe</option>
+                          <option value="beach">Beach</option>
+                          <option value="bed">Bed</option>
+                          <option value="birdHouse">Bird H.</option>
+                          <option value="bowling">Bowling</option>
+                          <option value="candle">Candle</option>
+                          <option value="cat">Cat</option>
+                          <option value="dog">Dog</option>
+                          <option value="flower">Flower</option>
+                          <option value="hiking">Hiking</option>
+                          <option value="house">House</option>
+                          <option value="iceSkates">Skates</option>
+                          <option value="movieProjector">Proj.</option>
+                          <option value="mustache">Mustache</option>
+                          <option value="paintbrush">Brush</option>
+                          <option value="vampireFangs">Fangs</option>
+                        </optgroup>
                       </select>
                       <input 
                         type="number" 
@@ -1225,32 +1266,73 @@ export function GraphicGeneratorModal({
                       value={inventoryShape}
                       onChange={e => setInventoryShape(e.target.value as InventoryShapeKind)}
                     >
-                      <option value="actingMask">Acting Mask</option>
-                      <option value="apple">Apple</option>
-                      <option value="axe">Axe</option>
-                      <option value="beach">Beach</option>
-                      <option value="bed">Bed</option>
-                      <option value="birdHouse">Bird House</option>
-                      <option value="bowling">Bowling</option>
-                      <option value="candle">Candle</option>
-                      <option value="cat">Cat</option>
-                      <option value="circle">Circle</option>
-                      <option value="cloud">Cloud</option>
-                      <option value="cloudLightning">Cloud with Lightning Bolt</option>
-                      <option value="moon">Crescent Moon</option>
-                      <option value="cross">Cross</option>
-                      <option value="dog">Dog</option>
-                      <option value="flower">Flower</option>
-                      <option value="heart">Heart</option>
-                      <option value="hiking">Hiking</option>
-                      <option value="house">House</option>
-                      <option value="iceSkates">Ice Skating Skates</option>
-                      <option value="lightning">Lightning Bolt</option>
-                      <option value="movieProjector">Movie Projector</option>
-                      <option value="mustache">Mustache</option>
-                      <option value="paintbrush">Paintbrush</option>
-                      <option value="star">Star (5-Pointed)</option>
-                      <option value="vampireFangs">Vampire Fangs</option>
+                      <optgroup label="Basics">
+                        <option value="circle">Circle</option>
+                        <option value="heart">Heart</option>
+                        <option value="star">Star (5-Pointed)</option>
+                        <option value="cross">Cross</option>
+                        <option value="moon">Crescent Moon</option>
+                        <option value="cloud">Cloud</option>
+                        <option value="cloudLightning">Cloud with Lightning Bolt</option>
+                        <option value="lightning">Lightning Bolt</option>
+                      </optgroup>
+                      <optgroup label="Science">
+                        <option value="atom">Atom</option>
+                        <option value="dna">DNA Helix</option>
+                        <option value="leaf">Leaf</option>
+                        <option value="fish">Fish</option>
+                        <option value="butterfly">Butterfly</option>
+                        <option value="earth">Earth / Globe</option>
+                        <option value="sun">Sun</option>
+                        <option value="volcano">Volcano</option>
+                        <option value="magnet">Horseshoe Magnet</option>
+                        <option value="thermometer">Thermometer</option>
+                        <option value="beaker">Lab Beaker</option>
+                        <option value="microscope">Microscope</option>
+                      </optgroup>
+                      <optgroup label="History">
+                        <option value="pyramid">Pyramid</option>
+                        <option value="greekColumn">Greek Column</option>
+                        <option value="castle">Castle</option>
+                        <option value="shipSail">Sailing Ship</option>
+                        <option value="compassRose">Compass Rose</option>
+                        <option value="scroll">Scroll</option>
+                        <option value="libertyBell">Liberty Bell</option>
+                        <option value="flag">Flag</option>
+                        <option value="timeline">Timeline</option>
+                      </optgroup>
+                      <optgroup label="Math">
+                        <option value="triangle">Triangle</option>
+                        <option value="square">Square</option>
+                        <option value="hexagon">Hexagon</option>
+                        <option value="cube">Cube</option>
+                        <option value="cone">Cone</option>
+                        <option value="cylinder">Cylinder</option>
+                        <option value="rightTriangle">Right Triangle</option>
+                        <option value="angle">Angle</option>
+                        <option value="coordinateAxes">Coordinate Axes</option>
+                        <option value="pieChart">Pie Chart</option>
+                      </optgroup>
+                      <optgroup label="Everyday">
+                        <option value="actingMask">Acting Mask</option>
+                        <option value="apple">Apple</option>
+                        <option value="axe">Axe</option>
+                        <option value="beach">Beach</option>
+                        <option value="bed">Bed</option>
+                        <option value="birdHouse">Bird House</option>
+                        <option value="bowling">Bowling</option>
+                        <option value="candle">Candle</option>
+                        <option value="cat">Cat</option>
+                        <option value="dog">Dog</option>
+                        <option value="flower">Flower</option>
+                        <option value="hiking">Hiking</option>
+                        <option value="house">House</option>
+                        <option value="iceSkates">Ice Skating Skates</option>
+                        <option value="movieProjector">Movie Projector</option>
+                        <option value="mustache">Mustache</option>
+                        <option value="paintbrush">Paintbrush</option>
+                        <option value="vampireFangs">Vampire Fangs</option>
+                      </optgroup>
                     </select>
                   </label>
                   <label>
@@ -1523,6 +1605,37 @@ function stampShapeOnGrid(
     case 'paintbrush': canvas.drawPaintbrush(cx, cy, size, filled); break;
     case 'star': canvas.drawStar(cx, cy, size, filled); break;
     case 'vampireFangs': canvas.drawVampireFangs(cx, cy, size, filled); break;
+    case 'atom': canvas.drawAtom(cx, cy, size, filled); break;
+    case 'dna': canvas.drawDna(cx, cy, size, filled); break;
+    case 'leaf': canvas.drawLeaf(cx, cy, size, filled); break;
+    case 'fish': canvas.drawFish(cx, cy, size, filled); break;
+    case 'butterfly': canvas.drawButterfly(cx, cy, size, filled); break;
+    case 'earth': canvas.drawEarth(cx, cy, size, filled); break;
+    case 'sun': canvas.drawSun(cx, cy, size, filled); break;
+    case 'volcano': canvas.drawVolcano(cx, cy, size, filled); break;
+    case 'magnet': canvas.drawMagnet(cx, cy, size, filled); break;
+    case 'thermometer': canvas.drawThermometer(cx, cy, size, filled); break;
+    case 'beaker': canvas.drawBeaker(cx, cy, size, filled); break;
+    case 'microscope': canvas.drawMicroscope(cx, cy, size, filled); break;
+    case 'pyramid': canvas.drawPyramid(cx, cy, size, filled); break;
+    case 'greekColumn': canvas.drawGreekColumn(cx, cy, size, filled); break;
+    case 'castle': canvas.drawCastle(cx, cy, size, filled); break;
+    case 'shipSail': canvas.drawShipSail(cx, cy, size, filled); break;
+    case 'compassRose': canvas.drawCompassRose(cx, cy, size, filled); break;
+    case 'scroll': canvas.drawScroll(cx, cy, size, filled); break;
+    case 'libertyBell': canvas.drawLibertyBell(cx, cy, size, filled); break;
+    case 'flag': canvas.drawFlag(cx, cy, size, filled); break;
+    case 'timeline': canvas.drawTimeline(cx, cy, size, filled); break;
+    case 'triangle': canvas.drawTriangle(cx, cy, size, filled); break;
+    case 'square': canvas.drawSquare(cx, cy, size, filled); break;
+    case 'hexagon': canvas.drawHexagon(cx, cy, size, filled); break;
+    case 'cube': canvas.drawCube(cx, cy, size, filled); break;
+    case 'cone': canvas.drawCone(cx, cy, size, filled); break;
+    case 'cylinder': canvas.drawCylinder(cx, cy, size, filled); break;
+    case 'rightTriangle': canvas.drawRightTriangle(cx, cy, size, filled); break;
+    case 'angle': canvas.drawAngle(cx, cy, size, filled); break;
+    case 'coordinateAxes': canvas.drawCoordinateAxes(cx, cy, size, filled); break;
+    case 'pieChart': canvas.drawPieChart(cx, cy, size, filled); break;
   }
 
   const newGrid = grid.map(row => [...row]);
