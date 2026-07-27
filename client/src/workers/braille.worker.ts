@@ -6,12 +6,9 @@
  * Scripts are loaded via fetch() instead of importScripts() so this file
  * can run as a proper ES module worker. On first run the worker:
  *
- *   1. Fetches public/wasm/liblouis.wasm and checks the first four bytes.
- *      • If they match the WASM magic (0x00 0x61 0x73 0x6D), a true
- *        WebAssembly binary is present and is instantiated via the
- *        Emscripten glue loaded from public/wasm/liblouis.js.
- *      • Otherwise the file contains the asm.js fallback that the setup
- *        script writes when no compiled WASM binary is found.
+ *   1. Fetches public/wasm/liblouis.wasm (must be real WASM magic
+ *      0x00 0x61 0x73 0x6D) and instantiates it via the Emscripten
+ *      MODULARIZE factory from public/wasm/liblouis.js.
  *   2. Fetches and executes public/wasm/easy-api.js.
  *   3. Enables on-demand table loading from public/tables/.
  *
@@ -130,8 +127,12 @@ function splitIntoChunks(text: string, maxSize = CHUNK_MAX_SIZE): string[] {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Fetch a URL and execute the response body as JavaScript in the worker's
- * global scope.  Used for non-ES-module scripts (Emscripten glue, easy-api).
+ * Fetch a URL and execute the response body as a classic script.
+ *
+ * Used for UMD wrappers (easy-api) that assign onto `self` themselves.
+ * Note: `new Function(src)` does NOT put top-level `var` onto `self` — that
+ * only happens for real classic scripts / importScripts. Callers that need a
+ * value declared with `var` must return it explicitly (see loadEmscriptenFactory).
  */
 async function execRemoteScript(url: string): Promise<void> {
   const resp = await fetch(url);
@@ -139,8 +140,33 @@ async function execRemoteScript(url: string): Promise<void> {
     throw new Error(`Failed to fetch ${url} — HTTP ${resp.status}`);
   }
   const src = await resp.text();
-  // new Function executes in global scope so Emscripten/easy-api globals land on `self`
   new Function(src).call(self);
+}
+
+/**
+ * Load Emscripten MODULARIZE glue (`var EXPORT_NAME = factory`).
+ *
+ * The glue's UMD footer only assigns `module.exports` / AMD — there is no
+ * `globalThis.EXPORT_NAME = …` fallback. Under `new Function`, the top-level
+ * `var` is function-local, so we return it explicitly.
+ */
+async function loadEmscriptenFactory(
+  url: string,
+  exportName: string
+): Promise<LiblouisFactory> {
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch ${url} — HTTP ${resp.status}`);
+  }
+  const src = await resp.text();
+  const factory = new Function(
+    `${src}\n; return typeof ${exportName} !== "undefined" ? ${exportName} : undefined;`
+  )() as LiblouisFactory | undefined;
+  if (typeof factory !== 'function') {
+    throw new Error(`${url} did not expose ${exportName} factory`);
+  }
+  (self as unknown as Record<string, unknown>)[exportName] = factory;
+  return factory;
 }
 
 // ─── Initialisation ──────────────────────────────────────────────────────────
@@ -176,14 +202,10 @@ async function init(): Promise<void> {
     );
   }
 
-  await execRemoteScript(`${BASE}/wasm/liblouis.js`);
-
-  const factory = (self as unknown as Record<string, unknown>)[
+  const factory = await loadEmscriptenFactory(
+    `${BASE}/wasm/liblouis.js`,
     'liblouis_emscripten'
-  ] as LiblouisFactory | undefined;
-  if (typeof factory !== 'function') {
-    throw new Error('liblouis.js did not expose liblouis_emscripten factory');
-  }
+  );
 
   const capi = await factory({
     wasmBinary: rawBuffer,
