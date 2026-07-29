@@ -38,7 +38,7 @@ export function MusicPlayerControls({
   disabled = false,
 }: MusicPlayerControlsProps) {
   const { t } = useTranslation();
-  const { isPlaying, isPaused, bpm, currentBeat, activeCharIndex } = playbackState;
+  const { isPlaying, isPaused, bpm, currentBeat, activeCharIndex, error } = playbackState;
 
   const currentMeasure =
     score.events.find(
@@ -189,6 +189,12 @@ export function MusicPlayerControls({
           {t('app.musicPlayer.musicStartCell', { index: musicStartCharIndex + 1 })}
         </span>
       </div>
+
+      {error ? (
+        <div className="music-player__error" role="alert">
+          {t(`app.musicPlayer.errors.${error}`)}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -65,6 +65,17 @@
   opacity: 0.5;
 }
 
+.music-player__error {
+  flex: 1 1 100%;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--error-border, #ffd8d3);
+  background: var(--error-bg, #fff0ee);
+  color: var(--error, #d1242f);
+  font-size: 0.8rem;
+}
+
 .braille-cell--music-active {
   outline: 2px solid var(--accent);
   outline-offset: 1px;

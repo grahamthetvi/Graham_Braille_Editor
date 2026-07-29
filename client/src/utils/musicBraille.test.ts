@@ -6,11 +6,12 @@ import {
   beatsCapacityFromTimeSig,
   findMusicStartCharIndex,
   keySignatureDeltas,
+  mergeTiedEvents,
   midiDownInterval,
   parseBrailleMusic,
   resolveWholeOrSixteenth,
 } from './musicBraille';
-
+import type { MusicNoteEvent } from '../types/musicBraille';
 describe('parseBrailleMusic', () => {
   it('parses middle-C quarter note with octave mark', () => {
     const score = parseBrailleMusic('"?');
@@ -159,6 +160,62 @@ describe('parseBrailleMusic', () => {
     const withDotC = parseBrailleMusic('"?.c"?');
     expect(withDotC.events).toHaveLength(1);
     expect(withDotC.events[0].durationBeats).toBeCloseTo(2, 5);
+  });
+
+  it('merges tied chords when all pitches match (order-independent)', () => {
+    const events: MusicNoteEvent[] = [
+      {
+        id: 'a',
+        charIndex: 0,
+        measure: 1,
+        timeOffsetBeats: 0,
+        durationBeats: 1,
+        midiPitches: [60, 64, 67],
+        type: 'chord',
+        isTied: true,
+      },
+      {
+        id: 'b',
+        charIndex: 4,
+        measure: 1,
+        timeOffsetBeats: 1,
+        durationBeats: 1,
+        midiPitches: [67, 60, 64],
+        type: 'chord',
+        isTied: false,
+      },
+    ];
+    const merged = mergeTiedEvents(events);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].durationBeats).toBeCloseTo(2, 5);
+    expect(merged[0].midiPitches).toEqual([60, 64, 67]);
+  });
+
+  it('does not merge ties when chord pitches differ', () => {
+    const merged = mergeTiedEvents([
+      {
+        id: 'a',
+        charIndex: 0,
+        measure: 1,
+        timeOffsetBeats: 0,
+        durationBeats: 1,
+        midiPitches: [60, 64, 67],
+        type: 'chord',
+        isTied: true,
+      },
+      {
+        id: 'b',
+        charIndex: 4,
+        measure: 1,
+        timeOffsetBeats: 1,
+        durationBeats: 1,
+        midiPitches: [60, 64, 65],
+        type: 'chord',
+        isTied: false,
+      },
+    ]);
+    expect(merged).toHaveLength(2);
+    expect(merged[0].durationBeats).toBe(1);
   });
 
   it('applies triplet prefix 1 to the next three notes (× 2/3)', () => {
