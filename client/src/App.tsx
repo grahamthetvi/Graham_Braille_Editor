@@ -42,7 +42,7 @@ import { useMusicPlayback } from './hooks/useMusicPlayback';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
 import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
-import { asciiToUnicodeBraille } from './utils/braille';
+import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './utils/braille';
 import {
   formatBrfPages,
   formatBrfForOutput,
@@ -654,8 +654,11 @@ Accuracy: _____________ %
 
 
   // ── Paginated braille output ─────────────────────────────────────────────
-  // Music Braille mode treats the editor as ASCII BRF (skip literary translation).
-  const musicBrfSource = isMusicBrailleMode ? inputText : translatedText;
+  // Music Braille mode treats the editor as Music BRF (ASCII and/or Unicode cells).
+  // Normalize Unicode→ASCII so playback and preview share the same 1:1 indices.
+  const musicBrfSource = isMusicBrailleMode
+    ? unicodeBrailleToAscii(inputText)
+    : translatedText;
   const {
     playbackState: musicPlayback,
     score: musicScore,
@@ -669,7 +672,7 @@ Accuracy: _____________ %
   );
 
   const unicodeBraille = isMusicBrailleMode
-    ? (inputText ? asciiToUnicodeBraille(inputText) : '')
+    ? (musicBrfSource ? asciiToUnicodeBraille(musicBrfSource) : '')
     : (translatedText ? asciiToUnicodeBraille(translatedText) : '');
   const paragraphStarts = useMemo(
     () => ({

@@ -129,7 +129,7 @@
       },
       "musicMode": {
         "label": "Music Player Mode",
-        "title": "Treat the editor as ASCII Music Braille (BRF). Import .brf without literary back-translation, preview cells, and play notes with Web Audio.",
+        "title": "Treat the editor as Music Braille (ASCII BRF or Unicode braille cells). Import .brf without literary back-translation, preview cells, and play notes with Web Audio.",
         "ariaLabel": "Toggle Music Braille player mode"
       },
       "stl": {
@@ -185,7 +185,7 @@
       "previewTitle": "Music Braille Preview",
       "previewAriaLabel": "Music Braille preview with playback highlight",
       "previewPageLabel": "Music Braille score",
-      "placeholder": "Type or import ASCII Music Braille (BRF). Example: \"? : $ ] \\ [ w  for a C major scale in quarter notes.",
+      "placeholder": "Type or paste Music Braille as ASCII BRF or Unicode cells. Example ASCII: \"?:$]\\[w  — or Unicode: ⠐⠹⠱⠫⠻⠳⠪⠺",
       "play": {
         "label": "Play",
         "title": "Play Music Braille from the cursor",
