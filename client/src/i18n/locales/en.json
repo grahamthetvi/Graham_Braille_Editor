@@ -127,6 +127,11 @@
         "title": "Insert alphabet and simple words exercises",
         "ariaLabel": "Alphabet & Words Generator"
       },
+      "musicMode": {
+        "label": "Music Player Mode",
+        "title": "Treat the editor as ASCII Music Braille (BRF). Import .brf without literary back-translation, preview cells, and play notes with Web Audio.",
+        "ariaLabel": "Toggle Music Braille player mode"
+      },
       "stl": {
         "label": "Door Sign (STL)",
         "title": "Export the paginated Braille preview as a 3D STL door sign (BANA midpoint dot spacing, millimeters) for 3D printing.",
@@ -174,6 +179,39 @@
         "ariaLabel": "Braille preview output"
       },
       "translating": "Translating… {{progress}}%"
+    },
+    "musicPlayer": {
+      "ariaLabel": "Music Braille playback controls",
+      "previewTitle": "Music Braille Preview",
+      "previewAriaLabel": "Music Braille preview with playback highlight",
+      "previewPageLabel": "Music Braille score",
+      "placeholder": "Type or import ASCII Music Braille (BRF). Example: \"? : $ ] \\ [ w  for a C major scale in quarter notes.",
+      "play": {
+        "label": "Play",
+        "title": "Play Music Braille from the start",
+        "ariaLabel": "Play Music Braille"
+      },
+      "resume": {
+        "label": "Resume"
+      },
+      "pause": {
+        "label": "Pause",
+        "title": "Pause playback",
+        "ariaLabel": "Pause Music Braille playback"
+      },
+      "stop": {
+        "label": "Stop",
+        "title": "Stop and return to the beginning",
+        "ariaLabel": "Stop Music Braille playback"
+      },
+      "tempo": {
+        "label": "Tempo {{bpm}} BPM",
+        "ariaLabel": "Playback tempo in beats per minute"
+      },
+      "measure": "Measure {{current}} / {{total}}",
+      "noteCell": "Cell {{index}}",
+      "noteIdle": "Ready",
+      "events": "{{count}} notes"
     },
     "pageBreak": {
       "label": "Page Break",

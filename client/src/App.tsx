@@ -26,6 +26,7 @@ import { PerkinsViewer } from './components/PerkinsViewer';
 import { BrailleCell } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
+import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
 import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import {
@@ -37,6 +38,7 @@ import {
   type TtsEngineId,
 } from './services/tts';
 import { useBraille, type MathCode } from './hooks/useBraille';
+import { useMusicPlayback } from './hooks/useMusicPlayback';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
 import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
@@ -256,6 +258,10 @@ export default function App() {
 
   // ── Perkins Viewer ───────────────────────────────────────────────────────
   const [isPerkinsMode, setIsPerkinsMode] = useState(false);
+  /** When on, editor text is treated as ASCII Music Braille BRF (no literary translate). */
+  const [isMusicBrailleMode, setIsMusicBrailleMode] = useState(false);
+  const isMusicBrailleModeRef = useRef(isMusicBrailleMode);
+  isMusicBrailleModeRef.current = isMusicBrailleMode;
 
   // ── Theme management ─────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>(() => {
@@ -386,17 +392,19 @@ export default function App() {
   // ── Text change handler (called by Editor with debounced value) ──────────
   const handleTextChange = useCallback((text: string) => {
     setInputText(text);
+    if (isMusicBrailleModeRef.current) return;
     if (text.trim()) {
       translate(text, selectedTable, mathCode);
     }
   }, [translate, selectedTable, mathCode]);
 
-  // ── Re-translate when literary table or math code changes (not on every keystroke) ──
+  // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
+    if (isMusicBrailleMode) return;
     const text = inputTextRef.current;
     if (!text.trim()) return;
     translate(text, selectedTable, mathCode);
-  }, [selectedTable, mathCode, translate]);
+  }, [selectedTable, mathCode, translate, isMusicBrailleMode]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -467,6 +475,12 @@ export default function App() {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
         const normalized = normalizeImportedBrf(raw);
+        // Music Braille mode: keep ASCII BRF as-is (literary back-translate would destroy it).
+        if (isMusicBrailleModeRef.current) {
+          setInputText(normalized);
+          setFileContent(normalized);
+          return;
+        }
         void backTranslateBrf(normalized, selectedTable)
           .then(({ plainText }) => {
             setInputText(plainText);
@@ -478,7 +492,9 @@ export default function App() {
       } else {
         setInputText(raw);
         setFileContent(raw);
-        translate(raw, selectedTable, mathCode);
+        if (!isMusicBrailleModeRef.current) {
+          translate(raw, selectedTable, mathCode);
+        }
       }
     };
     reader.readAsText(file, 'utf-8');
@@ -636,7 +652,20 @@ Accuracy: _____________ %
 
 
   // ── Paginated braille output ─────────────────────────────────────────────
-  const unicodeBraille = translatedText ? asciiToUnicodeBraille(translatedText) : '';
+  // Music Braille mode treats the editor as ASCII BRF (skip literary translation).
+  const musicBrfSource = isMusicBrailleMode ? inputText : translatedText;
+  const {
+    playbackState: musicPlayback,
+    score: musicScore,
+    play: playMusic,
+    pause: pauseMusic,
+    stop: stopMusic,
+    setBPM: setMusicBpm,
+  } = useMusicPlayback(isMusicBrailleMode ? musicBrfSource : '');
+
+  const unicodeBraille = isMusicBrailleMode
+    ? (inputText ? asciiToUnicodeBraille(inputText) : '')
+    : (translatedText ? asciiToUnicodeBraille(translatedText) : '');
   const paragraphStarts = useMemo(
     () => ({
       firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
@@ -649,7 +678,30 @@ Accuracy: _____________ %
   // The destructive 'buildPlainTextToMatchBrailleWrap' algorithm is reserved 
   // exclusively for 'Download print layout' above.
 
-  const brfPages = unicodeBraille
+  // Music mode: build lines that preserve source char indices for playback highlight.
+  const musicPreviewLines = useMemo(() => {
+    if (!isMusicBrailleMode || !unicodeBraille) return null;
+    const lines: Array<Array<{ char: string; index: number }>> = [];
+    let row: Array<{ char: string; index: number }> = [];
+    const maxCells = Math.max(1, pageSettings.cellsPerRow);
+    for (let i = 0; i < unicodeBraille.length; i++) {
+      const ch = unicodeBraille[i];
+      if (ch === '\n') {
+        lines.push(row);
+        row = [];
+        continue;
+      }
+      if (row.length >= maxCells) {
+        lines.push(row);
+        row = [];
+      }
+      row.push({ char: ch, index: i });
+    }
+    lines.push(row);
+    return lines;
+  }, [isMusicBrailleMode, unicodeBraille, pageSettings.cellsPerRow]);
+
+  const brfPages = !isMusicBrailleMode && unicodeBraille
     ? formatBrfPages(
         unicodeBraille,
         pageSettings.cellsPerRow,
@@ -1035,6 +1087,17 @@ Accuracy: _____________ %
                 </button>
 
                 <button
+                  className={`toolbar-btn${isMusicBrailleMode ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setIsMusicBrailleMode((s) => !s)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.musicMode.title')}
+                  aria-label={t('app.tools.musicMode.ariaLabel')}
+                  aria-pressed={isMusicBrailleMode}
+                >
+                  {t('app.tools.musicMode.label')}
+                </button>
+
+                <button
                   className={`toolbar-btn${showMusicBrailleGuide ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowMusicBrailleGuide(true)}
                   disabled={isPerkinsMode}
@@ -1042,7 +1105,7 @@ Accuracy: _____________ %
                   aria-label="Open Music Braille recommendation guide"
                   aria-expanded={showMusicBrailleGuide}
                 >
-                  Music Braille
+                  Music Braille Guide
                 </button>
 
                 <button
@@ -1232,8 +1295,10 @@ Accuracy: _____________ %
               {/* Pane title row with settings toggle */}
               <div className="pane-title-row">
                 <div className="pane-title">
-                  {t('app.panes.brfPreview.title')}
-                  {isLoading && translatedText && (
+                  {isMusicBrailleMode
+                    ? t('app.musicPlayer.previewTitle')
+                    : t('app.panes.brfPreview.title')}
+                  {!isMusicBrailleMode && isLoading && translatedText && (
                     <span className="preview-loading">{t('app.panes.brfPreview.translatingSuffix')}</span>
                   )}
                 </div>
@@ -1528,14 +1593,63 @@ Accuracy: _____________ %
                 </div>
               )}
 
-              {error && (
+              {error && !isMusicBrailleMode && (
                 <p className="translation-error" role="alert">
                   {t('app.layoutSettings.translationErrorPrefix', { error })}
                 </p>
               )}
 
-              {/* Paginated Word-like braille output */}
-              {brfPages.length > 0 ? (
+              {isMusicBrailleMode && (
+                <MusicPlayerControls
+                  playbackState={musicPlayback}
+                  score={musicScore}
+                  onPlay={playMusic}
+                  onPause={pauseMusic}
+                  onStop={stopMusic}
+                  onBpmChange={setMusicBpm}
+                  disabled={isPerkinsMode}
+                />
+              )}
+
+              {/* Music Braille preview (source-index preserving for playback highlight) */}
+              {isMusicBrailleMode && musicPreviewLines && musicPreviewLines.some((l) => l.length > 0) ? (
+                <div
+                  className="brf-pages-container"
+                  aria-label={t('app.musicPlayer.previewAriaLabel')}
+                  ref={brfContainerRef}
+                  style={{
+                    '--braille-cell-height': `${brailleSize}px`,
+                    '--braille-cell-width': `${brailleSize * 0.64}px`,
+                    '--braille-cell-gap': `${brailleSize * 0.4}px`,
+                    '--braille-dot-size-active': `${brailleSize * 0.22}px`,
+                    '--braille-dot-size-inactive': `${inactiveDotSize}px`,
+                    '--braille-cell-height-8dot': `${brailleSize * 1.33}px`,
+                    '--braille-line-gap': `${brailleSize * 0.5}px`,
+                  } as React.CSSProperties}
+                >
+                  <div className="brf-page" aria-label={t('app.musicPlayer.previewPageLabel')}>
+                    <div className="brf-page-content">
+                      {musicPreviewLines.map((line, lineIdx) => (
+                        <div key={lineIdx} className="brf-page-line">
+                          {line.length === 0 ? (
+                            '\u00a0'
+                          ) : (
+                            line.map(({ char, index }) => (
+                              <BrailleCell
+                                key={index}
+                                char={char}
+                                showEmptyDots={showEmptyDots}
+                                isActive={musicPlayback.activeCharIndex === index}
+                              />
+                            ))
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : /* Paginated Word-like braille output */
+              brfPages.length > 0 ? (
                 <div 
                   className="brf-pages-container" 
                   aria-label={t('app.layoutSettings.braillePreviewAriaLabel')}
@@ -1650,9 +1764,11 @@ Accuracy: _____________ %
                 </div>
               ) : (
                 <p className="brf-placeholder" aria-live="polite">
-                  {workerReady
-                    ? t('app.layoutSettings.placeholders.typeToSee')
-                    : t('app.layoutSettings.placeholders.loading')}
+                  {isMusicBrailleMode
+                    ? t('app.musicPlayer.placeholder')
+                    : workerReady
+                      ? t('app.layoutSettings.placeholders.typeToSee')
+                      : t('app.layoutSettings.placeholders.loading')}
                 </p>
               )}
             </section>
@@ -1666,7 +1782,7 @@ Accuracy: _____________ %
         bridgeConnected={bridgeConnected}
         bridgeUpdateAvailable={bridgeUpdateAvailable}
         useWebUSB={useWebUSB}
-        brfLength={translatedText.length}
+        brfLength={isMusicBrailleMode ? inputText.length : translatedText.length}
         wordCount={wordCount}
         charCount={charCount}
         isLoading={isLoading}
