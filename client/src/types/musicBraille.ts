@@ -41,12 +41,17 @@ export interface MusicScoreAST {
   keySignature: KeySignature;
 }
 
+/** Stable keys for music playback errors (UI maps via i18n). */
+export type MusicPlaybackErrorKey = 'webAudioUnavailable' | 'playbackFailed';
+
 export interface PlaybackState {
   isPlaying: boolean;
   isPaused: boolean;
   currentBeat: number;
   activeCharIndex: number | null;
   bpm: number;
+  /** Non-null when the last play attempt failed. */
+  error: MusicPlaybackErrorKey | null;
 }
 
 export const DEFAULT_TIME_SIGNATURE: TimeSignature = {

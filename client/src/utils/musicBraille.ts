@@ -306,6 +306,18 @@ function materializeMeasure(
   return { notes, measureBeatsUsed: maxUsed };
 }
 
+/** True when pitch multisets match (order-independent). */
+function midiPitchesEqual(a: number[], b: number[]): boolean {
+  if (a.length !== b.length) return false;
+  if (a.length === 0) return true;
+  const sa = a.length === 1 ? a : [...a].sort((x, y) => x - y);
+  const sb = b.length === 1 ? b : [...b].sort((x, y) => x - y);
+  for (let i = 0; i < sa.length; i++) {
+    if (sa[i] !== sb[i]) return false;
+  }
+  return true;
+}
+
 /** Merge tied note pairs: extend the prior event and drop the continuation attack. */
 export function mergeTiedEvents(events: MusicNoteEvent[]): MusicNoteEvent[] {
   const out: MusicNoteEvent[] = [];
@@ -318,7 +330,7 @@ export function mergeTiedEvents(events: MusicNoteEvent[]): MusicNoteEvent[] {
       prev.type !== 'rest' &&
       prev.midiPitches.length > 0 &&
       e.midiPitches.length > 0 &&
-      prev.midiPitches[0] === e.midiPitches[0] &&
+      midiPitchesEqual(prev.midiPitches, e.midiPitches) &&
       nearlyEqual(e.timeOffsetBeats, prev.timeOffsetBeats + prev.durationBeats);
 
     if (canMerge && prev) {

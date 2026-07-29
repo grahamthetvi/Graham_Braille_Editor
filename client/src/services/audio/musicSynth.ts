@@ -1,35 +1,70 @@
 /**
  * Lightweight native Web Audio synthesizer for Music Braille playback.
  * No external audio packages — triangle oscillators with a short envelope.
+ *
+ * Keeps a single AudioContext alive across pause/resume; only `dispose()`
+ * closes it (e.g. on unmount). Call `ensureReady()` from a user gesture
+ * before scheduling so autoplay-policy resume completes first.
  */
 
-type WebkitWindow = Window &
-  typeof globalThis & {
-    webkitAudioContext?: typeof AudioContext;
-  };
+type WebkitWindow = typeof globalThis & {
+  AudioContext?: typeof AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+};
+
+type ActiveVoice = { osc: OscillatorNode; gain: GainNode };
 
 export class MusicSynthEngine {
   private ctx: AudioContext | null = null;
-  private activeNodes: Array<{ osc: OscillatorNode; gain: GainNode }> = [];
+  private activeNodes = new Set<ActiveVoice>();
+  private readyPromise: Promise<AudioContext> | null = null;
 
-  private getContext(): AudioContext {
-    if (!this.ctx) {
-      const w = window as WebkitWindow;
-      const Ctor = window.AudioContext || w.webkitAudioContext;
-      if (!Ctor) {
-        throw new Error('Web Audio API is not available in this browser');
-      }
-      this.ctx = new Ctor();
+  private getOrCreateContext(): AudioContext {
+    if (this.ctx && this.ctx.state !== 'closed') {
+      return this.ctx;
     }
-    if (this.ctx.state === 'suspended') {
-      void this.ctx.resume();
+    const g = globalThis as WebkitWindow;
+    const Ctor = g.AudioContext || g.webkitAudioContext;
+    if (!Ctor) {
+      throw new Error('Web Audio API is not available in this browser');
     }
+    this.ctx = new Ctor();
     return this.ctx;
   }
 
-  /** Current audio clock time (seconds), or 0 if context not yet created. */
+  /**
+   * Ensure an AudioContext exists and is running. Must be awaited before
+   * scheduling notes so the first attack is not lost to autoplay policy.
+   */
+  async ensureReady(): Promise<AudioContext> {
+    if (this.ctx && this.ctx.state === 'running') {
+      return this.ctx;
+    }
+    if (this.readyPromise) {
+      return this.readyPromise;
+    }
+
+    this.readyPromise = (async () => {
+      const ctx = this.getOrCreateContext();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+      if (ctx.state !== 'running') {
+        throw new Error('AudioContext failed to resume');
+      }
+      return ctx;
+    })();
+
+    try {
+      return await this.readyPromise;
+    } finally {
+      this.readyPromise = null;
+    }
+  }
+
+  /** Current audio clock time (seconds). Prefer calling after `ensureReady()`. */
   now(): number {
-    return this.ctx?.currentTime ?? 0;
+    return this.ctx && this.ctx.state !== 'closed' ? this.ctx.currentTime : 0;
   }
 
   playNote(midiPitch: number, startTime: number, durationSec: number): void {
@@ -39,12 +74,19 @@ export class MusicSynthEngine {
   playChord(midiPitches: number[], startTimeSec: number, durationSec: number): void {
     if (!midiPitches.length || durationSec <= 0) return;
 
-    const ctx = this.getContext();
+    const ctx = this.getOrCreateContext();
+    // Best-effort resume if a caller skipped ensureReady (e.g. tests).
+    if (ctx.state === 'suspended') {
+      void ctx.resume();
+    }
+
     const voiceCount = midiPitches.length;
     const peak = Math.min(0.22, 0.35 / Math.sqrt(voiceCount));
     const attack = Math.min(0.02, durationSec * 0.2);
     const release = Math.min(0.05, Math.max(0.01, durationSec * 0.25));
-    const stopAt = startTimeSec + durationSec;
+    // Clamp into the future so Web Audio does not reject past automation times.
+    const start = Math.max(startTimeSec, ctx.currentTime + 0.001);
+    const stopAt = start + durationSec;
 
     for (const midiPitch of midiPitches) {
       if (!Number.isFinite(midiPitch)) continue;
@@ -54,23 +96,23 @@ export class MusicSynthEngine {
 
       const freq = 440 * Math.pow(2, (midiPitch - 69) / 12);
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, startTimeSec);
+      osc.frequency.setValueAtTime(freq, start);
 
-      gain.gain.setValueAtTime(0.0001, startTimeSec);
-      gain.gain.exponentialRampToValueAtTime(peak, startTimeSec + attack);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(peak, start + attack);
       gain.gain.exponentialRampToValueAtTime(
         0.0001,
-        Math.max(startTimeSec + attack + 0.001, stopAt - release),
+        Math.max(start + attack + 0.001, stopAt - release),
       );
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(startTimeSec);
+      osc.start(start);
       osc.stop(stopAt + 0.01);
 
-      const entry = { osc, gain };
-      this.activeNodes.push(entry);
+      const entry: ActiveVoice = { osc, gain };
+      this.activeNodes.add(entry);
       osc.onended = () => {
         try {
           osc.disconnect();
@@ -78,26 +120,46 @@ export class MusicSynthEngine {
         } catch {
           /* already disconnected */
         }
-        this.activeNodes = this.activeNodes.filter((n) => n !== entry);
+        this.activeNodes.delete(entry);
       };
     }
   }
 
-  /** Silence and tear down the audio context (call on Stop). */
-  stopAll(): void {
-    for (const { osc, gain } of this.activeNodes) {
+  /** Silence sounding voices but keep the AudioContext for reuse. */
+  silence(): void {
+    const now = this.now();
+    for (const entry of this.activeNodes) {
+      const { osc, gain } = entry;
       try {
-        osc.stop();
+        gain.gain.cancelScheduledValues(now);
+        const current = Math.max(0.0001, gain.gain.value || 0.0001);
+        gain.gain.setValueAtTime(current, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.02);
+        osc.stop(now + 0.03);
+      } catch {
+        try {
+          osc.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+      try {
         osc.disconnect();
         gain.disconnect();
       } catch {
         /* ignore */
       }
     }
-    this.activeNodes = [];
-    if (this.ctx) {
+    this.activeNodes.clear();
+  }
+
+  /** Silence and close the audio context (call on unmount). */
+  dispose(): void {
+    this.silence();
+    this.readyPromise = null;
+    if (this.ctx && this.ctx.state !== 'closed') {
       void this.ctx.close();
-      this.ctx = null;
     }
+    this.ctx = null;
   }
 }

@@ -234,7 +234,11 @@
       "noteCell": "Cell {{index}}",
       "noteIdle": "Ready",
       "events": "{{count}} notes",
-      "musicStartCell": "Music @ cell {{index}}"
+      "musicStartCell": "Music @ cell {{index}}",
+      "errors": {
+        "webAudioUnavailable": "Music playback needs Web Audio, which this browser does not support.",
+        "playbackFailed": "Music playback could not start. Try again or use a different browser."
+      }
     },
     "pageBreak": {
       "label": "Page Break",
