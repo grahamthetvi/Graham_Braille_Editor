@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MusicScoreAST, PlaybackState } from '../types/musicBraille';
-import { parseBrailleMusic } from '../utils/musicBraille';
+import { beatForCharIndex, parseBrailleMusic } from '../utils/musicBraille';
 import { MusicSynthEngine } from '../services/audio/musicSynth';
 
 const DEFAULT_BPM = 120;
@@ -27,7 +27,15 @@ function clampBpm(bpm: number): number {
   return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
 }
 
-export function useMusicPlayback(brfString: string): UseMusicPlaybackReturn {
+/**
+ * @param brfString ASCII Music Braille source
+ * @param cursorCharIndex Editor caret/selection start offset — Play (not Resume)
+ *   starts from the first note at or after this character.
+ */
+export function useMusicPlayback(
+  brfString: string,
+  cursorCharIndex = 0,
+): UseMusicPlaybackReturn {
   const [bpm, setBpmState] = useState(DEFAULT_BPM);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -41,6 +49,7 @@ export function useMusicPlayback(brfString: string): UseMusicPlaybackReturn {
   const playOriginRef = useRef<{ audioStart: number; beatStart: number } | null>(null);
   const bpmRef = useRef(bpm);
   const scoreRef = useRef<MusicScoreAST>(parseBrailleMusic(''));
+  const cursorCharIndexRef = useRef(cursorCharIndex);
 
   const score = useMemo(() => parseBrailleMusic(brfString || ''), [brfString]);
 
@@ -51,6 +60,10 @@ export function useMusicPlayback(brfString: string): UseMusicPlaybackReturn {
   useEffect(() => {
     scoreRef.current = score;
   }, [score]);
+
+  useEffect(() => {
+    cursorCharIndexRef.current = cursorCharIndex;
+  }, [cursorCharIndex]);
 
   const clearTimers = useCallback(() => {
     for (const id of timersRef.current) {
@@ -139,10 +152,13 @@ export function useMusicPlayback(brfString: string): UseMusicPlaybackReturn {
 
   const play = useCallback(() => {
     if (!scoreRef.current.events.length) return;
-    const startBeat = isPaused ? pauseBeatRef.current : 0;
+    // Resume continues from the pause beat; a fresh Play starts at the caret.
+    const startBeat = isPaused
+      ? pauseBeatRef.current
+      : beatForCharIndex(scoreRef.current, cursorCharIndexRef.current);
     if (!isPaused) {
-      pauseBeatRef.current = 0;
-      setCurrentBeat(0);
+      pauseBeatRef.current = startBeat;
+      setCurrentBeat(startBeat);
     }
     setIsPaused(false);
     setIsPlaying(true);

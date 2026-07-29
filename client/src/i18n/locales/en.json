@@ -188,8 +188,8 @@
       "placeholder": "Type or import ASCII Music Braille (BRF). Example: \"? : $ ] \\ [ w  for a C major scale in quarter notes.",
       "play": {
         "label": "Play",
-        "title": "Play Music Braille from the start",
-        "ariaLabel": "Play Music Braille"
+        "title": "Play Music Braille from the cursor",
+        "ariaLabel": "Play Music Braille from the cursor"
       },
       "resume": {
         "label": "Resume"
