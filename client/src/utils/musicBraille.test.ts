@@ -93,6 +93,41 @@ describe('parseBrailleMusic', () => {
     expect(score.events[1].midiPitches[0]).toBe(62);
   });
 
+  it('does not crush in-accord voices when parallel parts each fill the measure', () => {
+    // Two half notes per voice (4 beats each). Summing both voices used to
+    // exceed capacity and force 32nd-note values, so playback sounded like a
+    // scrambled burst instead of overlapping halves.
+    const score = parseBrailleMusic('"nr<>"os');
+    expect(score.events).toHaveLength(4);
+    expect(score.totalBeats).toBeCloseTo(4, 5);
+    for (const e of score.events) {
+      expect(e.durationBeats).toBeCloseTo(2, 5);
+    }
+    const byStart = [...score.events].sort(
+      (a, b) => a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex,
+    );
+    expect(byStart[0].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(byStart[1].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(byStart[2].timeOffsetBeats).toBeCloseTo(2, 5);
+    expect(byStart[3].timeOffsetBeats).toBeCloseTo(2, 5);
+  });
+
+  it('keeps quarter values for two full parallel in-accord voices', () => {
+    const score = parseBrailleMusic('"?:$]<>"w[\\$');
+    expect(score.events).toHaveLength(8);
+    expect(score.events.every((e) => Math.abs(e.durationBeats - 1) < 1e-9)).toBe(true);
+    expect(score.totalBeats).toBeCloseTo(4, 5);
+  });
+
+  it('still switches a single overflowing voice to short values', () => {
+    // Five quarters in one voice exceed 4/4 — must use 64th-note values.
+    const score = parseBrailleMusic('"?:$]?');
+    expect(score.events).toHaveLength(5);
+    expect(score.events.every((e) => Math.abs(e.durationBeats - 1 / 64) < 1e-9)).toBe(
+      true,
+    );
+  });
+
   it('applies whole/16th online rule from remaining measure space', () => {
     // First whole fits; subsequent whole-shapes become 16ths
     const five = parseBrailleMusic('"yyyyy');

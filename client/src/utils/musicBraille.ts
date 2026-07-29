@@ -231,6 +231,24 @@ export function resolveWholeOrSixteenth(
   return applyDots(4, dots);
 }
 
+/**
+ * Split measure events into in-accord voices. A new voice starts whenever
+ * provisional time moves backwards (parser resets offset on `<>`).
+ */
+function splitInAccordVoices(events: PendingEvent[]): PendingEvent[][] {
+  if (events.length === 0) return [];
+  const voices: PendingEvent[][] = [[]];
+  let prevOffset = -1;
+  for (const e of events) {
+    if (prevOffset >= 0 && e.timeOffsetBeats < prevOffset - 1e-9) {
+      voices.push([]);
+    }
+    voices[voices.length - 1].push(e);
+    prevOffset = e.timeOffsetBeats;
+  }
+  return voices;
+}
+
 function materializeMeasure(
   events: PendingEvent[],
   capacity: number,
@@ -243,8 +261,18 @@ function materializeMeasure(
   const provisionalDur = (e: PendingEvent, useShort: boolean) =>
     e.forcedDurationBeats ?? durationFor(e.durationClass, useShort, e.dots);
 
-  const longSum = events.reduce((s, e) => s + provisionalDur(e, false), 0);
-  const shortSum = events.reduce((s, e) => s + provisionalDur(e, true), 0);
+  // In-accord voices overlap in time — capacity must be checked per voice,
+  // not against the sum of every parallel part (that falsely forces "short"
+  // values and crushes the measure into a burst of 32nds/128ths).
+  const voices = splitInAccordVoices(events);
+  let longSum = 0;
+  let shortSum = 0;
+  for (const voice of voices) {
+    const voiceLong = voice.reduce((s, e) => s + provisionalDur(e, false), 0);
+    const voiceShort = voice.reduce((s, e) => s + provisionalDur(e, true), 0);
+    longSum = Math.max(longSum, voiceLong);
+    shortSum = Math.max(shortSum, voiceShort);
+  }
 
   let useShort = false;
   if (longSum > capacity + 1e-9) {
@@ -254,21 +282,32 @@ function materializeMeasure(
   }
 
   // Forced-duration events keep their absolute beats; scale only the rest.
-  const scalableLong = events.reduce(
-    (s, e) => s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, false, e.dots)),
-    0,
-  );
-  const scalableShort = events.reduce(
-    (s, e) => s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, true, e.dots)),
-    0,
-  );
+  // Scale from the voice that needs the largest compression so every part
+  // stays aligned when upper-cell values overflow into lower-cell values.
+  let scalableLong = 0;
+  let scalableShort = 0;
+  for (const voice of voices) {
+    const vLong = voice.reduce(
+      (s, e) =>
+        s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, false, e.dots)),
+      0,
+    );
+    const vShort = voice.reduce(
+      (s, e) =>
+        s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, true, e.dots)),
+      0,
+    );
+    if (vLong > scalableLong) {
+      scalableLong = vLong;
+      scalableShort = vShort;
+    }
+  }
   const scale =
     useShort && scalableLong > 0 ? scalableShort / scalableLong : 1;
 
   const notes: MusicNoteEvent[] = [];
   let maxUsed = 0;
   let prevProvisional = -1;
-  let cursor = 0;
 
   for (const e of events) {
     const dur = provisionalDur(e, useShort);
@@ -279,13 +318,10 @@ function materializeMeasure(
       localOffset = e.forcedDurationBeats != null
         ? e.timeOffsetBeats
         : e.timeOffsetBeats * scale;
-      cursor = localOffset;
     } else if (e.forcedDurationBeats != null) {
       localOffset = e.timeOffsetBeats;
-      cursor = localOffset;
     } else {
       localOffset = e.timeOffsetBeats * scale;
-      cursor = localOffset;
     }
     prevProvisional = e.timeOffsetBeats;
 
@@ -300,7 +336,6 @@ function materializeMeasure(
       isTied: e.isTied,
     });
     maxUsed = Math.max(maxUsed, localOffset + dur);
-    void cursor;
   }
 
   return { notes, measureBeatsUsed: maxUsed };
