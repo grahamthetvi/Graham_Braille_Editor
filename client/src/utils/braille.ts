@@ -50,6 +50,27 @@ export function unicodeBrailleToAscii(s: string): string {
 }
 
 /**
+ * True when non-whitespace content is Unicode braille cells (U+2800–U+28FF).
+ * Used to auto back-translate pasted/imported Unicode BRF in the text editor.
+ * @param minRatio Minimum fraction of non-whitespace chars that must be braille cells (default 1 = all).
+ */
+export function isPredominantlyUnicodeBraille(text: string, minRatio = 1): boolean {
+    if (!text) return false;
+    let braille = 0;
+    let other = 0;
+    for (const ch of text) {
+        if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r' || ch === '\f') continue;
+        const cp = ch.codePointAt(0)!;
+        if (cp >= 0x2800 && cp <= 0x28ff) braille += 1;
+        else other += 1;
+    }
+    if (braille === 0) return false;
+    if (other === 0) return true;
+    const ratio = Math.min(1, Math.max(0, minRatio));
+    return braille / (braille + other) >= ratio;
+}
+
+/**
  * Marks a line of literal large-print ("jumbo") text in the BRF stream. Such lines are
  * NOT braille — they carry plain text that the preview renders as big print. The marker
  * is a control char (0x02) outside the BRF range so it survives ASCII↔Unicode conversion.
