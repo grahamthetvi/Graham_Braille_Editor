@@ -7,23 +7,34 @@ export interface MusicPlayerControlsProps {
   playbackState: PlaybackState;
   score: MusicScoreAST;
   onPlay: () => void;
+  /** Jump to the first detected music notes (skips literary front matter). */
+  onPlayFromMusicStart: () => void;
   onPause: () => void;
   onStop: () => void;
   onBpmChange: (bpm: number) => void;
+  /** When true (default), Play starts at the editor caret. */
+  playFromCursor: boolean;
+  onPlayFromCursorChange: (enabled: boolean) => void;
+  /** Character index where music is estimated to begin (for status). */
+  musicStartCharIndex?: number;
   disabled?: boolean;
 }
 
 /**
  * Compact playback bar for Music Braille — Play / Pause / Stop + tempo.
- * Uses shared theme CSS variables from App / index styles.
+ * Includes a default-on "From cursor" toggle and a "Music start" jump button.
  */
 export function MusicPlayerControls({
   playbackState,
   score,
   onPlay,
+  onPlayFromMusicStart,
   onPause,
   onStop,
   onBpmChange,
+  playFromCursor,
+  onPlayFromCursorChange,
+  musicStartCharIndex = 0,
   disabled = false,
 }: MusicPlayerControlsProps) {
   const { t } = useTranslation();
@@ -64,8 +75,16 @@ export function MusicPlayerControls({
             className="toolbar-btn toolbar-btn--primary music-player__btn"
             onClick={onPlay}
             disabled={!canPlay}
-            title={t('app.musicPlayer.play.title')}
-            aria-label={t('app.musicPlayer.play.ariaLabel')}
+            title={
+              playFromCursor
+                ? t('app.musicPlayer.play.titleCursor')
+                : t('app.musicPlayer.play.titleDocument')
+            }
+            aria-label={
+              playFromCursor
+                ? t('app.musicPlayer.play.ariaLabelCursor')
+                : t('app.musicPlayer.play.ariaLabelDocument')
+            }
           >
             {isPaused ? t('app.musicPlayer.resume.label') : t('app.musicPlayer.play.label')}
           </button>
@@ -91,6 +110,29 @@ export function MusicPlayerControls({
           aria-label={t('app.musicPlayer.stop.ariaLabel')}
         >
           {t('app.musicPlayer.stop.label')}
+        </button>
+
+        <button
+          type="button"
+          className="toolbar-btn music-player__btn"
+          onClick={onPlayFromMusicStart}
+          disabled={!canPlay}
+          title={t('app.musicPlayer.musicStart.title')}
+          aria-label={t('app.musicPlayer.musicStart.ariaLabel')}
+        >
+          {t('app.musicPlayer.musicStart.label')}
+        </button>
+
+        <button
+          type="button"
+          className={`toolbar-btn music-player__btn${playFromCursor ? ' toolbar-btn--active' : ''}`}
+          onClick={() => onPlayFromCursorChange(!playFromCursor)}
+          disabled={disabled}
+          aria-pressed={playFromCursor}
+          title={t('app.musicPlayer.fromCursor.title')}
+          aria-label={t('app.musicPlayer.fromCursor.ariaLabel')}
+        >
+          {t('app.musicPlayer.fromCursor.label')}
         </button>
       </div>
 
@@ -139,6 +181,12 @@ export function MusicPlayerControls({
         </span>
         <span>
           {t('app.musicPlayer.events', { count: score.events.length })}
+        </span>
+        <span className="music-player__status-sep" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          {t('app.musicPlayer.musicStartCell', { index: musicStartCharIndex + 1 })}
         </span>
       </div>
     </div>

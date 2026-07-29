@@ -704,3 +704,91 @@ export function beatForCharIndex(score: MusicScoreAST, charIndex: number): numbe
   if (atOrAfter) return atOrAfter.timeOffsetBeats;
   return score.totalBeats;
 }
+
+function lineHasMusicSignature(line: string): boolean {
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '#' && tryParseHashPrefix(line, i)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when `i` looks like a Music Braille octave mark followed by a note/rest
+ * (optional accidentals). Avoids common literary false positives such as
+ * capital indicators (`,` + A–Z).
+ */
+function isLikelyOctaveNoteAt(text: string, i: number): boolean {
+  const oct = text[i];
+  if (!(oct in OCTAVE_MIDI_C)) return false;
+
+  let j = i + 1;
+  while (j < text.length && text[j] in ACCIDENTAL_DELTA) j += 1;
+  if (j >= text.length) return false;
+
+  const raw = text[j];
+  // Literary capital letter: comma + uppercase A–Z
+  if (oct === ',' && raw >= 'A' && raw <= 'Z') return false;
+  // Sentence period + whitespace is not an octave-5 note
+  if (oct === '.' && (raw === ' ' || raw === '\n' || raw === '\t')) return false;
+
+  const note = normalizeBrfChar(raw);
+  return note in NOTE_SHAPES || note in REST_SHAPES;
+}
+
+/**
+ * Heuristic character offset where Music Braille (notes) likely begins after
+ * literary front matter. Prefers a music heading (key/time) then the first
+ * octave+note; falls back to the first octave+note in the file.
+ */
+export function findMusicStartCharIndex(brf: string): number {
+  const text = unicodeBrailleToAscii(brf || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!text) return 0;
+
+  const lines: Array<{ start: number; content: string }> = [];
+  let lineStart = 0;
+  for (let i = 0; i <= text.length; i++) {
+    if (i === text.length || text[i] === '\n') {
+      lines.push({ start: lineStart, content: text.slice(lineStart, i) });
+      lineStart = i + 1;
+    }
+  }
+
+  let searchFrom = 0;
+  let foundHeading = false;
+
+  // Prefer blank line + music heading (BANA initial heading convention).
+  for (let li = 0; li < lines.length; li++) {
+    const prevBlank = li === 0 || lines[li - 1].content.trim() === '';
+    if (prevBlank && lineHasMusicSignature(lines[li].content)) {
+      searchFrom = lines[li].start;
+      foundHeading = true;
+      break;
+    }
+  }
+
+  // Any music heading if no blank-line-prefixed one was found.
+  if (!foundHeading) {
+    for (const line of lines) {
+      if (lineHasMusicSignature(line.content)) {
+        searchFrom = line.start;
+        foundHeading = true;
+        break;
+      }
+    }
+  }
+
+  for (let i = searchFrom; i < text.length; i++) {
+    if (isLikelyOctaveNoteAt(text, i)) return i;
+  }
+
+  if (searchFrom > 0) {
+    for (let i = 0; i < searchFrom; i++) {
+      if (isLikelyOctaveNoteAt(text, i)) return i;
+    }
+  }
+
+  const score = parseBrailleMusic(text);
+  return score.events.length > 0 ? score.events[0].charIndex : 0;
+}

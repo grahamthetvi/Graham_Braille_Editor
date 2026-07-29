@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { asciiToUnicodeBraille } from './braille';
+import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
 import {
   DEFAULT_BEATS_PER_MEASURE,
   beatForCharIndex,
   beatsCapacityFromTimeSig,
+  findMusicStartCharIndex,
   keySignatureDeltas,
   midiDownInterval,
   parseBrailleMusic,
@@ -255,5 +256,37 @@ describe('beatForCharIndex', () => {
     const score = parseBrailleMusic('"de');
     const pastEnd = score.events[score.events.length - 1].charIndex + 10;
     expect(beatForCharIndex(score, pastEnd)).toBe(score.totalBeats);
+  });
+});
+
+describe('findMusicStartCharIndex', () => {
+  it('returns the opening octave mark for a pure music string', () => {
+    const brf = '"?:$]\\[w';
+    expect(findMusicStartCharIndex(brf)).toBe(0);
+  });
+
+  it('skips literary front matter before the first octave+note', () => {
+    const literary = ',BEETHOVEN"<#AGGJ,-#AHBG">';
+    const music = '"?:$]';
+    const brf = `${literary}\n\n${music}`;
+    const start = findMusicStartCharIndex(brf);
+    expect(brf[start]).toBe('"');
+    expect(start).toBe(brf.indexOf(music));
+  });
+
+  it('prefers notes after a music heading with time signature', () => {
+    const brf = ',ALLEGRO4 #D4\n\n"? :$';
+    // Heading has #D4; music begins with " on the following line.
+    const start = findMusicStartCharIndex(brf);
+    expect(brf.slice(start, start + 2)).toBe('"?');
+  });
+
+  it('works with Unicode literary + music cells', () => {
+    const literary = asciiToUnicodeBraille(',FUR ELISE');
+    const music = asciiToUnicodeBraille('"defg');
+    const brf = `${literary}\n\n${music}`;
+    const start = findMusicStartCharIndex(brf);
+    expect(start).toBeGreaterThan(0);
+    expect(unicodeBrailleToAscii(brf)[start]).toBe('"');
   });
 });

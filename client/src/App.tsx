@@ -262,8 +262,10 @@ export default function App() {
   const [isMusicBrailleMode, setIsMusicBrailleMode] = useState(false);
   const isMusicBrailleModeRef = useRef(isMusicBrailleMode);
   isMusicBrailleModeRef.current = isMusicBrailleMode;
-  /** Editor caret offset — Music Play starts from the note at/after this character. */
+  /** Editor caret offset — used when "From cursor" play mode is on. */
   const [musicCursorCharIndex, setMusicCursorCharIndex] = useState(0);
+  /** When on (default), Play starts at the caret; Music start always jumps to score. */
+  const [musicPlayFromCursor, setMusicPlayFromCursor] = useState(true);
 
   // ── Theme management ─────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>(() => {
@@ -662,6 +664,7 @@ Accuracy: _____________ %
   const {
     playbackState: musicPlayback,
     score: musicScore,
+    musicStartCharIndex,
     play: playMusic,
     pause: pauseMusic,
     stop: stopMusic,
@@ -669,6 +672,7 @@ Accuracy: _____________ %
   } = useMusicPlayback(
     isMusicBrailleMode ? musicBrfSource : '',
     isMusicBrailleMode ? musicCursorCharIndex : 0,
+    musicPlayFromCursor,
   );
 
   const unicodeBraille = isMusicBrailleMode
@@ -1612,10 +1616,14 @@ Accuracy: _____________ %
                 <MusicPlayerControls
                   playbackState={musicPlayback}
                   score={musicScore}
-                  onPlay={playMusic}
+                  onPlay={() => playMusic()}
+                  onPlayFromMusicStart={() => playMusic({ from: 'music' })}
                   onPause={pauseMusic}
                   onStop={stopMusic}
                   onBpmChange={setMusicBpm}
+                  playFromCursor={musicPlayFromCursor}
+                  onPlayFromCursorChange={setMusicPlayFromCursor}
+                  musicStartCharIndex={musicStartCharIndex}
                   disabled={isPerkinsMode}
                 />
               )}

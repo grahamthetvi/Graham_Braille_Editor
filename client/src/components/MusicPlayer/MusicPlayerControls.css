@@ -20,6 +20,10 @@
   min-width: 4.5rem;
 }
 
+.music-player__transport .music-player__btn:nth-child(n + 3) {
+  min-width: 5.5rem;
+}
+
 .music-player__tempo {
   display: flex;
   flex-direction: column;
