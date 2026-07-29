@@ -3,9 +3,11 @@ import { extractDots, unicodeBrailleToAscii } from '../utils/braille';
 interface BrailleCellProps {
   char: string;
   showEmptyDots?: boolean;
+  /** When true, emphasize this cell during Music Braille playback. */
+  isActive?: boolean;
 }
 
-export function BrailleCell({ char, showEmptyDots = true }: BrailleCellProps) {
+export function BrailleCell({ char, showEmptyDots = true, isActive = false }: BrailleCellProps) {
   const isSpace = char === ' ' || char === '\u2800';
   const dots = extractDots(char);
   
@@ -48,10 +50,11 @@ export function BrailleCell({ char, showEmptyDots = true }: BrailleCellProps) {
 
   return (
     <span
-      className={`braille-cell ${isEightDot ? 'braille-cell--8dot' : 'braille-cell--6dot'} ${isSpace ? 'braille-cell--space' : ''}`}
+      className={`braille-cell ${isEightDot ? 'braille-cell--8dot' : 'braille-cell--6dot'} ${isSpace ? 'braille-cell--space' : ''}${isActive ? ' braille-cell--music-active' : ''}`}
       role="img"
       aria-label={tooltip}
       title={tooltip}
+      data-music-active={isActive ? 'true' : undefined}
     >
       {/* Hidden character to support screen readers and standard copy-paste selecting */}
       <span className="visually-hidden-char">{char}</span>

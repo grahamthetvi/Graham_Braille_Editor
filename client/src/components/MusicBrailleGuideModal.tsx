@@ -9,13 +9,13 @@ interface MusicBrailleGuideModalProps {
 export const MUSIC_BRAILLE_GUIDE_TEXT = `Music Braille Recommendation
 Graham Braille Editor
 
-Graham Braille Editor translates literary text and math into braille. It does not yet convert sheet music into Music Braille automatically.
+Graham Braille Editor translates literary text and math into braille. For Music Braille playback, turn on **Music Player Mode** under Teaching Tools, then type or import ASCII Music Braille (BRF). The built-in player highlights each cell as it sounds.
 
-For Music Braille, we recommend this free workflow:
+To create Music Braille from sheet music, we recommend this free workflow:
 
 1. MuseScore — create or open your score, then export MusicXML.
 2. Sao Mai Braille (SMB) — convert that MusicXML into Music Braille (BRF).
-3. Optional — open the BRF in Graham Braille Editor to preview or emboss.
+3. Open the BRF here with Music Player Mode on to preview, hear, or emboss.
 
 Step-by-step
 
