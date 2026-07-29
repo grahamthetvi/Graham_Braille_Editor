@@ -683,3 +683,18 @@ export function parseBrailleMusic(
     keySignature,
   };
 }
+
+/**
+ * Beat position to start playback for a caret/selection character offset.
+ * Uses the first score event at or after `charIndex`; if the caret is past
+ * every event, returns `totalBeats` (nothing left to play).
+ */
+export function beatForCharIndex(score: MusicScoreAST, charIndex: number): number {
+  if (!score.events.length) return 0;
+  if (!Number.isFinite(charIndex) || charIndex <= 0) {
+    return score.events[0].timeOffsetBeats;
+  }
+  const atOrAfter = score.events.find((e) => e.charIndex >= charIndex);
+  if (atOrAfter) return atOrAfter.timeOffsetBeats;
+  return score.totalBeats;
+}

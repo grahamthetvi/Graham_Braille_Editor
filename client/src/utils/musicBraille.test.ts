@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_BEATS_PER_MEASURE,
+  beatForCharIndex,
   beatsCapacityFromTimeSig,
   keySignatureDeltas,
   midiDownInterval,
@@ -194,5 +195,43 @@ describe('midiDownInterval', () => {
 
   it('moves an octave down', () => {
     expect(midiDownInterval(60, 'C', 8)).toBe(48);
+  });
+});
+
+describe('beatForCharIndex', () => {
+  it('returns 0 for an empty score', () => {
+    expect(beatForCharIndex(parseBrailleMusic(''), 5)).toBe(0);
+  });
+
+  it('starts at the first note when the caret is at the beginning', () => {
+    const score = parseBrailleMusic('"defg');
+    expect(beatForCharIndex(score, 0)).toBe(0);
+    expect(beatForCharIndex(score, score.events[0].charIndex)).toBe(0);
+  });
+
+  it('starts at the note under the caret', () => {
+    const score = parseBrailleMusic('"defg');
+    const third = score.events[2];
+    expect(beatForCharIndex(score, third.charIndex)).toBeCloseTo(
+      third.timeOffsetBeats,
+      5,
+    );
+  });
+
+  it('skips to the next note when the caret is between note characters', () => {
+    const score = parseBrailleMusic('"d e');
+    // Space sits between the two note letters; caret there should start on the second.
+    const spaceIndex = score.events[0].charIndex + 1;
+    expect(score.events[1].charIndex).toBeGreaterThan(spaceIndex);
+    expect(beatForCharIndex(score, spaceIndex)).toBeCloseTo(
+      score.events[1].timeOffsetBeats,
+      5,
+    );
+  });
+
+  it('returns totalBeats when the caret is past every event', () => {
+    const score = parseBrailleMusic('"de');
+    const pastEnd = score.events[score.events.length - 1].charIndex + 10;
+    expect(beatForCharIndex(score, pastEnd)).toBe(score.totalBeats);
   });
 });

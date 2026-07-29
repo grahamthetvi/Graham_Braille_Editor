@@ -262,6 +262,8 @@ export default function App() {
   const [isMusicBrailleMode, setIsMusicBrailleMode] = useState(false);
   const isMusicBrailleModeRef = useRef(isMusicBrailleMode);
   isMusicBrailleModeRef.current = isMusicBrailleMode;
+  /** Editor caret offset — Music Play starts from the note at/after this character. */
+  const [musicCursorCharIndex, setMusicCursorCharIndex] = useState(0);
 
   // ── Theme management ─────────────────────────────────────────────────────
   const [theme, setTheme] = useState<Theme>(() => {
@@ -661,7 +663,10 @@ Accuracy: _____________ %
     pause: pauseMusic,
     stop: stopMusic,
     setBPM: setMusicBpm,
-  } = useMusicPlayback(isMusicBrailleMode ? musicBrfSource : '');
+  } = useMusicPlayback(
+    isMusicBrailleMode ? musicBrfSource : '',
+    isMusicBrailleMode ? musicCursorCharIndex : 0,
+  );
 
   const unicodeBraille = isMusicBrailleMode
     ? (inputText ? asciiToUnicodeBraille(inputText) : '')
@@ -1278,6 +1283,7 @@ Accuracy: _____________ %
               onScrollPercentageChange={handleEditorScroll}
               scrollPercentage={editorScrollPercentage}
               onSelectionChange={setActiveWordRange}
+              onCursorOffsetChange={setMusicCursorCharIndex}
             />
           </div>
         </section>
