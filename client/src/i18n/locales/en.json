@@ -188,8 +188,12 @@
       "placeholder": "Type or paste Music Braille as ASCII BRF or Unicode cells. Example ASCII: \"?:$]\\[w  — or Unicode: ⠐⠹⠱⠫⠻⠳⠪⠺",
       "play": {
         "label": "Play",
-        "title": "Play Music Braille from the cursor",
-        "ariaLabel": "Play Music Braille from the cursor"
+        "title": "Play Music Braille",
+        "ariaLabel": "Play Music Braille",
+        "titleCursor": "Play Music Braille from the cursor",
+        "ariaLabelCursor": "Play Music Braille from the cursor",
+        "titleDocument": "Play Music Braille from the start of the document",
+        "ariaLabelDocument": "Play Music Braille from the document start"
       },
       "resume": {
         "label": "Resume"
@@ -203,6 +207,16 @@
         "label": "Stop",
         "title": "Stop and return to the beginning",
         "ariaLabel": "Stop Music Braille playback"
+      },
+      "musicStart": {
+        "label": "Music start",
+        "title": "Play from the first detected music notes (skips literary title text)",
+        "ariaLabel": "Play from the start of the music"
+      },
+      "fromCursor": {
+        "label": "From cursor",
+        "title": "When on, Play starts at the editor cursor (default)",
+        "ariaLabel": "Toggle play from cursor"
       },
       "tempo": {
         "label": "Tempo {{bpm}} BPM",
@@ -219,7 +233,8 @@
       },
       "noteCell": "Cell {{index}}",
       "noteIdle": "Ready",
-      "events": "{{count}} notes"
+      "events": "{{count}} notes",
+      "musicStartCell": "Music @ cell {{index}}"
     },
     "pageBreak": {
       "label": "Page Break",
