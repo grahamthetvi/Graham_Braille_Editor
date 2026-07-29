@@ -209,6 +209,14 @@
         "ariaLabel": "Playback tempo in beats per minute"
       },
       "measure": "Measure {{current}} / {{total}}",
+      "timeSignature": "{{beats}}/{{unit}}",
+      "keySignature": {
+        "none": "C major / A minor",
+        "sharps": "{{count}} sharp",
+        "sharps_plural": "{{count}} sharps",
+        "flats": "{{count}} flat",
+        "flats_plural": "{{count}} flats"
+      },
       "noteCell": "Cell {{index}}",
       "noteIdle": "Ready",
       "events": "{{count}} notes"

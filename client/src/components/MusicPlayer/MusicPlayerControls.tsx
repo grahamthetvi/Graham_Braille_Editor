@@ -41,6 +41,14 @@ export function MusicPlayerControls({
       ? t('app.musicPlayer.noteCell', { index: activeCharIndex + 1 })
       : t('app.musicPlayer.noteIdle');
 
+  const keyCount = score.keySignature.sharpsFlatsCount;
+  const keyLabel =
+    keyCount === 0
+      ? t('app.musicPlayer.keySignature.none')
+      : keyCount > 0
+        ? t('app.musicPlayer.keySignature.sharps', { count: keyCount })
+        : t('app.musicPlayer.keySignature.flats', { count: -keyCount });
+
   const canPlay = !disabled && score.events.length > 0;
 
   return (
@@ -109,6 +117,19 @@ export function MusicPlayerControls({
             total: score.totalMeasures,
           })}
         </span>
+        <span className="music-player__status-sep" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          {t('app.musicPlayer.timeSignature', {
+            beats: score.timeSignature.beatsPerMeasure,
+            unit: score.timeSignature.beatUnit,
+          })}
+        </span>
+        <span className="music-player__status-sep" aria-hidden="true">
+          ·
+        </span>
+        <span>{keyLabel}</span>
         <span className="music-player__status-sep" aria-hidden="true">
           ·
         </span>

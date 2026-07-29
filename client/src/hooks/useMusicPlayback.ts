@@ -105,9 +105,8 @@ export function useMusicPlayback(brfString: string): UseMusicPlaybackReturn {
         const durSec = Math.max(0.05, remainBeats * secondsPerBeat * 0.92);
 
         if (ev.type !== 'rest' && ev.midiPitches.length > 0) {
-          for (const midi of ev.midiPitches) {
-            synth.playNote(midi, startTime, durSec);
-          }
+          // Tied continuations are merged in the parser (extended durationBeats).
+          synth.playChord(ev.midiPitches, startTime, durSec);
         }
 
         const highlightDelayMs = Math.max(0, delayBeats * secondsPerBeat * 1000);

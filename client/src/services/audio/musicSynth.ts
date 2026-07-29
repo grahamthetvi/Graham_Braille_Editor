@@ -33,45 +33,54 @@ export class MusicSynthEngine {
   }
 
   playNote(midiPitch: number, startTime: number, durationSec: number): void {
-    if (!Number.isFinite(midiPitch) || durationSec <= 0) return;
+    this.playChord([midiPitch], startTime, durationSec);
+  }
+
+  playChord(midiPitches: number[], startTimeSec: number, durationSec: number): void {
+    if (!midiPitches.length || durationSec <= 0) return;
 
     const ctx = this.getContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    const freq = 440 * Math.pow(2, (midiPitch - 69) / 12);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, startTime);
-
+    const voiceCount = midiPitches.length;
+    const peak = Math.min(0.22, 0.35 / Math.sqrt(voiceCount));
     const attack = Math.min(0.02, durationSec * 0.2);
     const release = Math.min(0.05, Math.max(0.01, durationSec * 0.25));
-    const stopAt = startTime + durationSec;
-    const peak = 0.22;
+    const stopAt = startTimeSec + durationSec;
 
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(peak, startTime + attack);
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      Math.max(startTime + attack + 0.001, stopAt - release),
-    );
+    for (const midiPitch of midiPitches) {
+      if (!Number.isFinite(midiPitch)) continue;
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-    osc.start(startTime);
-    osc.stop(stopAt + 0.01);
+      const freq = 440 * Math.pow(2, (midiPitch - 69) / 12);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, startTimeSec);
 
-    const entry = { osc, gain };
-    this.activeNodes.push(entry);
-    osc.onended = () => {
-      try {
-        osc.disconnect();
-        gain.disconnect();
-      } catch {
-        /* already disconnected */
-      }
-      this.activeNodes = this.activeNodes.filter((n) => n !== entry);
-    };
+      gain.gain.setValueAtTime(0.0001, startTimeSec);
+      gain.gain.exponentialRampToValueAtTime(peak, startTimeSec + attack);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        Math.max(startTimeSec + attack + 0.001, stopAt - release),
+      );
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTimeSec);
+      osc.stop(stopAt + 0.01);
+
+      const entry = { osc, gain };
+      this.activeNodes.push(entry);
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          gain.disconnect();
+        } catch {
+          /* already disconnected */
+        }
+        this.activeNodes = this.activeNodes.filter((n) => n !== entry);
+      };
+    }
   }
 
   /** Silence and tear down the audio context (call on Stop). */
