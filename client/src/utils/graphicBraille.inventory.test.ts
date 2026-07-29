@@ -19,6 +19,12 @@ function countInteriorDiscDots(
 
 const NEW_SHAPES: InventoryShapeKind[] = ['flower', 'iceSkates', 'vampireFangs', 'paintbrush', 'hiking', 'axe', 'beach', 'birdHouse', 'bowling', 'movieProjector', 'candle', 'cloudLightning', 'actingMask', 'mustache', 'dog', 'cat', 'house', 'bed'];
 
+const EDUCATIONAL_SHAPES: InventoryShapeKind[] = [
+  'atom', 'dna', 'leaf', 'fish', 'butterfly', 'earth', 'sun', 'volcano', 'magnet', 'thermometer', 'beaker', 'microscope',
+  'pyramid', 'greekColumn', 'castle', 'shipSail', 'compassRose', 'scroll', 'libertyBell', 'flag', 'timeline',
+  'triangle', 'square', 'hexagon', 'cube', 'cone', 'cylinder', 'rightTriangle', 'angle', 'coordinateAxes', 'pieChart',
+];
+
 describe('inventory shapes — flower, ice skates, vampire fangs, paintbrush, hiking, axe, candle', () => {
   it('flower outline mode fills the centre disc but leaves petals as rings', () => {
     const r = 15;
@@ -41,6 +47,23 @@ describe('inventory shapes — flower, ice skates, vampire fangs, paintbrush, hi
   });
 
   for (const kind of NEW_SHAPES) {
+    it(`generates non-empty BRF for ${kind} (outline)`, () => {
+      const result = generateInventoryShape(kind, 15, false);
+      expect(result.brf.length).toBeGreaterThan(0);
+      expect(result.brf.replace(/\s/g, '').length).toBeGreaterThan(0);
+      expect(result.summary).toContain('size 15');
+    });
+
+    it(`generates non-empty BRF for ${kind} (filled)`, () => {
+      const result = generateInventoryShape(kind, 15, true);
+      expect(result.brf.length).toBeGreaterThan(0);
+      expect(result.summary).toContain('filled');
+    });
+  }
+});
+
+describe('educational inventory shapes — science, history, math', () => {
+  for (const kind of EDUCATIONAL_SHAPES) {
     it(`generates non-empty BRF for ${kind} (outline)`, () => {
       const result = generateInventoryShape(kind, 15, false);
       expect(result.brf.length).toBeGreaterThan(0);
