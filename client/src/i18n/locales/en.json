@@ -329,6 +329,10 @@
           "label": "Show empty dots",
           "ariaLabel": "Show empty dots in braille cells"
         },
+        "cellStyle": {
+          "label": "Raised-dot cells",
+          "ariaLabel": "Use detailed raised-dot braille cells instead of Unicode glyphs"
+        },
         "emptyDotSize": {
           "label": "Empty dot size",
           "ariaLabel": "Braille display empty dot size slider",

@@ -29,6 +29,8 @@ export interface EditorHandle {
   setValueFromBrailleSync: (text: string) => void;
   /** Replace a specific range of text */
   replaceRange: (startOffset: number, endOffset: number, text: string) => void;
+  /** Imperatively sync scroll position (0–1) without React state. */
+  setScrollPercentage: (percentage: number) => void;
 }
 
 /**
@@ -136,7 +138,19 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       ]);
       editor.pushUndoStop();
       editor.focus();
-    }
+    },
+    setScrollPercentage: (percentage: number) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const scrollHeight = editor.getContentHeight();
+      const clientHeight = editor.getLayoutInfo().height;
+      const maxScroll = Math.max(0, scrollHeight - clientHeight);
+      if (maxScroll <= 0) return;
+      const targetTop = Math.max(0, Math.min(1, percentage)) * maxScroll;
+      if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
+        editor.setScrollTop(targetTop);
+      }
+    },
   }));
 
   useEffect(() => {

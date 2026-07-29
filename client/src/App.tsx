@@ -23,10 +23,18 @@ import { StlExportDialog } from './components/StlExportDialog';
 import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
 import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
-import { BrailleCell } from './components/BrailleCell';
+import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
+import {
+  BraillePreviewPages,
+  type BraillePreviewPagesHandle,
+} from './components/BraillePreview/BraillePreviewPages';
+import {
+  MusicBraillePreview,
+  type MusicBraillePreviewHandle,
+} from './components/BraillePreview/MusicBraillePreview';
 import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import {
@@ -41,6 +49,7 @@ import { useBraille, type MathCode } from './hooks/useBraille';
 import { useMusicPlayback } from './hooks/useMusicPlayback';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
+import { useScrollSync } from './hooks/useScrollSync';
 import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
 import { asciiToUnicodeBraille, isPredominantlyUnicodeBraille, unicodeBrailleToAscii } from './utils/braille';
 import {
@@ -344,6 +353,11 @@ export default function App() {
     const saved = localStorage.getItem('graham-braille-show-empty-dots');
     return saved ? saved === 'true' : true;
   });
+  /** Unicode glyphs by default for scroll performance; optional detailed dots. */
+  const [brailleCellVariant, setBrailleCellVariant] = useState<BrailleCellVariant>(() => {
+    const saved = localStorage.getItem('graham-braille-cell-style');
+    return saved === 'dots' ? 'dots' : 'unicode';
+  });
   const [inactiveDotSize, setInactiveDotSize] = useState<number>(() => {
     const saved = localStorage.getItem('graham-braille-inactive-dot-size');
     const parsed = saved ? parseFloat(saved) : 4.0;
@@ -357,6 +371,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('graham-braille-show-empty-dots', String(showEmptyDots));
   }, [showEmptyDots]);
+
+  useEffect(() => {
+    localStorage.setItem('graham-braille-cell-style', brailleCellVariant);
+  }, [brailleCellVariant]);
 
   useEffect(() => {
     localStorage.setItem('graham-braille-inactive-dot-size', String(inactiveDotSize));
@@ -718,9 +736,12 @@ Accuracy: _____________ %
     musicPlayFromCursor,
   );
 
-  const unicodeBraille = isMusicBrailleMode
-    ? (musicBrfSource ? asciiToUnicodeBraille(musicBrfSource) : '')
-    : (translatedText ? asciiToUnicodeBraille(translatedText) : '');
+  const unicodeBraille = useMemo(() => {
+    if (isMusicBrailleMode) {
+      return musicBrfSource ? asciiToUnicodeBraille(musicBrfSource) : '';
+    }
+    return translatedText ? asciiToUnicodeBraille(translatedText) : '';
+  }, [isMusicBrailleMode, musicBrfSource, translatedText]);
   const paragraphStarts = useMemo(
     () => ({
       firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
@@ -756,16 +777,26 @@ Accuracy: _____________ %
     return lines;
   }, [isMusicBrailleMode, unicodeBraille, pageSettings.cellsPerRow]);
 
-  const brfPages = !isMusicBrailleMode && unicodeBraille
-    ? formatBrfPages(
-        unicodeBraille,
-        pageSettings.cellsPerRow,
-        pageSettings.linesPerPage,
-        pageSettings.showPageNumbers,
-        paragraphStarts,
-      )
-    : [];
-
+  const brfPages = useMemo(
+    () =>
+      !isMusicBrailleMode && unicodeBraille
+        ? formatBrfPages(
+            unicodeBraille,
+            pageSettings.cellsPerRow,
+            pageSettings.linesPerPage,
+            pageSettings.showPageNumbers,
+            paragraphStarts,
+          )
+        : [],
+    [
+      isMusicBrailleMode,
+      unicodeBraille,
+      pageSettings.cellsPerRow,
+      pageSettings.linesPerPage,
+      pageSettings.showPageNumbers,
+      paragraphStarts,
+    ],
+  );
   const formattedBrfForPrint = useMemo(() => {
     if (!translatedText) return '';
     return formatBrfForOutput(
@@ -794,23 +825,15 @@ Accuracy: _____________ %
   );
 
   // ── Scroll & Highlight Sync ──────────────────────────────────────────────
-  const brfContainerRef = useRef<HTMLDivElement>(null);
-  const [editorScrollPercentage, setEditorScrollPercentage] = useState<number | undefined>(undefined);
+  const brfPagesRef = useRef<BraillePreviewPagesHandle>(null);
+  const musicPreviewRef = useRef<MusicBraillePreviewHandle>(null);
+  const { isSyncing, runSynced, schedule } = useScrollSync();
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
   const [syncHighlight, setSyncHighlight] = useState(true);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(1);
 
   const scrollToPage = useCallback((pageIndex: number) => {
-    const container = brfContainerRef.current;
-    if (!container) return;
-    const pageElements = container.getElementsByClassName('brf-page');
-    const targetPage = pageElements[pageIndex] as HTMLElement | undefined;
-    if (targetPage) {
-      container.scrollTo({
-        top: targetPage.offsetTop,
-        behavior: 'smooth'
-      });
-    }
+    brfPagesRef.current?.scrollToPage(pageIndex);
   }, []);
 
   const handleInsertPageBreak = useCallback(() => {
@@ -832,39 +855,36 @@ Accuracy: _____________ %
     return [srcToBrf[srcStart], srcToBrfEnd[srcEnd]];
   }, [syncHighlight, activeWordRange, wordMap]);
 
-  const handleEditorScroll = useCallback((percentage: number) => {
-    const container = brfContainerRef.current;
-    if (!container) return;
-    
-    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-    if (maxScroll > 0) {
-      const targetScrollTop = percentage * maxScroll;
-      if (Math.abs(container.scrollTop - targetScrollTop) > 1) {
-        container.scrollTop = targetScrollTop;
-      }
-    }
-  }, []);
+  const handleEditorScroll = useCallback(
+    (percentage: number) => {
+      if (isSyncing()) return;
+      schedule(() => {
+        runSynced(() => {
+          if (isMusicBrailleModeRef.current) {
+            musicPreviewRef.current?.setScrollPercentage(percentage);
+          } else {
+            brfPagesRef.current?.setScrollPercentage(percentage);
+          }
+        });
+      });
+    },
+    [isSyncing, runSynced, schedule],
+  );
 
-  const handleBrfScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const container = e.currentTarget;
-    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-    if (maxScroll > 0) {
-      const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
-      setEditorScrollPercentage(percentage);
-    }
+  const handlePreviewScrollPercentage = useCallback(
+    (percentage: number) => {
+      if (isSyncing()) return;
+      schedule(() => {
+        runSynced(() => {
+          editorRef.current?.setScrollPercentage(percentage);
+        });
+      });
+    },
+    [isSyncing, runSynced, schedule],
+  );
 
-    // Determine active page
-    const pageElements = container.getElementsByClassName('brf-page');
-    let activeIndex = 0;
-    for (let i = 0; i < pageElements.length; i++) {
-      const pageEl = pageElements[i] as HTMLElement;
-      if (pageEl.offsetTop - container.scrollTop <= container.clientHeight / 2) {
-        activeIndex = i;
-      } else {
-        break;
-      }
-    }
-    setCurrentPreviewPage(activeIndex + 1);
+  const handleActivePageChange = useCallback((pageNumber1Based: number) => {
+    setCurrentPreviewPage(pageNumber1Based);
   }, []);
 
   // ── Page settings input handlers ─────────────────────────────────────────
@@ -896,8 +916,6 @@ Accuracy: _____________ %
       setPageSettings(s => ({ ...s, viewPlusLeftPadCells: v }));
     }
   }
-
-  let globalWordIndex = 0;
 
   return (
     <div className="app-layout">
@@ -1331,7 +1349,6 @@ Accuracy: _____________ %
               value={fileContent}
               cellsPerRow={pageSettings.cellsPerRow}
               onScrollPercentageChange={handleEditorScroll}
-              scrollPercentage={editorScrollPercentage}
               onSelectionChange={setActiveWordRange}
               onCursorOffsetChange={setMusicCursorCharIndex}
             />
@@ -1346,7 +1363,6 @@ Accuracy: _____________ %
             <section
               className="brf-preview"
               aria-label={t('app.panes.brfPreview.ariaLabel')}
-              aria-live="polite"
             >
               {/* Pane title row with settings toggle */}
               <div className="pane-title-row">
@@ -1609,13 +1625,24 @@ Accuracy: _____________ %
                     <label className="settings-field">
                       <input
                         type="checkbox"
-                        checked={showEmptyDots}
-                        onChange={(e) => setShowEmptyDots(e.target.checked)}
-                        aria-label={t('app.layoutSettings.brailleDisplay.showEmptyDots.ariaLabel')}
+                        checked={brailleCellVariant === 'dots'}
+                        onChange={(e) => setBrailleCellVariant(e.target.checked ? 'dots' : 'unicode')}
+                        aria-label={t('app.layoutSettings.brailleDisplay.cellStyle.ariaLabel')}
                       />
-                      <span>{t('app.layoutSettings.brailleDisplay.showEmptyDots.label')}</span>
+                      <span>{t('app.layoutSettings.brailleDisplay.cellStyle.label')}</span>
                     </label>
-                    {showEmptyDots && (
+                    {brailleCellVariant === 'dots' && (
+                      <label className="settings-field">
+                        <input
+                          type="checkbox"
+                          checked={showEmptyDots}
+                          onChange={(e) => setShowEmptyDots(e.target.checked)}
+                          aria-label={t('app.layoutSettings.brailleDisplay.showEmptyDots.ariaLabel')}
+                        />
+                        <span>{t('app.layoutSettings.brailleDisplay.showEmptyDots.label')}</span>
+                      </label>
+                    )}
+                    {brailleCellVariant === 'dots' && showEmptyDots && (
                       <label className="settings-field">
                         <span>{t('app.layoutSettings.brailleDisplay.emptyDotSize.label')}</span>
                         <input
@@ -1673,155 +1700,33 @@ Accuracy: _____________ %
 
               {/* Music Braille preview (source-index preserving for playback highlight) */}
               {isMusicBrailleMode && musicPreviewLines && musicPreviewLines.some((l) => l.length > 0) ? (
-                <div
-                  className="brf-pages-container"
-                  aria-label={t('app.musicPlayer.previewAriaLabel')}
-                  ref={brfContainerRef}
-                  style={{
-                    '--braille-cell-height': `${brailleSize}px`,
-                    '--braille-cell-width': `${brailleSize * 0.64}px`,
-                    '--braille-cell-gap': `${brailleSize * 0.4}px`,
-                    '--braille-dot-size-active': `${brailleSize * 0.22}px`,
-                    '--braille-dot-size-inactive': `${inactiveDotSize}px`,
-                    '--braille-cell-height-8dot': `${brailleSize * 1.33}px`,
-                    '--braille-line-gap': `${brailleSize * 0.5}px`,
-                  } as React.CSSProperties}
-                >
-                  <div className="brf-page" aria-label={t('app.musicPlayer.previewPageLabel')}>
-                    <div className="brf-page-content">
-                      {musicPreviewLines.map((line, lineIdx) => (
-                        <div key={lineIdx} className="brf-page-line">
-                          {line.length === 0 ? (
-                            '\u00a0'
-                          ) : (
-                            line.map(({ char, index }) => (
-                              <BrailleCell
-                                key={index}
-                                char={char}
-                                showEmptyDots={showEmptyDots}
-                                isActive={musicPlayback.activeCharIndex === index}
-                              />
-                            ))
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <MusicBraillePreview
+                  ref={musicPreviewRef}
+                  lines={musicPreviewLines}
+                  brailleSize={brailleSize}
+                  inactiveDotSize={inactiveDotSize}
+                  showEmptyDots={showEmptyDots}
+                  cellVariant={brailleCellVariant}
+                  activeCharIndex={musicPlayback.activeCharIndex}
+                  onScrollPercentage={handlePreviewScrollPercentage}
+                  ariaLabel={t('app.musicPlayer.previewAriaLabel')}
+                  pageLabel={t('app.musicPlayer.previewPageLabel')}
+                />
               ) : /* Paginated Word-like braille output */
               brfPages.length > 0 ? (
-                <div 
-                  className="brf-pages-container" 
-                  aria-label={t('app.layoutSettings.braillePreviewAriaLabel')}
-                  ref={brfContainerRef}
-                  onScroll={handleBrfScroll}
-                  style={{
-                    '--braille-cell-height': `${brailleSize}px`,
-                    '--braille-cell-width': `${brailleSize * 0.64}px`,
-                    '--braille-cell-gap': `${brailleSize * 0.4}px`,
-                    '--braille-dot-size-active': `${brailleSize * 0.22}px`,
-                    '--braille-dot-size-inactive': `${inactiveDotSize}px`,
-                    '--braille-cell-height-8dot': `${brailleSize * 1.33}px`,
-                    '--braille-line-gap': `${brailleSize * 0.5}px`,
-                  } as React.CSSProperties}
-                >
-                  {brfPages.map((pageContent, i) => {
-                    const lines = pageContent.split('\n');
-                    return (
-                      <div
-                        key={i}
-                        className="brf-page"
-                        aria-label={t('app.layoutSettings.pageLabel', { page: i + 1, total: brfPages.length })}
-                      >
-                        <div className="brf-page-number" aria-hidden="true">
-                          {t('app.layoutSettings.pageMarker', { page: i + 1 })}
-                        </div>
-                        <div className="brf-page-content">
-                          {lines.map((line, lineIdx) => {
-                            // Jumbo / large-print line: `\u0002<sizePx>\u0002<text>` — render as big print.
-                            if (line.startsWith('\u0002')) {
-                              const rest = line.slice(1);
-                              const sep = rest.indexOf('\u0002');
-                              const sizeStr = sep >= 0 ? rest.slice(0, sep) : '';
-                              const text = sep >= 0 ? rest.slice(sep + 1) : rest;
-                              const size = Math.min(400, Math.max(8, parseInt(sizeStr, 10) || 48));
-                              
-                              const jumboStyles = {
-                                fontSize: `${size}px`,
-                                '--braille-cell-height': `${size}px`,
-                                '--braille-cell-width': `${size * 0.64}px`,
-                                '--braille-cell-gap': `${size * 0.4}px`,
-                                '--braille-dot-size-active': `${size * 0.22}px`,
-                                '--braille-dot-size-inactive': `${size * 0.22 * (inactiveDotSize / Math.max(1, brailleSize * 0.22))}px`,
-                                '--braille-cell-height-8dot': `${size * 1.33}px`,
-                                '--braille-line-gap': `${size * 0.5}px`,
-                              } as React.CSSProperties;
-
-                              return (
-                                <div
-                                  key={lineIdx}
-                                  className="brf-jumbo-line"
-                                  style={jumboStyles}
-                                >
-                                  {text.length > 0 ? (
-                                    text.split('').map((char, charIdx) => (
-                                      <BrailleCell
-                                        key={charIdx}
-                                        char={char}
-                                        showEmptyDots={showEmptyDots}
-                                      />
-                                    ))
-                                  ) : (
-                                    '\u00a0'
-                                  )}
-                                </div>
-                              );
-                            }
-                            const tokens = line.split(/([\s\u2800]+)/);
-                            return (
-                              <div key={lineIdx} className="brf-page-line">
-                                {tokens.map((token, tokenIdx) => {
-                                  if (!token) return null;
-                                  
-                                  if (/^[\s\u2800]+$/.test(token)) {
-                                    return token.split('').map((char, charIdx) => (
-                                      <BrailleCell
-                                        key={`${tokenIdx}-${charIdx}`}
-                                        char={char}
-                                        showEmptyDots={showEmptyDots}
-                                      />
-                                    ));
-                                  }
-                                  
-                                  const currentWordIndex = globalWordIndex++;
-                                  const isActive = activeBrfWordRange != null &&
-                                    currentWordIndex >= activeBrfWordRange[0] &&
-                                    currentWordIndex <= activeBrfWordRange[1];
-                                    
-                                  const wordCells = token.split('').map((char, charIdx) => (
-                                    <BrailleCell
-                                      key={charIdx}
-                                      char={char}
-                                      showEmptyDots={showEmptyDots}
-                                    />
-                                  ));
-                                  
-                                  return isActive ? (
-                                    <span key={`w${tokenIdx}`} className="braille-highlight">
-                                      {wordCells}
-                                    </span>
-                                  ) : (
-                                    <Fragment key={`w${tokenIdx}`}>{wordCells}</Fragment>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <BraillePreviewPages
+                  ref={brfPagesRef}
+                  pages={brfPages}
+                  brailleSize={brailleSize}
+                  inactiveDotSize={inactiveDotSize}
+                  showEmptyDots={showEmptyDots}
+                  cellVariant={brailleCellVariant}
+                  linesPerPage={pageSettings.linesPerPage}
+                  activeWordRange={activeBrfWordRange}
+                  onScrollPercentage={handlePreviewScrollPercentage}
+                  onActivePageChange={handleActivePageChange}
+                  ariaLabel={t('app.layoutSettings.braillePreviewAriaLabel')}
+                />
               ) : (
                 <p className="brf-placeholder" aria-live="polite">
                   {isMusicBrailleMode

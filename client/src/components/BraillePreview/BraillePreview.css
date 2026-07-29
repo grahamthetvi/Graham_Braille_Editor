@@ -1,0 +1,33 @@
+.brf-virtual-spacer {
+  flex-shrink: 0;
+  width: 100%;
+  pointer-events: none;
+}
+
+.brf-page {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
+.brf-page-line {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 2.5em;
+}
+
+/* Fast path: one Unicode braille glyph per cell (no per-dot paint). */
+.braille-cell--unicode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', 'Noto Sans Symbols 2', sans-serif;
+  font-size: calc(var(--braille-cell-height, 22px) * 0.92);
+  line-height: 1;
+  letter-spacing: 0;
+  transition: none;
+  grid-template-columns: none;
+  grid-template-rows: none;
+}
+
+.braille-cell--unicode.braille-cell--space {
+  opacity: 0.35;
+}
