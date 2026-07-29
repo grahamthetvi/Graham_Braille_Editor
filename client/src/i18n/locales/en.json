@@ -16,7 +16,7 @@
       "import": {
         "label": "Import file",
         "ariaLabel": "Import text or BRF file",
-        "title": "Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+        "title": "Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
       },
       "drafts": {
         "label": "Drafts",

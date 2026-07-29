@@ -42,7 +42,7 @@ import { useMusicPlayback } from './hooks/useMusicPlayback';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
 import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
-import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './utils/braille';
+import { asciiToUnicodeBraille, isPredominantlyUnicodeBraille, unicodeBrailleToAscii } from './utils/braille';
 import {
   formatBrfPages,
   formatBrfForOutput,
@@ -72,6 +72,8 @@ import './App.css';
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
+ *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
+ *     (skipped in Music Braille mode).
  *   • Export expands a bar (like Print) for BRF, print layout, and MP3 audio.
  *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
@@ -393,28 +395,68 @@ export default function App() {
     }
   }, [mathCode]);
 
+  // Separate state that is only set on file load or math conversion; passed as `value` to Editor
+  // so Monaco's content is replaced. Kept out of inputText feedback loop.
+  const [fileContent, setFileContent] = useState<string | undefined>(undefined);
+
   // ── Text change handler (called by Editor with debounced value) ──────────
-  const handleTextChange = useCallback((text: string) => {
-    setInputText(text);
-    if (isMusicBrailleModeRef.current) return;
-    if (text.trim()) {
-      translate(text, selectedTable, mathCode);
-    }
-  }, [translate, selectedTable, mathCode]);
+  // When the left pane is (almost) entirely Unicode braille cells, treat it as
+  // BRF and back-translate into plain text instead of forward-translating.
+  const unicodeBackTranslateGenRef = useRef(0);
+
+  const applyBackTranslatedPlain = useCallback((plainText: string) => {
+    setInputText(plainText);
+    setFileContent(plainText);
+  }, []);
+
+  const tryAutoBackTranslateUnicode = useCallback(
+    (text: string): boolean => {
+      if (isMusicBrailleModeRef.current) return false;
+      if (!isPredominantlyUnicodeBraille(text)) return false;
+
+      const gen = ++unicodeBackTranslateGenRef.current;
+      const normalized = normalizeImportedBrf(text);
+      void backTranslateBrf(normalized, selectedTable)
+        .then(({ plainText }) => {
+          if (gen !== unicodeBackTranslateGenRef.current) return;
+          // Keep the Unicode source if liblouis returned nothing useful.
+          if (!plainText.trim() && normalized.trim()) return;
+          applyBackTranslatedPlain(plainText);
+        })
+        .catch((err: unknown) => {
+          console.error('[unicode auto back-translate]', err);
+        });
+      return true;
+    },
+    [applyBackTranslatedPlain, backTranslateBrf, selectedTable],
+  );
+
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setInputText(text);
+      if (isMusicBrailleModeRef.current) return;
+      if (tryAutoBackTranslateUnicode(text)) return;
+      if (text.trim()) {
+        translate(text, selectedTable, mathCode);
+      }
+    },
+    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
+  );
 
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
     if (isMusicBrailleMode) return;
     const text = inputTextRef.current;
     if (!text.trim()) return;
+    if (isPredominantlyUnicodeBraille(text)) {
+      tryAutoBackTranslateUnicode(text);
+      return;
+    }
     translate(text, selectedTable, mathCode);
-  }, [selectedTable, mathCode, translate, isMusicBrailleMode]);
+  }, [selectedTable, mathCode, translate, isMusicBrailleMode, tryAutoBackTranslateUnicode]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Separate state that is only set on file load or math conversion; passed as `value` to Editor
-  // so Monaco's content is replaced. Kept out of inputText feedback loop.
-  const [fileContent, setFileContent] = useState<string | undefined>(undefined);
 
   // ── Autosave ────────────────────────────────────────────────────────────
   const [drafts, setDrafts] = useState<SessionMetadata[]>([]);
@@ -445,9 +487,9 @@ export default function App() {
       if (text) {
         setInputText(text);
         setFileContent(text);
-        if (text.trim()) {
-          translate(text, selectedTable, mathCode);
-        }
+        if (!text.trim()) return;
+        if (tryAutoBackTranslateUnicode(text)) return;
+        translate(text, selectedTable, mathCode);
       }
     }).catch(err => {
       console.error('Failed to restore session', err);
@@ -496,9 +538,10 @@ export default function App() {
       } else {
         setInputText(raw);
         setFileContent(raw);
-        if (!isMusicBrailleModeRef.current) {
-          translate(raw, selectedTable, mathCode);
-        }
+        if (isMusicBrailleModeRef.current) return;
+        // Unicode braille pasted into a .txt (or similar) should back-translate like .brf.
+        if (tryAutoBackTranslateUnicode(raw)) return;
+        translate(raw, selectedTable, mathCode);
       }
     };
     reader.readAsText(file, 'utf-8');
