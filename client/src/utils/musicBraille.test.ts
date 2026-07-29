@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { asciiToUnicodeBraille } from './braille';
 import {
   DEFAULT_BEATS_PER_MEASURE,
   beatForCharIndex,
@@ -20,6 +21,27 @@ describe('parseBrailleMusic', () => {
     expect(score.events[0].measure).toBe(1);
     expect(score.timeSignature).toEqual({ beatsPerMeasure: 4, beatUnit: 4 });
     expect(score.keySignature).toEqual({ sharpsFlatsCount: 0 });
+  });
+
+  it('parses Unicode braille music the same as ASCII BRF', () => {
+    const ascii = '"?:$]\\[w';
+    const unicode = asciiToUnicodeBraille(ascii);
+    expect(unicode).toMatch(/^[\u2800-\u28FF]+$/);
+
+    const fromAscii = parseBrailleMusic(ascii);
+    const fromUnicode = parseBrailleMusic(unicode);
+
+    expect(fromUnicode.events).toHaveLength(fromAscii.events.length);
+    expect(fromUnicode.totalBeats).toBeCloseTo(fromAscii.totalBeats, 5);
+    for (let i = 0; i < fromAscii.events.length; i++) {
+      expect(fromUnicode.events[i].midiPitches).toEqual(fromAscii.events[i].midiPitches);
+      expect(fromUnicode.events[i].durationBeats).toBe(fromAscii.events[i].durationBeats);
+      expect(fromUnicode.events[i].charIndex).toBe(fromAscii.events[i].charIndex);
+      expect(fromUnicode.events[i].timeOffsetBeats).toBeCloseTo(
+        fromAscii.events[i].timeOffsetBeats,
+        5,
+      );
+    }
   });
 
   it('parses a simple C major scale of eighths in one measure', () => {

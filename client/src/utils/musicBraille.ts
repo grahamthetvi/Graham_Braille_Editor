@@ -1,5 +1,6 @@
 /**
- * ASCII BRF Music Braille lexer/parser (BANA / North American conventions).
+ * Music Braille lexer/parser (BANA / North American conventions).
+ * Input may be ASCII BRF and/or Unicode braille cells (normalized to ASCII).
  *
  * Supports time/key signatures, ties, triplets, bar repeats, in-accord,
  * and dual-duration disambiguation (whole↔16th online; measure-fill for others).
@@ -16,6 +17,7 @@ import {
   DEFAULT_KEY_SIGNATURE,
   DEFAULT_TIME_SIGNATURE,
 } from '../types/musicBraille';
+import { unicodeBrailleToAscii } from './braille';
 
 /** Quarter-note beats in one measure when no time signature is parsed (4/4). */
 export const DEFAULT_BEATS_PER_MEASURE = 4;
@@ -384,7 +386,9 @@ function tryParseHashPrefix(
 }
 
 /**
- * Parse an ASCII Music Braille BRF string into a timed score AST.
+ * Parse Music Braille into a timed score AST.
+ * Accepts North American ASCII BRF and/or Unicode braille cells (U+2800–U+28FF);
+ * Unicode is normalized to ASCII before lexing so pasted Unicode scores play.
  */
 export function parseBrailleMusic(
   brf: string,
@@ -396,7 +400,9 @@ export function parseBrailleMusic(
     options.beatsPerMeasure ?? beatsCapacityFromTimeSig(timeSignature);
   let keyDeltas = keySignatureDeltas(keySignature.sharpsFlatsCount);
 
-  const text = brf.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const text = unicodeBrailleToAscii(brf)
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
 
   let currentOctaveMidiC = 60;
   let measure = 1;

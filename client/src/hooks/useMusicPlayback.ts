@@ -1,5 +1,5 @@
 /**
- * useMusicPlayback — parse ASCII Music Braille BRF and schedule Web Audio notes.
+ * useMusicPlayback — parse Music Braille (ASCII BRF or Unicode cells) and schedule Web Audio notes.
  *
  * Exposes activeCharIndex so the BRF preview can highlight the sounding cell.
  */
@@ -28,7 +28,7 @@ function clampBpm(bpm: number): number {
 }
 
 /**
- * @param brfString ASCII Music Braille source
+ * @param brfString Music Braille source (ASCII BRF and/or Unicode braille cells)
  * @param cursorCharIndex Editor caret/selection start offset — Play (not Resume)
  *   starts from the first note at or after this character.
  */
