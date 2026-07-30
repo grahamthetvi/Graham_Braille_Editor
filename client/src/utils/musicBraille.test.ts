@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
 import {
   DEFAULT_BEATS_PER_MEASURE,
@@ -464,5 +467,125 @@ describe('non-meter # markup', () => {
     expect(score.events).toHaveLength(1);
     expect(score.events[0].midiPitches).toEqual([60]);
     expect(score.events[0].durationBeats).toBeCloseTo(1, 5);
+  });
+});
+
+describe('piano soft-overflow / duration materialization', () => {
+  it('keeps seven half-shapes in 3/8 piano as audible sixteenths (no 2-beat soft overflow)', () => {
+    // Dense RH of half-shapes used to soft-overflow to d=2 each.
+    const brf = `#c8
+.>npqrstn
+_>xxxxxx`;
+    const score = parseBrailleMusic(brf);
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(0);
+    expect(score.parseInfo?.capacityBeats).toBeCloseTo(1.5, 5);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.length).toBe(7);
+    expect(notes.every((e) => e.durationBeats <= 0.5 + 1e-9)).toBe(true);
+    expect(notes.every((e) => e.durationBeats >= 0.2)).toBe(true);
+    // Contiguous — no silence holes between attacks in the RH voice.
+    const rh = notes.filter((e) => e.midiPitches[0] >= 60);
+    for (let i = 1; i < rh.length; i++) {
+      const gap =
+        rh[i].timeOffsetBeats -
+        (rh[i - 1].timeOffsetBeats + rh[i - 1].durationBeats);
+      expect(gap).toBeLessThanOrEqual(0.01);
+    }
+  });
+
+  it('does not let a dense LH force RH wholes into 4-beat tones', () => {
+    // RH: two wholes (should be 16ths). LH: seven half-shapes overflowing.
+    const brf = `#c8
+.>yz
+_>npqrstn`;
+    const score = parseBrailleMusic(brf);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.every((e) => e.durationBeats <= 0.5 + 1e-9)).toBe(true);
+    expect(notes.every((e) => e.durationBeats < 2)).toBe(true);
+  });
+});
+
+describe('piano fingering / slur landmines', () => {
+  it('does not treat fingering 1 after a note as a triplet', () => {
+    const brf = `#c8
+.>"?1":"$
+_>xxx`;
+    const score = parseBrailleMusic(brf);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.length).toBeGreaterThanOrEqual(3);
+    // Quarters that fit 3/8 stay long (1 beat) — not ×2/3 triplet values.
+    expect(notes[0].durationBeats).toBeCloseTo(notes[1].durationBeats, 5);
+    expect(notes[0].durationBeats).not.toBeCloseTo((2 / 3), 5);
+  });
+
+  it('does not invent a bar-repeat from fingering 0 at a measure boundary', () => {
+    const brf = `#c8
+.>"? "$
+_>x 0x`;
+    const score = parseBrailleMusic(brf);
+    // Two measures of content — not three from a false bar repeat.
+    expect(score.totalMeasures).toBeLessThanOrEqual(3);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    // Should not duplicate the first measure's pitches via bar repeat.
+    const midis = notes.map((e) => e.midiPitches[0]);
+    expect(midis.filter((p) => p === notes[0].midiPitches[0]).length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+
+  it('strips slur l without dropping surrounding notes', () => {
+    const brf = `#c8
+.>"?l":
+_>xx`;
+    const score = parseBrailleMusic(brf);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.length).toBeGreaterThanOrEqual(2);
+    expect(notes[0].midiPitches[0]).toBe(60);
+    expect(notes[1].midiPitches[0]).toBe(62);
+  });
+});
+
+describe('full Für Elise golden regression', () => {
+  it('plays the opening motif and stays within meter without soft-overflow gaps', () => {
+    const full = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf'), 'utf8');
+    const score = parseBrailleMusic(full);
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(20);
+    expect(score.parseInfo?.capacityBeats).toBeCloseTo(1.5, 5);
+
+    const notes = score.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort(
+        (a, b) =>
+          a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex,
+      );
+    expect(notes.length).toBeGreaterThan(500);
+
+    // E5 D#5 E5 D#5 E5 B4 D4 C4 …
+    expect(notes[0].midiPitches[0]).toBe(76);
+    expect(notes[1].midiPitches[0]).toBe(75);
+    expect(notes[2].midiPitches[0]).toBe(76);
+    expect(notes[3].midiPitches[0]).toBe(75);
+    expect(notes[4].midiPitches[0]).toBe(76);
+    expect(notes[5].midiPitches[0]).toBe(71);
+
+    const capacity = score.parseInfo?.capacityBeats ?? 1.5;
+    // No soft-overflow 2/4-beat tones; longer values must still fit the bar.
+    expect(Math.max(...notes.map((e) => e.durationBeats))).toBeLessThanOrEqual(
+      capacity + 1e-6,
+    );
+    expect(notes.every((e) => e.durationBeats < 2)).toBe(true);
+    expect(notes.every((e) => e.durationBeats >= 0.2)).toBe(true);
+
+    // Silence holes between successive attacks (allowing tiny float / overlap).
+    const gaps: number[] = [];
+    for (let i = 1; i < notes.length; i++) {
+      const gap =
+        notes[i].timeOffsetBeats -
+        (notes[i - 1].timeOffsetBeats + notes[i - 1].durationBeats);
+      if (gap > 1e-6) gaps.push(gap);
+    }
+    const maxGap = gaps.length ? Math.max(...gaps) : 0;
+    expect(maxGap).toBeLessThanOrEqual(1.0 + 1e-6);
   });
 });

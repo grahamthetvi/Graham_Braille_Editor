@@ -13,6 +13,11 @@ const HAND_LH = '_>';
 /** Upper-number letters a–j used for measure numbers (j=0). */
 const MEASURE_NUM = new Set('abcdefghijABCDEFGHIJ'.split(''));
 
+const NOTE_REST_CELLS = 'defghij?:$]\\[|wnopqrstyz&=(!)xuvm';
+const NOTE_REST = new Set(NOTE_REST_CELLS.split(''));
+/** Interval cells that are valid only immediately after a note/rest. */
+const INTERVAL_AFTER_NOTE = new Set('/+#903-'.split(''));
+
 export interface PianoChunk {
   /** Inclusive start index in the ASCII-normalized source. */
   start: number;
@@ -29,10 +34,7 @@ export interface PianoSystem {
 
 function isNoteLikeChar(ch: string): boolean {
   const c = ch >= 'A' && ch <= 'Z' ? ch.toLowerCase() : ch;
-  return (
-    'defghij?:$]\\[|wnopqrstyz&=(!)xuvm'.includes(c) ||
-    c === "'" // dotted rhythm
-  );
+  return NOTE_REST.has(c) || c === "'";
 }
 
 function isMusicUtilityChar(ch: string): boolean {
@@ -44,13 +46,163 @@ function isMusicUtilityChar(ch: string): boolean {
     '/+#903-'.includes(c) || // intervals
     (c >= '0' && c <= '9') || // fingerings / numbered nuances / #2 endings
     c === 'c' || // tie
-    c === 'l' || // slur (common Sao Mai)
-    c === '1' || // triplet (also covered by digits)
-    c === '0' || // bar repeat / interval
+    c === 'l' || // slur (common Sao Mai) — stripped in sanitize
     c === '#' ||
     c === '<' ||
     c === '>'
   );
+}
+
+/**
+ * Remove slur / fingering landmines and Sao Mai LH noise (`<c`, orphan `*c`)
+ * while keeping true post-note intervals, ties, and leading triplet `1`.
+ */
+export function sanitizePianoChunkText(
+  text: string,
+  indexMap: number[],
+): { text: string; indexMap: number[] } {
+  let out = '';
+  const outMap: number[] = [];
+  let i = 0;
+  let sawNoteInChunk = false;
+  let lastWasNoteOrInterval = false;
+
+  const push = (ch: string, abs: number) => {
+    out += ch;
+    outMap.push(abs);
+  };
+
+  while (i < text.length) {
+    const ch = text[i];
+    const abs = indexMap[i] ?? 0;
+
+    // Sao Mai LH chord/noise prefix: flat + orphan `c` (not a tie).
+    if (ch === '<' && text[i + 1] === 'c') {
+      i += 2;
+      lastWasNoteOrInterval = false;
+      continue;
+    }
+
+    // Orphan natural+c noise (not after a note — real ties use c after notes).
+    if (ch === '*' && text[i + 1] === 'c' && !lastWasNoteOrInterval) {
+      i += 2;
+      lastWasNoteOrInterval = false;
+      continue;
+    }
+
+    // Non-meter `#` nuances / endings (`#1`, `#2`) — drop so a following `1`
+    // is not lexed as a triplet prefix.
+    if (ch === '#') {
+      i += 1;
+      while (i < text.length) {
+        const n = text[i];
+        if (
+          (n >= '0' && n <= '9') ||
+          (n >= 'a' && n <= 'j') ||
+          (n >= 'A' && n <= 'J') ||
+          n === '/'
+        ) {
+          i += 1;
+          continue;
+        }
+        break;
+      }
+      lastWasNoteOrInterval = false;
+      continue;
+    }
+
+    // Slur — never lex as music.
+    if (ch === 'l' || ch === 'L') {
+      i += 1;
+      continue;
+    }
+
+    // Digits: interval 9/0/3 only after note; triplet 1 only before any note
+    // and not after octave/accidental clutter at chunk start without intent —
+    // keep leading `1` when the next cell is a note/octave (true triplet).
+    if (ch >= '0' && ch <= '9') {
+      if (INTERVAL_AFTER_NOTE.has(ch) && lastWasNoteOrInterval) {
+        push(ch, abs);
+        lastWasNoteOrInterval = true;
+        i += 1;
+        continue;
+      }
+      if (ch === '1' && !sawNoteInChunk) {
+        // Peek: triplet only when a note (optionally after octave/accidental) follows.
+        let j = i + 1;
+        while (
+          j < text.length &&
+          ("@^_\";,<%*'".includes(text[j]) || text[j] === '.')
+        ) {
+          j += 1;
+        }
+        if (j < text.length && NOTE_REST.has(text[j])) {
+          push(ch, abs);
+          lastWasNoteOrInterval = false;
+          i += 1;
+          continue;
+        }
+      }
+      i += 1;
+      continue;
+    }
+
+    if (NOTE_REST.has(ch)) {
+      push(ch, abs);
+      sawNoteInChunk = true;
+      lastWasNoteOrInterval = true;
+      i += 1;
+      continue;
+    }
+
+    if (INTERVAL_AFTER_NOTE.has(ch) && lastWasNoteOrInterval) {
+      push(ch, abs);
+      lastWasNoteOrInterval = true;
+      i += 1;
+      continue;
+    }
+
+    // Tie after note: c or .c
+    if (ch === 'c' && lastWasNoteOrInterval) {
+      push(ch, abs);
+      lastWasNoteOrInterval = false;
+      i += 1;
+      continue;
+    }
+    if (ch === '.' && text[i + 1] === 'c' && lastWasNoteOrInterval) {
+      push('.', abs);
+      push('c', indexMap[i + 1] ?? abs);
+      lastWasNoteOrInterval = false;
+      i += 2;
+      continue;
+    }
+
+    // Octave / accidental / dot (`.` also starts octave 5).
+    if ("@^_\";,<%*'".includes(ch) || ch === '.') {
+      push(ch, abs);
+      lastWasNoteOrInterval = false;
+      i += 1;
+      continue;
+    }
+
+    // Drop anything else (including bare `>` residue).
+    i += 1;
+    lastWasNoteOrInterval = false;
+  }
+
+  return { text: out, indexMap: outMap };
+}
+
+function sanitizeChunk(chunk: PianoChunk): PianoChunk | null {
+  const cleaned = sanitizePianoChunkText(chunk.text, chunk.indexMap);
+  if (![...cleaned.text].some((ch) => NOTE_REST.has(ch))) {
+    return null;
+  }
+  return {
+    start: cleaned.indexMap[0] ?? chunk.start,
+    text: cleaned.text,
+    indexMap: cleaned.indexMap,
+  };
 }
 
 /**
@@ -115,11 +267,13 @@ export function extractHandChunks(line: string, lineStart: number): {
     }
     // Drop leading spaces from map too
     const lead = chunkText.length - trimmed.length;
-    chunks.push({
+    const raw: PianoChunk = {
       start: lineStart + (chunkStart < 0 ? 0 : chunkStart + lead),
       text: trimmed,
       indexMap: chunkMap.slice(lead),
-    });
+    };
+    const cleaned = sanitizeChunk(raw);
+    if (cleaned) chunks.push(cleaned);
     chunkText = '';
     chunkMap = [];
     chunkStart = -1;
@@ -154,7 +308,8 @@ export function extractHandChunks(line: string, lineStart: number): {
     const ch = line[i];
     const abs = lineStart + i;
 
-    // Space = measure chunk boundary within a system line
+    // Space = measure chunk boundary. Collapse alignment padding runs into a
+    // single boundary so empty slots are not invented between measures.
     if (ch === ' ' || ch === '\t') {
       flushChunk();
       while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i += 1;
@@ -177,13 +332,7 @@ export function extractHandChunks(line: string, lineStart: number): {
   }
   flushChunk();
 
-  // Drop chunks that have no actual note/rest cells (only dots, etc.)
-  const noteCells = 'defghij?:$]\\[|wnopqrstyz&=(!)xuvm';
-  const meaningful = chunks.filter((c) =>
-    [...c.text].some((ch) => noteCells.includes(ch)),
-  );
-
-  return { hand, chunks: meaningful };
+  return { hand, chunks };
 }
 
 /**
@@ -242,6 +391,29 @@ export function segmentPianoSystems(asciiText: string): PianoSystem[] {
 }
 
 /**
+ * Align RH/LH measure chunks when counts differ (alignment spaces / pickups).
+ * Pairs by index up to min length, then appends leftover note-bearing chunks
+ * from the longer hand so measures are not falsely zipped across barlines.
+ */
+export function alignHandChunks(
+  rh: PianoChunk[],
+  lh: PianoChunk[],
+): Array<{ rh?: PianoChunk; lh?: PianoChunk }> {
+  const paired: Array<{ rh?: PianoChunk; lh?: PianoChunk }> = [];
+  const n = Math.min(rh.length, lh.length);
+  for (let i = 0; i < n; i++) {
+    paired.push({ rh: rh[i], lh: lh[i] });
+  }
+  for (let i = n; i < rh.length; i++) {
+    paired.push({ rh: rh[i] });
+  }
+  for (let i = n; i < lh.length; i++) {
+    paired.push({ lh: lh[i] });
+  }
+  return paired;
+}
+
+/**
  * Linearize piano systems into a single braille stream with `<>` between
  * RH and LH of each measure and spaces between measures. `indexMap[i]` gives
  * the original ASCII source index for each emitted character (spaces/`<>`
@@ -265,26 +437,27 @@ export function linearizePianoSystems(systems: PianoSystem[]): {
     }
   };
 
+  const allPairs: Array<{ rh?: PianoChunk; lh?: PianoChunk }> = [];
   for (const sys of systems) {
-    const n = Math.max(sys.rh.length, sys.lh.length);
-    for (let m = 0; m < n; m++) {
-      const rh = sys.rh[m];
-      const lh = sys.lh[m];
-      if (rh) pushChunk(rh);
-      if (rh && lh) {
-        const abs = lh.indexMap[0] ?? lh.start;
-        pushChar('<', abs);
-        pushChar('>', abs);
-      }
-      if (lh) pushChunk(lh);
-      if (m < n - 1 || systems.indexOf(sys) < systems.length - 1) {
-        const abs =
-          lh?.indexMap[0] ??
-          rh?.indexMap[rh.indexMap.length - 1] ??
-          rh?.start ??
-          0;
-        pushChar(' ', abs);
-      }
+    allPairs.push(...alignHandChunks(sys.rh, sys.lh));
+  }
+
+  for (let m = 0; m < allPairs.length; m++) {
+    const { rh, lh } = allPairs[m];
+    if (rh) pushChunk(rh);
+    if (rh && lh) {
+      const abs = lh.indexMap[0] ?? lh.start;
+      pushChar('<', abs);
+      pushChar('>', abs);
+    }
+    if (lh) pushChunk(lh);
+    if (m < allPairs.length - 1) {
+      const abs =
+        lh?.indexMap[0] ??
+        rh?.indexMap[(rh.indexMap.length || 1) - 1] ??
+        rh?.start ??
+        0;
+      pushChar(' ', abs);
     }
   }
 
