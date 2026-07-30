@@ -42,8 +42,10 @@ function isMusicUtilityChar(ch: string): boolean {
     '@^_".;,'.includes(c) || // octaves
     '<%*'.includes(c) || // accidentals
     '/+#903-'.includes(c) || // intervals
+    (c >= '0' && c <= '9') || // fingerings / numbered nuances / #2 endings
     c === 'c' || // tie
-    c === '1' || // triplet
+    c === 'l' || // slur (common Sao Mai)
+    c === '1' || // triplet (also covered by digits)
     c === '0' || // bar repeat / interval
     c === '#' ||
     c === '<' ||

@@ -263,6 +263,7 @@ function materializeMeasure(
   events: PendingEvent[],
   capacity: number,
   measureStartBeat: number,
+  options: { preferSixteenthWholes?: boolean } = {},
 ): { notes: MusicNoteEvent[]; measureBeatsUsed: number } {
   if (events.length === 0) {
     return { notes: [], measureBeatsUsed: 0 };
@@ -306,11 +307,35 @@ function materializeMeasure(
       return s + applyDots(0.25, e.dots);
     }, 0);
 
-  if (longSum > capacity + 1e-9) {
-    let gridSum = 0;
-    for (const voice of voices) {
-      gridSum = Math.max(gridSum, sixteenthGridSumFor(voice));
+  let gridSum = 0;
+  for (const voice of voices) {
+    gridSum = Math.max(gridSum, sixteenthGridSumFor(voice));
+  }
+
+  // Piano whole-shapes are usually 16ths. When an excerpt omits the printed
+  // meter (defaulting to 4/4), the online whole/16th rule would turn the first
+  // cell of each measure into a 4-beat tone — so prefer 16ths whenever several
+  // whole-shapes share a measure, or a lone whole-shape does not fill the bar.
+  if (options.preferSixteenthWholes) {
+    const unforcedWholes = events.filter(
+      (e) => unforced(e) && e.durationClass === 'whole',
+    );
+    const onlyWholeShapes = events.every(
+      (e) => !unforced(e) || e.durationClass === 'whole',
+    );
+    if (onlyWholeShapes && unforcedWholes.length >= 2 && gridSum <= capacity + 1e-9) {
+      durMode = 'short';
+    } else if (
+      onlyWholeShapes &&
+      unforcedWholes.length === 1 &&
+      longSum > capacity + 1e-9 &&
+      shortSum <= capacity + 1e-9
+    ) {
+      durMode = 'short';
     }
+  }
+
+  if (durMode === 'long' && longSum > capacity + 1e-9) {
     const shortIsSixteenthOnly = !hasNonWholeUnforced;
 
     if (gridSum <= capacity + 1e-9 && hasNonWholeUnforced) {
@@ -513,6 +538,30 @@ export function parseBrailleMusic(
       text = linear.text;
       indexMap = linear.indexMap;
     }
+    // Pasted piano excerpts often omit the printed meter (⠼⠉⠦). Infer a
+    // plausible capacity from average RH note density so whole-shapes become
+    // 16ths instead of 4-beat tones under the 4/4 default.
+    if (!foundHeadingTime) {
+      let rhNoteCells = 0;
+      let rhChunks = 0;
+      for (const sys of pianoSystems) {
+        for (const chunk of sys.rh) {
+          rhChunks += 1;
+          for (const ch of chunk.text) {
+            if (normalizeBrfChar(ch) in NOTE_SHAPES) rhNoteCells += 1;
+          }
+        }
+      }
+      const avgGridBeats = rhChunks > 0 ? (rhNoteCells / rhChunks) * 0.25 : 0;
+      if (avgGridBeats > 0 && avgGridBeats <= 1.65) {
+        timeSignature = { beatsPerMeasure: 3, beatUnit: 8 };
+      } else if (avgGridBeats <= 2.15) {
+        timeSignature = { beatsPerMeasure: 2, beatUnit: 4 };
+      } else if (avgGridBeats <= 3.15) {
+        timeSignature = { beatsPerMeasure: 3, beatUnit: 4 };
+      }
+      capacity = beatsCapacityFromTimeSig(timeSignature);
+    }
   } else {
     // Without hand signs, skip literary front matter so title letters are not
     // lexed as notes (and so capital `,` markers do not yank the octave to C7).
@@ -551,6 +600,7 @@ export function parseBrailleMusic(
       measurePending,
       capacity,
       scoreBeatBase,
+      { preferSixteenthWholes: fromPiano },
     );
     allEvents.push(...notes);
     previousMeasureNotes = notes;
@@ -714,10 +764,21 @@ export function parseBrailleMusic(
         durationClass === 'whole'
           ? resolveWholeOrSixteenth(measureBeatOffset, capacity, dots)
           : durationFor(durationClass, false, dots);
+      // Piano whole-shapes are almost always 16ths; keep provisional cursor on
+      // a 16th grid so several wholes stay in one measure for materialization.
+      if (fromPiano && durationClass === 'whole' && !inTriplet) {
+        longDur = applyDots(0.25, dots);
+      }
       longDur = applyTriplet(longDur);
 
-      const forcedDurationBeats =
-        durationClass === 'whole' || inTriplet ? longDur : undefined;
+      // Do not force whole/16th online for piano — measure materialization
+      // chooses 16ths when multiple whole-shapes share a bar (excerpts often
+      // omit the printed meter and would otherwise become 4-beat tones).
+      const forcedDurationBeats = inTriplet
+        ? longDur
+        : durationClass === 'whole' && !fromPiano
+          ? longDur
+          : undefined;
 
       const id = `e${eventCounter++}`;
       const provisionalOffset = measureBeatOffset;
@@ -781,10 +842,18 @@ export function parseBrailleMusic(
         shape.durationClass === 'whole'
           ? resolveWholeOrSixteenth(measureBeatOffset, capacity, dots)
           : durationFor(shape.durationClass, false, dots);
+      // Piano whole-shapes are almost always 16ths; keep provisional cursor on
+      // a 16th grid so several wholes stay in one measure for materialization.
+      if (fromPiano && shape.durationClass === 'whole' && !inTriplet) {
+        longDur = applyDots(0.25, dots);
+      }
       longDur = applyTriplet(longDur);
 
-      const forcedDurationBeats =
-        shape.durationClass === 'whole' || inTriplet ? longDur : undefined;
+      const forcedDurationBeats = inTriplet
+        ? longDur
+        : shape.durationClass === 'whole' && !fromPiano
+          ? longDur
+          : undefined;
 
       const id = `e${eventCounter++}`;
       const provisionalOffset = measureBeatOffset;

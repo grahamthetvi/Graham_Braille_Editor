@@ -417,6 +417,27 @@ describe('Sao Mai piano bar-over-bar (Für Elise excerpt)', () => {
     expect(notes[1].timeOffsetBeats).toBeCloseTo(0.25, 5);
     expect(notes[2].timeOffsetBeats).toBeCloseTo(0.5, 5);
   });
+
+  it('still plays 16ths when the meter line is omitted from a piano excerpt', () => {
+    // User paste without ⠼⠉⠦ — must not turn whole-shapes into 4-beat tones.
+    const excerpt = `⠚⠀⠨⠜⠄⠜⠏⠕⠉⠕⠀⠍⠕⠞⠕⠜⠀⠜⠏⠏⠨⠯⠩⠵⠀⠯⠩⠑⠋⠐⠚⠡⠑⠙
+⠀⠁⠸⠜⠀⠀⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠀⠭⠀⠀⠀⠀⠍
+⠃⠀⠨⠜⠀⠀⠀⠐⠊⠍⠐⠽⠯⠮⠀⠀⠀⠚⠍⠯⠩⠷⠾⠀⠀⠀⠀⠀⠙⠍⠐⠯⠨⠯⠩⠵
+⠀⠀⠸⠜⠄⠣⠉⠘⠮⠸⠯⠮⠍⠭⠀⠣⠉⠘⠯⠸⠯⠩⠷⠍⠭⠀⠣⠉⠘⠮⠸⠯⠮⠍⠭⠡⠉`;
+    const score = parseBrailleMusic(excerpt);
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(0);
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.length).toBeGreaterThan(10);
+    expect(notes.every((e) => e.durationBeats <= 0.5 + 1e-9)).toBe(true);
+    expect(notes[0].midiPitches[0]).toBe(76);
+    expect(notes[1].midiPitches[0]).toBe(75);
+    expect(notes[2].midiPitches[0]).toBe(76);
+    // Contiguous sixteenth attacks — not one whole note then a long gap.
+    expect(notes[0].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(notes[1].timeOffsetBeats).toBeCloseTo(0.25, 5);
+    expect(notes[2].timeOffsetBeats).toBeCloseTo(0.5, 5);
+  });
 });
 
 describe('literary front matter without piano hand signs', () => {
