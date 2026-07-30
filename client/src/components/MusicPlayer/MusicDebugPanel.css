@@ -1,0 +1,150 @@
+.music-debug {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10050;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  background: #1a1d23;
+  color: #e8eaed;
+  border: 1px solid #3c4450;
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.35;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.music-debug--min {
+  max-height: none;
+  overflow: hidden;
+}
+
+.music-debug__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid #3c4450;
+  position: sticky;
+  top: 0;
+  background: #1a1d23;
+}
+
+.music-debug__title {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.music-debug__hint {
+  color: #9aa3af;
+  font-size: 10px;
+}
+
+.music-debug__header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.music-debug__icon-btn {
+  appearance: none;
+  border: 1px solid #3c4450;
+  background: #252a33;
+  color: #e8eaed;
+  border-radius: 4px;
+  width: 1.6rem;
+  height: 1.6rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.music-debug__icon-btn:hover {
+  background: #323845;
+}
+
+.music-debug__body {
+  padding: 0.55rem 0.65rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.music-debug__section h3 {
+  margin: 0 0 0.25rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9aa3af;
+  font-weight: 600;
+}
+
+.music-debug__kv {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.music-debug__kv li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.35rem;
+}
+
+.music-debug__kv li span:first-child {
+  color: #9aa3af;
+}
+
+.music-debug__muted {
+  margin: 0;
+  color: #9aa3af;
+}
+
+.music-debug__log {
+  margin: 0;
+  padding-left: 1.1rem;
+  max-height: 8rem;
+  overflow: auto;
+}
+
+.music-debug__log li {
+  margin: 0.1rem 0;
+  word-break: break-word;
+}
+
+.music-debug__log--warn {
+  color: #f0c674;
+}
+
+.music-debug__log--warn code {
+  color: #e5a3a3;
+  font-size: 10px;
+}
+
+.music-debug__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.music-debug__actions .toolbar-btn {
+  font-size: 11px;
+  min-height: 1.8rem;
+  padding: 0.2rem 0.55rem;
+}
+
+.music-debug__toast {
+  margin: 0;
+  color: #8fd19e;
+}
+
+.music-debug__footer {
+  margin: 0;
+  color: #9aa3af;
+  font-size: 10px;
+}
