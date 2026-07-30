@@ -1,5 +1,6 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as monaco from 'monaco-editor';
+import { SixKeyChordTracker, UNICODE_BRAILLE_BLANK, sixKeyEventToDot } from '../utils/sixKeyBraille';
 
 interface EditorProps {
   onTextChange: (text: string) => void;
@@ -21,6 +22,12 @@ interface EditorProps {
   onSelectionChange?: (range: [number, number] | null) => void;
   /** Callback fired with the raw character offset of the cursor */
   onCursorOffsetChange?: (offset: number) => void;
+  /** When true, Monaco is read-only (used while imported braille is locked). */
+  readOnly?: boolean;
+  /** Fired when the user tries to type/edit while readOnly. */
+  onAttemptEdit?: () => void;
+  /** Enable Braille Blaster–style fds/jkl 6-key chord input (Unicode cells). */
+  sixKeyInput?: boolean;
 }
 
 export interface EditorHandle {
@@ -31,6 +38,8 @@ export interface EditorHandle {
   replaceRange: (startOffset: number, endOffset: number, text: string) => void;
   /** Imperatively sync scroll position (0–1) without React state. */
   setScrollPercentage: (percentage: number) => void;
+  /** Focus the Monaco editor. */
+  focus: () => void;
 }
 
 /**
@@ -48,6 +57,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   scrollPercentage,
   onSelectionChange,
   onCursorOffsetChange,
+  readOnly = false,
+  onAttemptEdit,
+  sixKeyInput = false,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -59,6 +71,31 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   useEffect(() => {
     onTextChangeRef.current = onTextChange;
   }, [onTextChange]);
+
+  const onAttemptEditRef = useRef(onAttemptEdit);
+  useEffect(() => {
+    onAttemptEditRef.current = onAttemptEdit;
+  }, [onAttemptEdit]);
+
+  const sixKeyInputRef = useRef(sixKeyInput);
+  useEffect(() => {
+    sixKeyInputRef.current = sixKeyInput;
+  }, [sixKeyInput]);
+
+  const insertAtCursor = (text: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const selection = editor.getSelection();
+    if (!selection) return;
+    editor.executeEdits('six-key', [
+      {
+        range: selection,
+        text,
+        forceMoveMarkers: true,
+      },
+    ]);
+    editor.pushUndoStop();
+  };
 
   useImperativeHandle(ref, () => ({
     insertTextAtCursor: (text: string) => {
@@ -151,6 +188,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
         editor.setScrollTop(targetTop);
       }
     },
+    focus: () => {
+      editorRef.current?.focus();
+    },
   }));
 
   useEffect(() => {
@@ -170,6 +210,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       scrollBeyondLastLine: false,
       automaticLayout: true,
       renderControlCharacters: true,
+      readOnly,
     });
 
     editorRef.current.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
@@ -269,8 +310,13 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       }
     });
 
+    const attemptDisposable = editorRef.current.onDidAttemptReadOnlyEdit(() => {
+      onAttemptEditRef.current?.();
+    });
+
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      attemptDisposable.dispose();
       editorRef.current?.dispose();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -297,6 +343,91 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       rulers: [cellsPerRow],
     });
   }, [cellsPerRow]);
+
+  // Toggle read-only without recreating the editor
+  useEffect(() => {
+    editorRef.current?.updateOptions({ readOnly });
+  }, [readOnly]);
+
+  // Braille Blaster–style 6-key chord input
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !sixKeyInput) return;
+
+    const tracker = new SixKeyChordTracker();
+    const dom = editor.getDomNode();
+    if (!dom) return;
+
+    const hasModifier = (e: KeyboardEvent) =>
+      e.ctrlKey || e.metaKey || e.altKey;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!sixKeyInputRef.current) return;
+      if (hasModifier(e)) return;
+
+      const dot = sixKeyEventToDot(e);
+      if (dot !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        tracker.keyDown(dot);
+        return;
+      }
+
+      if (e.code === 'Space' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        insertAtCursor(UNICODE_BRAILLE_BLANK);
+        return;
+      }
+
+      // Allow navigation / editing keys through; block other printable keys.
+      const passThrough = new Set([
+        'Enter',
+        'Backspace',
+        'Delete',
+        'Tab',
+        'Escape',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'Home',
+        'End',
+        'PageUp',
+        'PageDown',
+      ]);
+      if (passThrough.has(e.key) || passThrough.has(e.code)) return;
+      if (e.key.length === 1) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (!sixKeyInputRef.current) return;
+      if (hasModifier(e)) return;
+      const dot = sixKeyEventToDot(e);
+      if (dot === null) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const cell = tracker.keyUp(dot);
+      if (cell) insertAtCursor(cell);
+    };
+
+    const onBlur = () => tracker.reset();
+
+    // Capture on the editor DOM so we beat Monaco's default character input.
+    dom.addEventListener('keydown', onKeyDown, true);
+    dom.addEventListener('keyup', onKeyUp, true);
+    dom.addEventListener('blur', onBlur, true);
+
+    return () => {
+      tracker.reset();
+      dom.removeEventListener('keydown', onKeyDown, true);
+      dom.removeEventListener('keyup', onKeyUp, true);
+      dom.removeEventListener('blur', onBlur, true);
+    };
+  }, [sixKeyInput]);
 
   // Push externally controlled scroll position into the editor
   useEffect(() => {
