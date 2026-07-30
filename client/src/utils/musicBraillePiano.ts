@@ -42,8 +42,10 @@ function isMusicUtilityChar(ch: string): boolean {
     '@^_".;,'.includes(c) || // octaves
     '<%*'.includes(c) || // accidentals
     '/+#903-'.includes(c) || // intervals
+    (c >= '0' && c <= '9') || // fingerings / numbered nuances / #2 endings
     c === 'c' || // tie
-    c === '1' || // triplet
+    c === 'l' || // slur (common Sao Mai)
+    c === '1' || // triplet (also covered by digits)
     c === '0' || // bar repeat / interval
     c === '#' ||
     c === '<' ||
@@ -84,6 +86,16 @@ export function extractHandChunks(line: string, lineStart: number): {
   } else if (line.slice(i, i + 2) === HAND_LH) {
     hand = 'lh';
     i += 2;
+  } else if (line[i] === '.' || line[i] === '_') {
+    // Tolerate blank cells between the octave/dot prefix and `>` (some exports
+    // insert alignment spaces inside the hand sign).
+    const prefix = line[i];
+    let j = i + 1;
+    while (j < line.length && (line[j] === ' ' || line[j] === '\t')) j += 1;
+    if (line[j] === '>') {
+      hand = prefix === '.' ? 'rh' : 'lh';
+      i = j + 1;
+    }
   }
 
   // Optional dot-3 music hyphen / blank cells after hand sign

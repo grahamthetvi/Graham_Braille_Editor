@@ -139,6 +139,13 @@ export function MusicDebugPanel() {
                   </span>
                 </li>
                 <li>
+                  <span>Parse</span>
+                  <span>
+                    pianoSystems={score.pianoSystems} · capacity={score.capacityBeats} ·
+                    literarySkip={score.literarySkipCharIndex}
+                  </span>
+                </li>
+                <li>
                   <span>Risks</span>
                   <span>
                     tiny={score.tinyNoteCount} · sub16th={score.subSixteenthCount} · backjumps=
