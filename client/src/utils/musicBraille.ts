@@ -259,6 +259,8 @@ function splitInAccordVoices(events: PendingEvent[]): PendingEvent[][] {
   return voices;
 }
 
+type DurMode = 'long' | 'short' | 'sixteenthGrid';
+
 function materializeMeasure(
   events: PendingEvent[],
   capacity: number,
@@ -269,93 +271,98 @@ function materializeMeasure(
     return { notes: [], measureBeatsUsed: 0 };
   }
 
+  const pianoMode = options.preferSixteenthWholes === true;
+  const banSoftOverflow = pianoMode || capacity <= 2 + 1e-9;
+
   const provisionalDur = (e: PendingEvent, useShort: boolean) =>
     e.forcedDurationBeats ?? durationFor(e.durationClass, useShort, e.dots);
 
-  // In-accord voices overlap in time — capacity must be checked per voice,
-  // not against the sum of every parallel part (that falsely forces "short"
-  // values and crushes the measure into a burst of 32nds/128ths).
-  const voices = splitInAccordVoices(events);
-  let longSum = 0;
-  let shortSum = 0;
-  for (const voice of voices) {
-    const voiceLong = voice.reduce((s, e) => s + provisionalDur(e, false), 0);
-    const voiceShort = voice.reduce((s, e) => s + provisionalDur(e, true), 0);
-    longSum = Math.max(longSum, voiceLong);
-    shortSum = Math.max(shortSum, voiceShort);
-  }
-
-  /**
-   * Duration strategy (avoid inaudible 128ths from mixed Sao Mai cells):
-   * 1. Prefer long (upper-cell) values when they fit per voice.
-   * 2. If they overflow, try a 16th-note grid for unforced notes (common when
-   *    whole-shapes and eighth-shapes both encode 16ths in 3/8 piano music).
-   * 3. Only fall back to classic short values when that does not invent
-   *    sub-16th durations (i.e. wholes→16ths only). Otherwise keep long values
-   *    and allow a soft overflow — audible beats beat silent clicks.
-   */
-  type DurMode = 'long' | 'short' | 'sixteenthGrid';
-  let durMode: DurMode = 'long';
-
   const unforced = (e: PendingEvent) => e.forcedDurationBeats == null;
-  const hasNonWholeUnforced = events.some(
-    (e) => unforced(e) && e.durationClass !== 'whole',
-  );
+
   const sixteenthGridSumFor = (voice: PendingEvent[]) =>
     voice.reduce((s, e) => {
       if (e.forcedDurationBeats != null) return s + e.forcedDurationBeats;
       return s + applyDots(0.25, e.dots);
     }, 0);
 
-  let gridSum = 0;
-  for (const voice of voices) {
-    gridSum = Math.max(gridSum, sixteenthGridSumFor(voice));
-  }
-
-  // Piano whole-shapes are usually 16ths. When an excerpt omits the printed
-  // meter (defaulting to 4/4), the online whole/16th rule would turn the first
-  // cell of each measure into a 4-beat tone — so prefer 16ths whenever several
-  // whole-shapes share a measure, or a lone whole-shape does not fill the bar.
-  if (options.preferSixteenthWholes) {
-    const unforcedWholes = events.filter(
-      (e) => unforced(e) && e.durationClass === 'whole',
+  /**
+   * Duration strategy per in-accord voice (avoid inaudible 128ths and soft
+   * overflow in piano / small meters):
+   * 1. Prefer long (upper-cell) values when they fit.
+   * 2. If they overflow, prefer a 16th-note grid when it fits.
+   * 3. Else classic short only when that means wholes→16ths (no 32nds/128ths).
+   * 4. Piano / capacity≤2: never soft-overflow to 2/4-beat tones — keep a
+   *    16th grid even if the voice overfills the printed bar (piano flush
+   *    advances the score by measureBeatsUsed).
+   */
+  const chooseModeForVoice = (voice: PendingEvent[]): DurMode => {
+    const voiceLong = voice.reduce((s, e) => s + provisionalDur(e, false), 0);
+    const voiceShort = voice.reduce((s, e) => s + provisionalDur(e, true), 0);
+    const gridSum = sixteenthGridSumFor(voice);
+    const hasNonWholeUnforced = voice.some(
+      (e) => unforced(e) && e.durationClass !== 'whole',
     );
-    const onlyWholeShapes = events.every(
+    const shortIsSixteenthOnly = !hasNonWholeUnforced;
+    const onlyWholeShapes = voice.every(
       (e) => !unforced(e) || e.durationClass === 'whole',
     );
-    if (onlyWholeShapes && unforcedWholes.length >= 2 && gridSum <= capacity + 1e-9) {
-      durMode = 'short';
-    } else if (
-      onlyWholeShapes &&
-      unforcedWholes.length === 1 &&
-      longSum > capacity + 1e-9 &&
-      shortSum <= capacity + 1e-9
-    ) {
-      durMode = 'short';
+
+    // Piano whole-shapes are usually 16ths (esp. when meter was inferred).
+    if (pianoMode && onlyWholeShapes) {
+      const unforcedWholes = voice.filter(
+        (e) => unforced(e) && e.durationClass === 'whole',
+      );
+      if (unforcedWholes.length >= 2 && gridSum <= capacity + 1e-9) {
+        return 'short';
+      }
+      if (
+        unforcedWholes.length === 1 &&
+        voiceLong > capacity + 1e-9 &&
+        voiceShort <= capacity + 1e-9
+      ) {
+        return 'short';
+      }
     }
-  }
 
-  if (durMode === 'long' && longSum > capacity + 1e-9) {
-    const shortIsSixteenthOnly = !hasNonWholeUnforced;
+    if (voiceLong <= capacity + 1e-9) return 'long';
 
-    if (gridSum <= capacity + 1e-9 && hasNonWholeUnforced) {
-      durMode = 'sixteenthGrid';
-    } else if (
+    if (gridSum <= capacity + 1e-9 && (hasNonWholeUnforced || pianoMode)) {
+      return 'sixteenthGrid';
+    }
+    if (
       shortIsSixteenthOnly &&
-      (shortSum <= capacity + 1e-9 || shortSum < longSum)
+      (voiceShort <= capacity + 1e-9 || voiceShort < voiceLong)
     ) {
-      durMode = 'short';
-    } else if (!hasNonWholeUnforced && shortSum <= capacity + 1e-9) {
-      durMode = 'short';
-    } else {
-      durMode = 'long'; // soft overflow
+      return 'short';
+    }
+    if (!hasNonWholeUnforced && voiceShort <= capacity + 1e-9) {
+      return 'short';
+    }
+
+    if (banSoftOverflow) {
+      return 'sixteenthGrid';
+    }
+
+    return 'long'; // soft overflow — non-piano only
+  };
+
+  // In-accord voices overlap in time — choose duration mode independently so a
+  // dense LH does not force RH wholes into 4-beat tones.
+  const voices = splitInAccordVoices(events);
+  const modeByEventId = new Map<string, DurMode>();
+
+  for (const voice of voices) {
+    const mode = chooseModeForVoice(voice);
+    for (const e of voice) {
+      modeByEventId.set(e.id, mode);
     }
   }
 
   const durationOf = (e: PendingEvent): number => {
     if (e.forcedDurationBeats != null) return e.forcedDurationBeats;
-    if (durMode === 'sixteenthGrid') return applyDots(0.25, e.dots);
-    return durationFor(e.durationClass, durMode === 'short', e.dots);
+    const mode = modeByEventId.get(e.id) ?? 'long';
+    if (mode === 'sixteenthGrid') return applyDots(0.25, e.dots);
+    return durationFor(e.durationClass, mode === 'short', e.dots);
   };
 
   // Rebuild offsets from chosen durations so mixed modes stay contiguous per voice.
@@ -653,8 +660,11 @@ export function parseBrailleMusic(
       continue;
     }
 
-    // Bar repeat at measure start (after barline / empty measure)
+    // Bar repeat at measure start (after barline / empty measure).
+    // Skip in piano mode — Sao Mai fingerings/`0` residue after linearization
+    // falsely duplicate measures and punch silence holes.
     if (
+      !fromPiano &&
       ch === '0' &&
       atMeasureStart &&
       measurePending.length === 0 &&
@@ -764,9 +774,13 @@ export function parseBrailleMusic(
         durationClass === 'whole'
           ? resolveWholeOrSixteenth(measureBeatOffset, capacity, dots)
           : durationFor(durationClass, false, dots);
-      // Piano whole-shapes are almost always 16ths; keep provisional cursor on
-      // a 16th grid so several wholes stay in one measure for materialization.
-      if (fromPiano && durationClass === 'whole' && !inTriplet) {
+      // Piano whole/half shapes in small meters are almost always 16ths; keep
+      // the provisional cursor on a 16th grid for materialization.
+      if (
+        fromPiano &&
+        !inTriplet &&
+        (durationClass === 'whole' || (capacity < 2 && durationClass === 'half'))
+      ) {
         longDur = applyDots(0.25, dots);
       }
       longDur = applyTriplet(longDur);
@@ -842,9 +856,14 @@ export function parseBrailleMusic(
         shape.durationClass === 'whole'
           ? resolveWholeOrSixteenth(measureBeatOffset, capacity, dots)
           : durationFor(shape.durationClass, false, dots);
-      // Piano whole-shapes are almost always 16ths; keep provisional cursor on
-      // a 16th grid so several wholes stay in one measure for materialization.
-      if (fromPiano && shape.durationClass === 'whole' && !inTriplet) {
+      // Piano whole/half shapes in small meters are almost always 16ths; keep
+      // the provisional cursor on a 16th grid for materialization.
+      if (
+        fromPiano &&
+        !inTriplet &&
+        (shape.durationClass === 'whole' ||
+          (capacity < 2 && shape.durationClass === 'half'))
+      ) {
         longDur = applyDots(0.25, dots);
       }
       longDur = applyTriplet(longDur);
@@ -872,6 +891,13 @@ export function parseBrailleMusic(
       });
       pendingNewVoice = false;
       measureBeatOffset += longDur;
+      atMeasureStart = false;
+      continue;
+    }
+
+    // Slur (common Sao Mai) — ignore without clearing a pending accidental.
+    if (ch === 'l') {
+      i += 1;
       atMeasureStart = false;
       continue;
     }
