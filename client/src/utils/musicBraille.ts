@@ -18,6 +18,10 @@ import {
   DEFAULT_TIME_SIGNATURE,
 } from '../types/musicBraille';
 import { unicodeBrailleToAscii } from './braille';
+import {
+  linearizePianoSystems,
+  segmentPianoSystems,
+} from './musicBraillePiano';
 
 /** Quarter-note beats in one measure when no time signature is parsed (4/4). */
 export const DEFAULT_BEATS_PER_MEASURE = 4;
@@ -140,7 +144,10 @@ interface PendingEvent {
   isTied?: boolean;
   /** When set, skip long/short switching for this event (whole/16th online, triplets). */
   forcedDurationBeats?: number;
+  /** True when this event starts a new in-accord voice (`<>`). */
+  newVoice?: boolean;
 }
+
 
 export interface ParseBrailleMusicOptions {
   /** Override initial meter capacity in quarter-note beats. */
@@ -240,7 +247,10 @@ function splitInAccordVoices(events: PendingEvent[]): PendingEvent[][] {
   const voices: PendingEvent[][] = [[]];
   let prevOffset = -1;
   for (const e of events) {
-    if (prevOffset >= 0 && e.timeOffsetBeats < prevOffset - 1e-9) {
+    if (
+      e.newVoice ||
+      (prevOffset >= 0 && e.timeOffsetBeats < prevOffset - 1e-9)
+    ) {
       voices.push([]);
     }
     voices[voices.length - 1].push(e);
@@ -274,55 +284,71 @@ function materializeMeasure(
     shortSum = Math.max(shortSum, voiceShort);
   }
 
-  let useShort = false;
+  /**
+   * Duration strategy (avoid inaudible 128ths from mixed Sao Mai cells):
+   * 1. Prefer long (upper-cell) values when they fit per voice.
+   * 2. If they overflow, try a 16th-note grid for unforced notes (common when
+   *    whole-shapes and eighth-shapes both encode 16ths in 3/8 piano music).
+   * 3. Only fall back to classic short values when that does not invent
+   *    sub-16th durations (i.e. wholes→16ths only). Otherwise keep long values
+   *    and allow a soft overflow — audible beats beat silent clicks.
+   */
+  type DurMode = 'long' | 'short' | 'sixteenthGrid';
+  let durMode: DurMode = 'long';
+
+  const unforced = (e: PendingEvent) => e.forcedDurationBeats == null;
+  const hasNonWholeUnforced = events.some(
+    (e) => unforced(e) && e.durationClass !== 'whole',
+  );
+  const sixteenthGridSumFor = (voice: PendingEvent[]) =>
+    voice.reduce((s, e) => {
+      if (e.forcedDurationBeats != null) return s + e.forcedDurationBeats;
+      return s + applyDots(0.25, e.dots);
+    }, 0);
+
   if (longSum > capacity + 1e-9) {
-    if (shortSum <= capacity + 1e-9 || shortSum < longSum) {
-      useShort = true;
+    let gridSum = 0;
+    for (const voice of voices) {
+      gridSum = Math.max(gridSum, sixteenthGridSumFor(voice));
+    }
+    const shortIsSixteenthOnly = !hasNonWholeUnforced;
+
+    if (gridSum <= capacity + 1e-9 && hasNonWholeUnforced) {
+      durMode = 'sixteenthGrid';
+    } else if (
+      shortIsSixteenthOnly &&
+      (shortSum <= capacity + 1e-9 || shortSum < longSum)
+    ) {
+      durMode = 'short';
+    } else if (!hasNonWholeUnforced && shortSum <= capacity + 1e-9) {
+      durMode = 'short';
+    } else {
+      durMode = 'long'; // soft overflow
     }
   }
 
-  // Forced-duration events keep their absolute beats; scale only the rest.
-  // Scale from the voice that needs the largest compression so every part
-  // stays aligned when upper-cell values overflow into lower-cell values.
-  let scalableLong = 0;
-  let scalableShort = 0;
-  for (const voice of voices) {
-    const vLong = voice.reduce(
-      (s, e) =>
-        s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, false, e.dots)),
-      0,
-    );
-    const vShort = voice.reduce(
-      (s, e) =>
-        s + (e.forcedDurationBeats != null ? 0 : durationFor(e.durationClass, true, e.dots)),
-      0,
-    );
-    if (vLong > scalableLong) {
-      scalableLong = vLong;
-      scalableShort = vShort;
-    }
-  }
-  const scale =
-    useShort && scalableLong > 0 ? scalableShort / scalableLong : 1;
+  const durationOf = (e: PendingEvent): number => {
+    if (e.forcedDurationBeats != null) return e.forcedDurationBeats;
+    if (durMode === 'sixteenthGrid') return applyDots(0.25, e.dots);
+    return durationFor(e.durationClass, durMode === 'short', e.dots);
+  };
 
+  // Rebuild offsets from chosen durations so mixed modes stay contiguous per voice.
   const notes: MusicNoteEvent[] = [];
   let maxUsed = 0;
+  let voiceCursor = 0;
   let prevProvisional = -1;
 
   for (const e of events) {
-    const dur = provisionalDur(e, useShort);
-    let localOffset: number;
-
-    if (prevProvisional >= 0 && e.timeOffsetBeats < prevProvisional - 1e-9) {
-      // In-accord reset
-      localOffset = e.forcedDurationBeats != null
-        ? e.timeOffsetBeats
-        : e.timeOffsetBeats * scale;
-    } else if (e.forcedDurationBeats != null) {
-      localOffset = e.timeOffsetBeats;
-    } else {
-      localOffset = e.timeOffsetBeats * scale;
+    const dur = durationOf(e);
+    if (
+      e.newVoice ||
+      (prevProvisional >= 0 && e.timeOffsetBeats < prevProvisional - 1e-9)
+    ) {
+      voiceCursor = 0;
     }
+    const localOffset = voiceCursor;
+    voiceCursor += dur;
     prevProvisional = e.timeOffsetBeats;
 
     notes.push({
@@ -436,6 +462,10 @@ function tryParseHashPrefix(
  * Parse Music Braille into a timed score AST.
  * Accepts North American ASCII BRF and/or Unicode braille cells (U+2800–U+28FF);
  * Unicode is normalized to ASCII before lexing so pasted Unicode scores play.
+ *
+ * Sao Mai bar-over-bar piano scores (RH `.>` / LH `_>` systems) are detected and
+ * linearized with in-accord so both hands sound together instead of as sequential
+ * garbled measures.
  */
 export function parseBrailleMusic(
   brf: string,
@@ -447,9 +477,38 @@ export function parseBrailleMusic(
     options.beatsPerMeasure ?? beatsCapacityFromTimeSig(timeSignature);
   let keyDeltas = keySignatureDeltas(keySignature.sharpsFlatsCount);
 
-  const text = unicodeBrailleToAscii(brf)
+  const sourceAscii = unicodeBrailleToAscii(brf)
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
+
+  // Prefer meter/key printed in the heading even when we later lex a linearized
+  // piano stream that omitted those cells.
+  for (let si = 0; si < sourceAscii.length; si++) {
+    if (sourceAscii[si] !== '#') continue;
+    const parsed = tryParseHashPrefix(sourceAscii, si);
+    if (!parsed) continue;
+    if (parsed.kind === 'key' && parsed.key) {
+      keySignature = parsed.key;
+      keyDeltas = keySignatureDeltas(keySignature.sharpsFlatsCount);
+    } else if (parsed.kind === 'time' && parsed.time) {
+      timeSignature = parsed.time;
+      capacity = beatsCapacityFromTimeSig(timeSignature);
+    }
+    si = parsed.nextIndex - 1;
+  }
+
+  const pianoSystems = segmentPianoSystems(sourceAscii);
+  let text = sourceAscii;
+  let indexMap: number[] | null = null;
+  if (pianoSystems.length > 0) {
+    const linear = linearizePianoSystems(pianoSystems);
+    if (linear.text.trim().length > 0) {
+      text = linear.text;
+      indexMap = linear.indexMap;
+    }
+  }
+
+  const absIndex = (i: number) => indexMap?.[i] ?? i;
 
   let currentOctaveMidiC = 60;
   let measure = 1;
@@ -459,6 +518,7 @@ export function parseBrailleMusic(
   const activeAccidentals = new Map<PitchName, number>();
   let tripletRemaining = 0;
   let atMeasureStart = true;
+  let pendingNewVoice = false;
 
   let eventCounter = 0;
   const measurePending: PendingEvent[] = [];
@@ -525,7 +585,7 @@ export function parseBrailleMusic(
       measureBeatOffset === 0 &&
       previousMeasureNotes.length > 0
     ) {
-      const charIndex = i;
+      const charIndex = absIndex(i);
       i += 1;
       const duplicated: MusicNoteEvent[] = previousMeasureNotes.map((e) => ({
         ...e,
@@ -575,6 +635,7 @@ export function parseBrailleMusic(
     if (ch === '<' && text[i + 1] === '>') {
       measureBeatOffset = 0;
       pendingAccidental = null;
+      pendingNewVoice = true;
       i += 2;
       atMeasureStart = false;
       continue;
@@ -599,7 +660,7 @@ export function parseBrailleMusic(
     // Rests
     if (ch in REST_SHAPES) {
       const durationClass = REST_SHAPES[ch];
-      const charIndex = i;
+      const charIndex = absIndex(i);
       i += 1;
       let dots = 0;
       while (i < text.length && text[i] === "'") {
@@ -630,7 +691,9 @@ export function parseBrailleMusic(
         midiPitches: [],
         type: 'rest',
         forcedDurationBeats,
+        newVoice: pendingNewVoice,
       });
+      pendingNewVoice = false;
       measureBeatOffset += longDur;
       pendingAccidental = null;
       atMeasureStart = false;
@@ -640,7 +703,7 @@ export function parseBrailleMusic(
     // Notes
     if (ch in NOTE_SHAPES) {
       const shape = NOTE_SHAPES[ch];
-      const charIndex = i;
+      const charIndex = absIndex(i);
       i += 1;
 
       let dots = 0;
@@ -696,7 +759,9 @@ export function parseBrailleMusic(
         type: pitches.length > 1 ? 'chord' : 'note',
         isTied,
         forcedDurationBeats,
+        newVoice: pendingNewVoice,
       });
+      pendingNewVoice = false;
       measureBeatOffset += longDur;
       atMeasureStart = false;
       continue;
