@@ -33,12 +33,23 @@ export interface MusicNoteEvent {
   isTied?: boolean;
 }
 
+export interface MusicScoreParseInfo {
+  /** Sao Mai RH/LH systems detected (0 = sequential / non-piano lex). */
+  pianoSystems: number;
+  /** Quarter-note beat capacity used for measure fill. */
+  capacityBeats: number;
+  /** Character index where lexing began after skipping literary front matter. */
+  literarySkipCharIndex: number;
+}
+
 export interface MusicScoreAST {
   events: MusicNoteEvent[];
   totalBeats: number;
   totalMeasures: number;
   timeSignature: TimeSignature;
   keySignature: KeySignature;
+  /** Optional parse diagnostics for the music debug panel. */
+  parseInfo?: MusicScoreParseInfo;
 }
 
 /** Stable keys for music playback errors (UI maps via i18n). */

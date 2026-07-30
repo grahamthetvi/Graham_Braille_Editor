@@ -71,6 +71,12 @@ export interface MusicDebugScoreSummary {
   tinyNoteCount: number;
   /** Notes shorter than a 16th (0.25 beats). */
   subSixteenthCount: number;
+  /** Sao Mai piano systems detected (0 = sequential lex). */
+  pianoSystems: number;
+  /** Quarter-note beat capacity used while materializing measures. */
+  capacityBeats: number;
+  /** Lex start after skipping literary front matter (non-piano path). */
+  literarySkipCharIndex: number;
   firstNotes: Array<{
     t: number;
     d: number;
@@ -180,6 +186,9 @@ export function summarizeScore(
     durationHistogram,
     tinyNoteCount,
     subSixteenthCount,
+    pianoSystems: score.parseInfo?.pianoSystems ?? 0,
+    capacityBeats: score.parseInfo?.capacityBeats ?? 4,
+    literarySkipCharIndex: score.parseInfo?.literarySkipCharIndex ?? 0,
     firstNotes: score.events.slice(0, 24).map((e) => ({
       t: round(e.timeOffsetBeats, 3),
       d: round(e.durationBeats, 3),

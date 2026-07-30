@@ -481,30 +481,49 @@ export function parseBrailleMusic(
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
 
-  // Prefer meter/key printed in the heading even when we later lex a linearized
-  // piano stream that omitted those cells.
+  // Prefer the first meter/key printed in the heading (later `#` cells in the
+  // music body are often intervals/nuances, not new signatures).
+  let foundHeadingTime = options.beatsPerMeasure != null;
+  let foundHeadingKey = false;
   for (let si = 0; si < sourceAscii.length; si++) {
     if (sourceAscii[si] !== '#') continue;
     const parsed = tryParseHashPrefix(sourceAscii, si);
     if (!parsed) continue;
-    if (parsed.kind === 'key' && parsed.key) {
+    if (parsed.kind === 'key' && parsed.key && !foundHeadingKey) {
       keySignature = parsed.key;
       keyDeltas = keySignatureDeltas(keySignature.sharpsFlatsCount);
-    } else if (parsed.kind === 'time' && parsed.time) {
+      foundHeadingKey = true;
+    } else if (parsed.kind === 'time' && parsed.time && !foundHeadingTime) {
       timeSignature = parsed.time;
       capacity = beatsCapacityFromTimeSig(timeSignature);
+      foundHeadingTime = true;
     }
     si = parsed.nextIndex - 1;
+    if (foundHeadingTime && foundHeadingKey) break;
   }
 
   const pianoSystems = segmentPianoSystems(sourceAscii);
+  const fromPiano = pianoSystems.length > 0;
   let text = sourceAscii;
   let indexMap: number[] | null = null;
-  if (pianoSystems.length > 0) {
+  let literarySkipCharIndex = 0;
+  if (fromPiano) {
     const linear = linearizePianoSystems(pianoSystems);
     if (linear.text.trim().length > 0) {
       text = linear.text;
       indexMap = linear.indexMap;
+    }
+  } else {
+    // Without hand signs, skip literary front matter so title letters are not
+    // lexed as notes (and so capital `,` markers do not yank the octave to C7).
+    const skip = findMusicLexStartIndex(sourceAscii);
+    if (skip > 0 && shouldSkipLiteraryPrefix(sourceAscii, skip)) {
+      literarySkipCharIndex = skip;
+      text = sourceAscii.slice(literarySkipCharIndex);
+      indexMap = Array.from(
+        { length: text.length },
+        (_, i) => literarySkipCharIndex + i,
+      );
     }
   }
 
@@ -537,7 +556,14 @@ export function parseBrailleMusic(
     previousMeasureNotes = notes;
     previousMeasureLocalBase = scoreBeatBase;
     measurePending.length = 0;
-    scoreBeatBase += Math.max(capacity, measureBeatsUsed);
+    // Sao Mai piano chunks often underfill because alignment spaces create
+    // false barlines, and pickups are written as short measures. Pad only for
+    // ordinary (non-piano) scores where a space means a full barline.
+    if (fromPiano && measureBeatsUsed > 1e-9 && measureBeatsUsed < capacity - 1e-9) {
+      scoreBeatBase += measureBeatsUsed;
+    } else {
+      scoreBeatBase += Math.max(capacity, measureBeatsUsed);
+    }
     measureBeatOffset = 0;
     activeAccidentals.clear();
     pendingAccidental = null;
@@ -629,6 +655,20 @@ export function parseBrailleMusic(
         atMeasureStart = false;
         continue;
       }
+      // Non-meter `#` markup (e.g. `#1` position/nuance). Skip the marker and
+      // a following upper-number / digit run so `1` is not read as a triplet.
+      i += 1;
+      while (i < text.length) {
+        const n = normalizeBrfChar(text[i]);
+        if (n in UPPER_NUM || (text[i] >= '0' && text[i] <= '9') || text[i] === '/') {
+          i += 1;
+          continue;
+        }
+        break;
+      }
+      pendingAccidental = null;
+      atMeasureStart = false;
+      continue;
     }
 
     // In-accord
@@ -799,6 +839,11 @@ export function parseBrailleMusic(
     totalMeasures,
     timeSignature,
     keySignature,
+    parseInfo: {
+      pianoSystems: pianoSystems.length,
+      capacityBeats: capacity,
+      literarySkipCharIndex,
+    },
   };
 }
 
@@ -848,11 +893,44 @@ function isLikelyOctaveNoteAt(text: string, i: number): boolean {
 }
 
 /**
- * Heuristic character offset where Music Braille (notes) likely begins after
- * literary front matter. Prefers a music heading (key/time) then the first
- * octave+note; falls back to the first octave+note in the file.
+ * Walk backward from an octave+note so accidentals / triplet prefixes that
+ * belong to the first note are not dropped when skipping literary front matter.
  */
-export function findMusicStartCharIndex(brf: string): number {
+function includeLeadingMusicPrefixes(text: string, octaveIndex: number): number {
+  let i = octaveIndex;
+  while (i > 0) {
+    const prev = text[i - 1];
+    const prevN = normalizeBrfChar(prev);
+    if (prev in ACCIDENTAL_DELTA || prevN === '1') {
+      i -= 1;
+      continue;
+    }
+    break;
+  }
+  return i;
+}
+
+/** True when `text[0..skip)` looks like literary front matter worth dropping. */
+function shouldSkipLiteraryPrefix(text: string, skip: number): boolean {
+  if (skip <= 0) return false;
+  const prefix = text.slice(0, skip);
+  // BANA scores separate prelims from music with a blank line.
+  if (/\n[ \t]*\n/.test(prefix)) return true;
+  // Literary capital indicators (`,` + A–Z) produce bogus octave-7 notes if lexed.
+  for (let i = 0; i < prefix.length - 1; i++) {
+    if (prefix[i] === ',' && prefix[i + 1] >= 'A' && prefix[i + 1] <= 'Z') {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Character offset where Music Braille lexing should begin after literary
+ * front matter. Prefers a music heading (key/time) then the first octave+note.
+ * Does not call `parseBrailleMusic` (safe to use from inside the parser).
+ */
+export function findMusicLexStartIndex(brf: string): number {
   const text = unicodeBrailleToAscii(brf || '')
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
@@ -892,14 +970,35 @@ export function findMusicStartCharIndex(brf: string): number {
   }
 
   for (let i = searchFrom; i < text.length; i++) {
-    if (isLikelyOctaveNoteAt(text, i)) return i;
+    if (isLikelyOctaveNoteAt(text, i)) {
+      return includeLeadingMusicPrefixes(text, i);
+    }
   }
 
   if (searchFrom > 0) {
     for (let i = 0; i < searchFrom; i++) {
-      if (isLikelyOctaveNoteAt(text, i)) return i;
+      if (isLikelyOctaveNoteAt(text, i)) {
+        return includeLeadingMusicPrefixes(text, i);
+      }
     }
   }
+
+  return searchFrom;
+}
+
+/**
+ * Heuristic character offset where Music Braille (notes) likely begins after
+ * literary front matter. Prefers a music heading (key/time) then the first
+ * octave+note; falls back to the first octave+note in the file.
+ */
+export function findMusicStartCharIndex(brf: string): number {
+  const text = unicodeBrailleToAscii(brf || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!text) return 0;
+
+  const lexStart = findMusicLexStartIndex(text);
+  if (lexStart > 0 || isLikelyOctaveNoteAt(text, 0)) return lexStart;
 
   const score = parseBrailleMusic(text);
   return score.events.length > 0 ? score.events[0].charIndex : 0;

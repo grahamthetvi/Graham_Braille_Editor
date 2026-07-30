@@ -393,6 +393,8 @@ describe('Sao Mai piano bar-over-bar (Für Elise excerpt)', () => {
   it('parses 3/8 and the opening E-D#-E motif as audible sixteenths', () => {
     const score = parseBrailleMusic(eliseHead);
     expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(0);
+    expect(score.parseInfo?.capacityBeats).toBeCloseTo(1.5, 5);
     const notes = score.events.filter((e) => e.midiPitches.length > 0);
     expect(notes.length).toBeGreaterThan(8);
     expect(notes.every((e) => e.durationBeats >= 0.2)).toBe(true);
@@ -405,5 +407,41 @@ describe('Sao Mai piano bar-over-bar (Für Elise excerpt)', () => {
   it('does not invent sub-16th clicks for the opening system', () => {
     const score = parseBrailleMusic(eliseHead);
     expect(score.events.every((e) => e.durationBeats >= 0.2)).toBe(true);
+  });
+
+  it('does not pad the pickup measure to a full 3/8 of silence', () => {
+    const score = parseBrailleMusic(eliseHead);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    // Pickup E D# then immediately the next E — no 1-beat gap to beat 1.5.
+    expect(notes[0].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(notes[1].timeOffsetBeats).toBeCloseTo(0.25, 5);
+    expect(notes[2].timeOffsetBeats).toBeCloseTo(0.5, 5);
+  });
+});
+
+describe('literary front matter without piano hand signs', () => {
+  it('skips title letters so they are not lexed as notes', () => {
+    // Simulate a score where hand signs were lost but meter + octave notes remain.
+    const brf = `,FUR ELISE IN ,A ,MINOR
+
+#C8
+".&%z &%ef"j*ed`;
+    const score = parseBrailleMusic(brf);
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    expect(score.parseInfo?.literarySkipCharIndex).toBeGreaterThan(0);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes[0].midiPitches[0]).toBe(76); // E5, not a title letter
+    // No C7+ garbage from literary capital commas.
+    expect(notes.every((e) => e.midiPitches.every((p) => p < 96))).toBe(true);
+  });
+});
+
+describe('non-meter # markup', () => {
+  it('does not treat #1 as a triplet prefix', () => {
+    // Without the fix, `#` is skipped and `1` starts a triplet (durations × 2/3).
+    const score = parseBrailleMusic('#1"?');
+    expect(score.events).toHaveLength(1);
+    expect(score.events[0].midiPitches).toEqual([60]);
+    expect(score.events[0].durationBeats).toBeCloseTo(1, 5);
   });
 });
