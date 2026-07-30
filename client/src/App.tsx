@@ -27,6 +27,7 @@ import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
+import { MusicDebugPanel } from './components/MusicPlayer/MusicDebugPanel';
 import {
   BraillePreviewPages,
   type BraillePreviewPagesHandle,
@@ -1697,6 +1698,7 @@ Accuracy: _____________ %
                   disabled={isPerkinsMode}
                 />
               )}
+              {isMusicBrailleMode ? <MusicDebugPanel /> : null}
 
               {/* Music Braille preview (source-index preserving for playback highlight) */}
               {isMusicBrailleMode && musicPreviewLines && musicPreviewLines.some((l) => l.length > 0) ? (

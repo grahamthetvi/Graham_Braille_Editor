@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { MusicScoreAST, PlaybackState } from '../../types/musicBraille';
 import { MAX_BPM, MIN_BPM } from '../../hooks/useMusicPlayback';
+import { musicDebugLog } from '../../services/audio/musicDebugLog';
 import './MusicPlayerControls.css';
 
 export interface MusicPlayerControlsProps {
@@ -152,7 +153,16 @@ export function MusicPlayerControls({
         />
       </label>
 
-      <div className="music-player__status" aria-live="polite">
+      <div
+        className="music-player__status"
+        aria-live="polite"
+        title="Triple-click to toggle music debug"
+        onClick={(e) => {
+          if (e.detail === 3) {
+            musicDebugLog.toggle();
+          }
+        }}
+      >
         <span>
           {t('app.musicPlayer.measure', {
             current: currentMeasure,
