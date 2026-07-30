@@ -119,11 +119,11 @@ describe('parseBrailleMusic', () => {
     expect(score.totalBeats).toBeCloseTo(4, 5);
   });
 
-  it('still switches a single overflowing voice to short values', () => {
-    // Five quarters in one voice exceed 4/4 — must use 64th-note values.
+  it('still prefers a sixteenth grid over inaudible 64ths when quarters overflow', () => {
+    // Five quarters in one voice exceed 4/4 — use 16th grid (audible), not 64ths.
     const score = parseBrailleMusic('"?:$]?');
     expect(score.events).toHaveLength(5);
-    expect(score.events.every((e) => Math.abs(e.durationBeats - 1 / 64) < 1e-9)).toBe(
+    expect(score.events.every((e) => Math.abs(e.durationBeats - 0.25) < 1e-9)).toBe(
       true,
     );
   });
@@ -380,5 +380,30 @@ describe('findMusicStartCharIndex', () => {
     const start = findMusicStartCharIndex(brf);
     expect(start).toBeGreaterThan(0);
     expect(unicodeBrailleToAscii(brf)[start]).toBe('"');
+  });
+});
+
+describe('Sao Mai piano bar-over-bar (Für Elise excerpt)', () => {
+  const eliseHead = `⠼⠉⠦
+⠚⠀⠨⠜⠄⠜⠏⠕⠉⠕⠀⠍⠕⠞⠕⠜⠀⠜⠏⠏⠨⠯⠩⠵⠀⠯⠩⠑⠋⠐⠚⠡⠑⠙
+⠀⠁⠸⠜⠀⠀⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠄⠀⠭⠀⠀⠀⠀⠍
+⠃⠀⠨⠜⠀⠀⠀⠐⠊⠍⠐⠽⠯⠮⠀⠀⠀⠚⠍⠯⠩⠷⠾⠀⠀⠀⠀⠀⠙⠍⠐⠯⠨⠯⠩⠵
+⠀⠀⠸⠜⠄⠣⠉⠘⠮⠸⠯⠮⠍⠭⠀⠣⠉⠘⠯⠸⠯⠩⠷⠍⠭⠀⠣⠉⠘⠮⠸⠯⠮⠍⠭⠡⠉`;
+
+  it('parses 3/8 and the opening E-D#-E motif as audible sixteenths', () => {
+    const score = parseBrailleMusic(eliseHead);
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.length).toBeGreaterThan(8);
+    expect(notes.every((e) => e.durationBeats >= 0.2)).toBe(true);
+    // E5 D#5 E5 D#5 E5 B4 …
+    expect(notes[0].midiPitches[0]).toBe(76);
+    expect(notes[1].midiPitches[0]).toBe(75);
+    expect(notes[2].midiPitches[0]).toBe(76);
+  });
+
+  it('does not invent sub-16th clicks for the opening system', () => {
+    const score = parseBrailleMusic(eliseHead);
+    expect(score.events.every((e) => e.durationBeats >= 0.2)).toBe(true);
   });
 });
