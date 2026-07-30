@@ -37,6 +37,7 @@ import {
   type MusicBraillePreviewHandle,
 } from './components/BraillePreview/MusicBraillePreview';
 import { GradingPrintLayoutDialog } from './components/GradingPrintLayoutDialog';
+import { BackTranslatedEditModal } from './components/BackTranslatedEditModal';
 import { startBridgeStatusPolling } from './services/bridge-client';
 import {
   synthesizeMp3InBrowser,
@@ -83,7 +84,9 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
- *     (skipped in Music Braille mode).
+ *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
+ *     locked until the user chooses to edit print (regenerate braille) or edit braille
+ *     directly with 6-key input (imported braille remains source of truth).
  *   • Export expands a bar (like Print) for BRF, print layout, and MP3 audio.
  *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
@@ -93,6 +96,15 @@ import './App.css';
  */
 
 type Theme = 'dark' | 'light' | 'high-contrast';
+
+/**
+ * Literary-mode source after BRF/Unicode back-translate:
+ *   none            — normal print → braille
+ *   importedLocked  — RHS holds imported braille; LHS print is read-only until dialog
+ *   printEditing    — user unlocked print; edits forward-translate (may overwrite RHS)
+ *   brailleEditing  — LHS is Unicode braille source with 6-key; RHS mirrors LHS
+ */
+type LiterarySourceMode = 'none' | 'importedLocked' | 'printEditing' | 'brailleEditing';
 
 const monacoThemeMap: Record<Theme, string> = {
   dark: 'vs-dark',
@@ -274,6 +286,14 @@ export default function App() {
   const [isMusicBrailleMode, setIsMusicBrailleMode] = useState(false);
   const isMusicBrailleModeRef = useRef(isMusicBrailleMode);
   isMusicBrailleModeRef.current = isMusicBrailleMode;
+
+  /** After BRF/Unicode back-translate: protect imported braille until user chooses edit mode. */
+  const [literarySourceMode, setLiterarySourceMode] = useState<LiterarySourceMode>('none');
+  const literarySourceModeRef = useRef(literarySourceMode);
+  literarySourceModeRef.current = literarySourceMode;
+  const importedBrailleRef = useRef('');
+  const [showBackTranslatedEditModal, setShowBackTranslatedEditModal] = useState(false);
+
   /** Editor caret offset — used when "From cursor" play mode is on. */
   const [musicCursorCharIndex, setMusicCursorCharIndex] = useState(0);
   /** When on (default), Play starts at the caret; Music start always jumps to score. */
@@ -423,7 +443,10 @@ export default function App() {
   // BRF and back-translate into plain text instead of forward-translating.
   const unicodeBackTranslateGenRef = useRef(0);
 
-  const applyBackTranslatedPlain = useCallback((plainText: string) => {
+  const applyBackTranslatedPlain = useCallback((plainText: string, importedBraille: string) => {
+    importedBrailleRef.current = importedBraille;
+    setLiterarySourceMode('importedLocked');
+    setShowBackTranslatedEditModal(false);
     setInputText(plainText);
     setFileContent(plainText);
   }, []);
@@ -431,16 +454,17 @@ export default function App() {
   const tryAutoBackTranslateUnicode = useCallback(
     (text: string): boolean => {
       if (isMusicBrailleModeRef.current) return false;
+      if (literarySourceModeRef.current === 'brailleEditing') return false;
       if (!isPredominantlyUnicodeBraille(text)) return false;
 
       const gen = ++unicodeBackTranslateGenRef.current;
       const normalized = normalizeImportedBrf(text);
       void backTranslateBrf(normalized, selectedTable)
-        .then(({ plainText }) => {
+        .then(({ plainText, brf }) => {
           if (gen !== unicodeBackTranslateGenRef.current) return;
           // Keep the Unicode source if liblouis returned nothing useful.
           if (!plainText.trim() && normalized.trim()) return;
-          applyBackTranslatedPlain(plainText);
+          applyBackTranslatedPlain(plainText, brf || normalized);
         })
         .catch((err: unknown) => {
           console.error('[unicode auto back-translate]', err);
@@ -454,6 +478,8 @@ export default function App() {
     (text: string) => {
       setInputText(text);
       if (isMusicBrailleModeRef.current) return;
+      if (literarySourceModeRef.current === 'importedLocked') return;
+      if (literarySourceModeRef.current === 'brailleEditing') return;
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
         translate(text, selectedTable, mathCode);
@@ -465,6 +491,7 @@ export default function App() {
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
     if (isMusicBrailleMode) return;
+    if (literarySourceMode === 'importedLocked' || literarySourceMode === 'brailleEditing') return;
     const text = inputTextRef.current;
     if (!text.trim()) return;
     if (isPredominantlyUnicodeBraille(text)) {
@@ -472,7 +499,7 @@ export default function App() {
       return;
     }
     translate(text, selectedTable, mathCode);
-  }, [selectedTable, mathCode, translate, isMusicBrailleMode, tryAutoBackTranslateUnicode]);
+  }, [selectedTable, mathCode, translate, isMusicBrailleMode, literarySourceMode, tryAutoBackTranslateUnicode]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -504,6 +531,9 @@ export default function App() {
   function handleRestoreSession(id: string) {
     getSessionText(id).then(text => {
       if (text) {
+        setLiterarySourceMode('none');
+        importedBrailleRef.current = '';
+        setShowBackTranslatedEditModal(false);
         setInputText(text);
         setFileContent(text);
         if (!text.trim()) return;
@@ -547,14 +577,15 @@ export default function App() {
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
-          .then(({ plainText }) => {
-            setInputText(plainText);
-            setFileContent(plainText);
+          .then(({ plainText, brf }) => {
+            applyBackTranslatedPlain(plainText, brf || normalized);
           })
           .catch((err: unknown) => {
             console.error('[brf import]', err);
           });
       } else {
+        setLiterarySourceMode('none');
+        importedBrailleRef.current = '';
         setInputText(raw);
         setFileContent(raw);
         if (isMusicBrailleModeRef.current) return;
@@ -567,11 +598,45 @@ export default function App() {
     e.target.value = '';
   }
 
+  const handleAttemptEditWhileLocked = useCallback(() => {
+    if (literarySourceModeRef.current !== 'importedLocked') return;
+    setShowBackTranslatedEditModal(true);
+  }, []);
+
+  const handleEditPrintFromBackTranslate = useCallback(() => {
+    setShowBackTranslatedEditModal(false);
+    setLiterarySourceMode('printEditing');
+    // Keep current plain text; next edits forward-translate and may overwrite RHS.
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, []);
+
+  const handleEditBrailleFromBackTranslate = useCallback(() => {
+    setShowBackTranslatedEditModal(false);
+    const raw = importedBrailleRef.current;
+    const unicodeSource = raw
+      ? isPredominantlyUnicodeBraille(raw)
+        ? raw
+        : asciiToUnicodeBraille(raw)
+      : '';
+    setLiterarySourceMode('brailleEditing');
+    setInputText(unicodeSource);
+    setFileContent(unicodeSource);
+    requestAnimationFrame(() => editorRef.current?.focus());
+  }, []);
+
   // ── BRF download ─────────────────────────────────────────────────────────
+  /** ASCII BRF used for download/print: literary translate result, or braille-edit LHS. */
+  const literaryBrfSource = useMemo(() => {
+    if (literarySourceMode === 'brailleEditing') {
+      return inputText ? unicodeBrailleToAscii(inputText) : '';
+    }
+    return translatedText;
+  }, [literarySourceMode, inputText, translatedText]);
+
   function handleDownloadBrf() {
-    if (!translatedText) return;
+    if (!literaryBrfSource) return;
     const formatted = formatBrfForOutput(
-      translatedText,
+      literaryBrfSource,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
@@ -741,8 +806,14 @@ Accuracy: _____________ %
     if (isMusicBrailleMode) {
       return musicBrfSource ? asciiToUnicodeBraille(musicBrfSource) : '';
     }
+    if (literarySourceMode === 'brailleEditing') {
+      if (!inputText) return '';
+      return isPredominantlyUnicodeBraille(inputText)
+        ? inputText
+        : asciiToUnicodeBraille(inputText);
+    }
     return translatedText ? asciiToUnicodeBraille(translatedText) : '';
-  }, [isMusicBrailleMode, musicBrfSource, translatedText]);
+  }, [isMusicBrailleMode, musicBrfSource, translatedText, literarySourceMode, inputText]);
   const paragraphStarts = useMemo(
     () => ({
       firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
@@ -799,16 +870,16 @@ Accuracy: _____________ %
     ],
   );
   const formattedBrfForPrint = useMemo(() => {
-    if (!translatedText) return '';
+    if (!literaryBrfSource) return '';
     return formatBrfForOutput(
-      translatedText,
+      literaryBrfSource,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
     );
   }, [
-    translatedText,
+    literaryBrfSource,
     pageSettings.cellsPerRow,
     pageSettings.linesPerPage,
     pageSettings.showPageNumbers,
@@ -1162,7 +1233,17 @@ Accuracy: _____________ %
 
                 <button
                   className={`toolbar-btn${isMusicBrailleMode ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setIsMusicBrailleMode((s) => !s)}
+                  onClick={() => {
+                    setIsMusicBrailleMode((s) => {
+                      const next = !s;
+                      if (next) {
+                        setLiterarySourceMode('none');
+                        setShowBackTranslatedEditModal(false);
+                        importedBrailleRef.current = '';
+                      }
+                      return next;
+                    });
+                  }}
                   disabled={isPerkinsMode}
                   title={t('app.tools.musicMode.title')}
                   aria-label={t('app.tools.musicMode.ariaLabel')}
@@ -1297,9 +1378,9 @@ Accuracy: _____________ %
               onDownloadBrf={handleDownloadBrf}
               onDownloadPrintLayout={handleDownloadPrintLayoutText}
               onOpenAudio={() => setShowAudioExport(true)}
-              canDownloadBrf={Boolean(translatedText)}
-              canDownloadPrintLayout={Boolean(inputText.trim())}
-              canExportAudio={Boolean(inputText.trim())}
+              canDownloadBrf={Boolean(literaryBrfSource)}
+              canDownloadPrintLayout={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
+              canExportAudio={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               mp3Exporting={mp3Exporting}
               mp3ExportStatus={mp3ExportStatus}
               disabled={isPerkinsMode}
@@ -1309,7 +1390,7 @@ Accuracy: _____________ %
         {showPrint && (
           <div className="header-print-bar">
             <PrintPanel
-              brf={formattedBrfForPrint || translatedText}
+              brf={formattedBrfForPrint || literaryBrfSource}
               bridgeConnected={bridgeConnected}
               useWebUSB={useWebUSB}
               compact
@@ -1341,6 +1422,21 @@ Accuracy: _____________ %
               {t('app.pageBreak.label')}
             </button>
           </div>
+          {literarySourceMode === 'brailleEditing' && (
+            <p className="toolbar-label" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', opacity: 0.85 }}>
+              {t('app.panes.textInput.brailleEditHint')}
+            </p>
+          )}
+          {literarySourceMode === 'importedLocked' && (
+            <p className="toolbar-label" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', opacity: 0.85 }}>
+              {t('app.panes.textInput.importedLockedHint')}
+            </p>
+          )}
+          {literarySourceMode === 'printEditing' && (
+            <p className="toolbar-label" style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', opacity: 0.85 }}>
+              {t('app.panes.textInput.printUnlockedHint')}
+            </p>
+          )}
           
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <Editor
@@ -1352,6 +1448,9 @@ Accuracy: _____________ %
               onScrollPercentageChange={handleEditorScroll}
               onSelectionChange={setActiveWordRange}
               onCursorOffsetChange={setMusicCursorCharIndex}
+              readOnly={literarySourceMode === 'importedLocked'}
+              onAttemptEdit={handleAttemptEditWhileLocked}
+              sixKeyInput={literarySourceMode === 'brailleEditing'}
             />
           </div>
         </section>
@@ -1749,7 +1848,7 @@ Accuracy: _____________ %
         bridgeConnected={bridgeConnected}
         bridgeUpdateAvailable={bridgeUpdateAvailable}
         useWebUSB={useWebUSB}
-        brfLength={isMusicBrailleMode ? inputText.length : translatedText.length}
+        brfLength={isMusicBrailleMode ? inputText.length : literaryBrfSource.length}
         wordCount={wordCount}
         charCount={charCount}
         isLoading={isLoading}
@@ -1802,7 +1901,7 @@ Accuracy: _____________ %
           pageCount={brfPages.length}
           unicodePages={brfPages}
           buildBase={stlBuildBase}
-          disabled={!translatedText || isPerkinsMode}
+          disabled={!literaryBrfSource || isPerkinsMode}
           printText={inputText}
           selectedTable={selectedTable}
           mathCode={mathCode}
@@ -1846,6 +1945,14 @@ Accuracy: _____________ %
           onDiscardItem={handleDiscardSessionItem}
           onDiscardAll={handleDiscardAllSessions}
           onClose={() => setShowDrafts(false)}
+        />
+      )}
+
+      {showBackTranslatedEditModal && (
+        <BackTranslatedEditModal
+          onClose={() => setShowBackTranslatedEditModal(false)}
+          onEditPrint={handleEditPrintFromBackTranslate}
+          onEditBraille={handleEditBrailleFromBackTranslate}
         />
       )}
     </div>
