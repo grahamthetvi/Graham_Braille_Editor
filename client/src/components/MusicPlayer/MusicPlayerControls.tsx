@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import type { MusicScoreAST, PlaybackState } from '../../types/musicBraille';
 import { MAX_BPM, MIN_BPM } from '../../hooks/useMusicPlayback';
 import { musicDebugLog } from '../../services/audio/musicDebugLog';
+import { formatMusicEventLabels } from '../../utils/musicNoteLabel';
 import './MusicPlayerControls.css';
 
 export interface MusicPlayerControlsProps {
@@ -13,6 +14,8 @@ export interface MusicPlayerControlsProps {
   onPause: () => void;
   onStop: () => void;
   onBpmChange: (bpm: number) => void;
+  onStepPrev: () => void;
+  onStepNext: () => void;
   /** When true (default), Play starts at the editor caret. */
   playFromCursor: boolean;
   onPlayFromCursorChange: (enabled: boolean) => void;
@@ -22,8 +25,9 @@ export interface MusicPlayerControlsProps {
 }
 
 /**
- * Compact playback bar for Music Braille — Play / Pause / Stop + tempo.
+ * Compact playback bar for Music Braille — Play / Pause / Stop / Step + tempo.
  * Includes a default-on "From cursor" toggle and a "Music start" jump button.
+ * Status shows the current note name and music duration term.
  */
 export function MusicPlayerControls({
   playbackState,
@@ -33,23 +37,44 @@ export function MusicPlayerControls({
   onPause,
   onStop,
   onBpmChange,
+  onStepPrev,
+  onStepNext,
   playFromCursor,
   onPlayFromCursorChange,
   musicStartCharIndex = 0,
   disabled = false,
 }: MusicPlayerControlsProps) {
   const { t } = useTranslation();
-  const { isPlaying, isPaused, bpm, currentBeat, activeCharIndex, error } = playbackState;
+  const {
+    isPlaying,
+    isPaused,
+    bpm,
+    currentBeat,
+    activeCharIndex,
+    activeEventIndex,
+    error,
+  } = playbackState;
+
+  const activeEvent =
+    activeEventIndex != null && activeEventIndex >= 0 && activeEventIndex < score.events.length
+      ? score.events[activeEventIndex]
+      : score.events.find(
+          (e) =>
+            currentBeat >= e.timeOffsetBeats - 1e-6 &&
+            currentBeat < e.timeOffsetBeats + e.durationBeats,
+        ) ?? null;
 
   const currentMeasure =
-    score.events.find(
-      (e) =>
-        currentBeat >= e.timeOffsetBeats - 1e-6 &&
-        currentBeat < e.timeOffsetBeats + e.durationBeats,
-    )?.measure ?? (score.totalMeasures > 0 ? 1 : 0);
+    activeEvent?.measure ?? (score.totalMeasures > 0 ? 1 : 0);
 
-  const noteLabel =
-    activeCharIndex != null
+  const eventLabels = activeEvent ? formatMusicEventLabels(activeEvent) : null;
+
+  const noteLabel = eventLabels
+    ? t('app.musicPlayer.noteTerm', {
+        term: eventLabels.display,
+        index: (activeEvent?.charIndex ?? activeCharIndex ?? 0) + 1,
+      })
+    : activeCharIndex != null
       ? t('app.musicPlayer.noteCell', { index: activeCharIndex + 1 })
       : t('app.musicPlayer.noteIdle');
 
@@ -62,6 +87,20 @@ export function MusicPlayerControls({
         : t('app.musicPlayer.keySignature.flats', { count: -keyCount });
 
   const canPlay = !disabled && score.events.length > 0;
+  const canStep = canPlay;
+  const stepPosition =
+    activeEventIndex != null
+      ? activeEventIndex + 1
+      : activeEvent
+        ? score.events.indexOf(activeEvent) + 1
+        : 0;
+  const atFirst =
+    score.events.length === 0 ||
+    activeEventIndex === 0 ||
+    (activeEventIndex == null && !isPaused && !isPlaying && currentBeat <= 1e-6);
+  const atLast =
+    score.events.length === 0 ||
+    (activeEventIndex != null && activeEventIndex >= score.events.length - 1);
 
   return (
     <div
@@ -111,6 +150,28 @@ export function MusicPlayerControls({
           aria-label={t('app.musicPlayer.stop.ariaLabel')}
         >
           {t('app.musicPlayer.stop.label')}
+        </button>
+
+        <button
+          type="button"
+          className="toolbar-btn music-player__btn"
+          onClick={onStepPrev}
+          disabled={!canStep || atFirst}
+          title={t('app.musicPlayer.stepPrev.title')}
+          aria-label={t('app.musicPlayer.stepPrev.ariaLabel')}
+        >
+          {t('app.musicPlayer.stepPrev.label')}
+        </button>
+
+        <button
+          type="button"
+          className="toolbar-btn music-player__btn"
+          onClick={onStepNext}
+          disabled={!canStep || atLast}
+          title={t('app.musicPlayer.stepNext.title')}
+          aria-label={t('app.musicPlayer.stepNext.ariaLabel')}
+        >
+          {t('app.musicPlayer.stepNext.label')}
         </button>
 
         <button
@@ -185,12 +246,15 @@ export function MusicPlayerControls({
         <span className="music-player__status-sep" aria-hidden="true">
           ·
         </span>
-        <span>{noteLabel}</span>
+        <span className="music-player__note-term">{noteLabel}</span>
         <span className="music-player__status-sep" aria-hidden="true">
           ·
         </span>
         <span>
-          {t('app.musicPlayer.events', { count: score.events.length })}
+          {t('app.musicPlayer.stepOf', {
+            current: stepPosition,
+            total: score.events.length,
+          })}
         </span>
         <span className="music-player__status-sep" aria-hidden="true">
           ·

@@ -11,6 +11,7 @@
  */
 
 import type { MusicNoteEvent, MusicScoreAST, PlaybackState } from '../../types/musicBraille';
+import { midiToLabel } from '../../utils/musicNoteLabel';
 
 export const MUSIC_DEBUG_STORAGE_KEY = 'graham.musicDebug';
 
@@ -22,6 +23,7 @@ export type MusicDebugTransport =
   | 'pause'
   | 'stop'
   | 'resume'
+  | 'step'
   | 'bpm'
   | 'reschedule'
   | 'score-reset'
@@ -445,13 +447,7 @@ if (typeof window !== 'undefined') {
   };
 }
 
-/** Pitch name helper for the debug panel. */
-export function midiToLabel(midi: number): string {
-  const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-  const name = names[((midi % 12) + 12) % 12];
-  const octave = Math.floor(midi / 12) - 1;
-  return `${name}${octave}`;
-}
+export { midiToLabel };
 
 export function formatScheduleEvent(ev: MusicNoteEvent, bpm: number): string {
   const spb = 60 / Math.max(1, bpm);

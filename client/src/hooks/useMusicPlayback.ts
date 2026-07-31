@@ -4,6 +4,9 @@
  * Exposes activeCharIndex so the BRF preview can highlight the sounding cell.
  * Scheduling uses the AudioContext clock with a sliding lookahead window;
  * cell highlights and end-of-piece detection follow the same clock (no setTimeout).
+ *
+ * Step next/prev parks on a single event, sounds it once, and announces its
+ * music term (pitch + duration) via speechSynthesis.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,6 +21,13 @@ import {
   findMusicStartCharIndex,
   parseBrailleMusic,
 } from '../utils/musicBraille';
+import {
+  eventIndexAtBeat,
+  formatMusicEventLabels,
+  nextStepEventIndex,
+  prevStepEventIndex,
+} from '../utils/musicNoteLabel';
+import { speakMusicHint, cancelMusicSpeech } from '../utils/musicNoteSpeech';
 import { MusicSynthEngine } from '../services/audio/musicSynth';
 import { musicDebugLog } from '../services/audio/musicDebugLog';
 
@@ -30,6 +40,8 @@ const LOOKAHEAD_SEC = 1.25;
 const UI_UPDATE_MS = 50;
 /** Debounce tempo changes while playing so dragging the slider does not thrash. */
 const BPM_RESCHEDULE_MS = 150;
+/** How long a stepped note/rest sounds (seconds). */
+const STEP_SOUND_SEC = 0.45;
 
 /** Where a fresh (non-resume) Play should begin. */
 export type MusicPlayFrom = 'cursor' | 'document' | 'music';
@@ -43,31 +55,15 @@ export interface UseMusicPlaybackReturn {
   pause: () => void;
   stop: () => void;
   setBPM: (bpm: number) => void;
+  /** Advance one event; plays and announces the note/term. */
+  stepNext: () => void;
+  /** Go back one event; plays and announces the note/term. */
+  stepPrev: () => void;
 }
 
 function clampBpm(bpm: number): number {
   if (!Number.isFinite(bpm)) return DEFAULT_BPM;
   return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(bpm)));
-}
-
-function eventAtBeat(events: MusicNoteEvent[], beat: number): MusicNoteEvent | null {
-  return (
-    events.find(
-      (e) =>
-        beat >= e.timeOffsetBeats - 1e-6 &&
-        beat < e.timeOffsetBeats + e.durationBeats,
-    ) ?? null
-  );
-}
-
-function cancelSpeechOverlap(): void {
-  try {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  } catch {
-    /* ignore */
-  }
 }
 
 function toErrorKey(err: unknown): MusicPlaybackErrorKey {
@@ -94,6 +90,7 @@ export function useMusicPlayback(
   const [isPaused, setIsPaused] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
   const [activeCharIndex, setActiveCharIndex] = useState<number | null>(null);
+  const [activeEventIndex, setActiveEventIndex] = useState<number | null>(null);
   const [error, setError] = useState<MusicPlaybackErrorKey | null>(null);
 
   const synthRef = useRef<MusicSynthEngine | null>(null);
@@ -107,6 +104,7 @@ export function useMusicPlayback(
   const brfStringRef = useRef(brfString);
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
+  const activeEventIndexRef = useRef<number | null>(null);
   /** Bumped to cancel in-flight async schedule / stale rAF generations. */
   const playGenRef = useRef(0);
   const nextEventIndexRef = useRef(0);
@@ -144,6 +142,10 @@ export function useMusicPlayback(
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
+  useEffect(() => {
+    activeEventIndexRef.current = activeEventIndex;
+  }, [activeEventIndex]);
+
   const clearRaf = useCallback(() => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
@@ -177,6 +179,7 @@ export function useMusicPlayback(
       setIsPlaying(false);
       setIsPaused(false);
       setActiveCharIndex(null);
+      setActiveEventIndex(null);
       if (resetPosition) {
         pauseBeatRef.current = 0;
         setCurrentBeat(0);
@@ -207,11 +210,12 @@ export function useMusicPlayback(
         setIsPlaying(false);
         setIsPaused(false);
         setActiveCharIndex(null);
+        setActiveEventIndex(null);
         return;
       }
       if (gen !== playGenRef.current) return;
 
-      cancelSpeechOverlap();
+      cancelMusicSpeech();
       setError(null);
 
       const ast = scoreRef.current;
@@ -277,7 +281,8 @@ export function useMusicPlayback(
           nextEventIndexRef.current += 1;
         }
 
-        const active = eventAtBeat(scoreNow.events, beat);
+        const activeIdx = eventIndexAtBeat(scoreNow.events, beat);
+        const active = activeIdx >= 0 ? scoreNow.events[activeIdx] : null;
         musicDebugLog.logClock({
           audioTime: audioNow,
           beat,
@@ -292,6 +297,7 @@ export function useMusicPlayback(
           lastUiUpdateMsRef.current = wallNow;
           setCurrentBeat(beat);
           setActiveCharIndex(active?.charIndex ?? null);
+          setActiveEventIndex(activeIdx >= 0 ? activeIdx : null);
         }
 
         if (beat >= scoreNow.totalBeats - 1e-6) {
@@ -355,14 +361,122 @@ export function useMusicPlayback(
     isPausedRef.current = true;
     setIsPlaying(false);
     setIsPaused(true);
-    setActiveCharIndex(null);
+    const beat = pauseBeatRef.current;
+    const idx = eventIndexAtBeat(scoreRef.current.events, beat);
+    if (idx >= 0) {
+      setActiveEventIndex(idx);
+      setActiveCharIndex(scoreRef.current.events[idx].charIndex);
+      setCurrentBeat(scoreRef.current.events[idx].timeOffsetBeats);
+    } else {
+      setActiveCharIndex(null);
+      setActiveEventIndex(null);
+      setCurrentBeat(beat);
+    }
     musicDebugLog.logTransport('pause', undefined, pauseBeatRef.current, bpmRef.current);
   }, [clearBpmDebounce, clearRaf]);
 
   const stop = useCallback(() => {
     setError(null);
+    cancelMusicSpeech();
     stopInternal(true);
   }, [stopInternal]);
+
+  const parkOnEvent = useCallback(
+    async (ev: MusicNoteEvent, index: number, announce: boolean) => {
+      playGenRef.current += 1;
+      clearRaf();
+      clearBpmDebounce();
+
+      const beat = ev.timeOffsetBeats;
+      pauseBeatRef.current = beat;
+      playOriginRef.current = null;
+      nextEventIndexRef.current = 0;
+      isPlayingRef.current = false;
+      isPausedRef.current = true;
+      setIsPlaying(false);
+      setIsPaused(true);
+      setCurrentBeat(beat);
+      setActiveCharIndex(ev.charIndex);
+      setActiveEventIndex(index);
+
+      const labels = formatMusicEventLabels(ev);
+      musicDebugLog.logTransport(
+        'step',
+        `${index}:${labels.display}`,
+        beat,
+        bpmRef.current,
+      );
+
+      try {
+        const synth = ensureSynth();
+        await synth.ensureReady();
+        synth.silence();
+        if (ev.type !== 'rest' && ev.midiPitches.length > 0) {
+          const start = synth.now() + 0.02;
+          const durSec = Math.max(
+            0.12,
+            Math.min(STEP_SOUND_SEC, ev.durationBeats * (60 / bpmRef.current) * 0.85),
+          );
+          synth.playChord(ev.midiPitches, start, durSec);
+        }
+        setError(null);
+      } catch (err) {
+        setError(toErrorKey(err));
+      }
+
+      if (announce) {
+        speakMusicHint(labels.speech);
+      }
+    },
+    [clearBpmDebounce, clearRaf, ensureSynth],
+  );
+
+  const stepNext = useCallback(() => {
+    const events = scoreRef.current.events;
+    if (!events.length) return;
+
+    // Leave continuous playback; park on the next event after the current one.
+    if (isPlayingRef.current) {
+      playGenRef.current += 1;
+      clearRaf();
+      clearBpmDebounce();
+      synthRef.current?.silence();
+      playOriginRef.current = null;
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+    }
+
+    const idx = nextStepEventIndex(
+      events,
+      pauseBeatRef.current,
+      activeEventIndexRef.current,
+    );
+    if (idx < 0) return;
+    void parkOnEvent(events[idx], idx, true);
+  }, [clearBpmDebounce, clearRaf, parkOnEvent]);
+
+  const stepPrev = useCallback(() => {
+    const events = scoreRef.current.events;
+    if (!events.length) return;
+
+    if (isPlayingRef.current) {
+      playGenRef.current += 1;
+      clearRaf();
+      clearBpmDebounce();
+      synthRef.current?.silence();
+      playOriginRef.current = null;
+      isPlayingRef.current = false;
+      setIsPlaying(false);
+    }
+
+    const idx = prevStepEventIndex(
+      events,
+      pauseBeatRef.current,
+      activeEventIndexRef.current,
+    );
+    if (idx < 0) return;
+    void parkOnEvent(events[idx], idx, true);
+  }, [clearBpmDebounce, clearRaf, parkOnEvent]);
 
   const setBPM = useCallback(
     (next: number) => {
@@ -408,6 +522,7 @@ export function useMusicPlayback(
     setIsPlaying(false);
     setIsPaused(false);
     setActiveCharIndex(null);
+    setActiveEventIndex(null);
     setCurrentBeat(0);
     setError(null);
   }, [brfString, clearBpmDebounce, clearRaf]);
@@ -417,6 +532,7 @@ export function useMusicPlayback(
       playGenRef.current += 1;
       clearRaf();
       clearBpmDebounce();
+      cancelMusicSpeech();
       synthRef.current?.dispose();
       synthRef.current = null;
     };
@@ -427,6 +543,7 @@ export function useMusicPlayback(
     isPaused,
     currentBeat,
     activeCharIndex,
+    activeEventIndex,
     bpm,
     error,
   };
@@ -437,10 +554,11 @@ export function useMusicPlayback(
       isPaused,
       currentBeat,
       activeCharIndex,
+      activeEventIndex,
       bpm,
       error,
     });
-  }, [isPlaying, isPaused, currentBeat, activeCharIndex, bpm, error]);
+  }, [isPlaying, isPaused, currentBeat, activeCharIndex, activeEventIndex, bpm, error]);
 
   return {
     playbackState,
@@ -450,6 +568,8 @@ export function useMusicPlayback(
     pause,
     stop,
     setBPM,
+    stepNext,
+    stepPrev,
   };
 }
 

@@ -170,7 +170,7 @@ export function MusicDebugPanel() {
                 <span>
                   {pb?.isPlaying ? 'playing' : pb?.isPaused ? 'paused' : 'idle'} · BPM{' '}
                   {pb?.bpm ?? '—'} · beat {pb?.currentBeat?.toFixed(2) ?? '—'} · ch{' '}
-                  {pb?.activeCharIndex ?? '—'}
+                  {pb?.activeCharIndex ?? '—'} · ev {pb?.activeEventIndex ?? '—'}
                 </span>
               </li>
               <li>
