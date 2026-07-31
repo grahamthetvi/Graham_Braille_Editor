@@ -1,4 +1,4 @@
-import { asciiToUnicodeBraille } from './braille';
+import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
 
 /**
  * Word-wraps a single braille line to at most `cells` characters.
@@ -729,10 +729,12 @@ export function formatBrfPages(
 }
 
 /**
- * Normalizes a BRF file read as text: CRLF → LF, form feeds → blank line (page gap).
+ * Normalizes a BRF file read as text: CRLF → LF, form feeds → blank line (page gap),
+ * and Unicode braille cells → North American ASCII BRF so import matches paste/playback.
  */
 export function normalizeImportedBrf(raw: string): string {
-  return raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\f/g, '\n\n');
+  const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\f/g, '\n\n');
+  return unicodeBrailleToAscii(normalized);
 }
 
 /** Default download name; includes time so same-day exports do not overwrite in the browser. */

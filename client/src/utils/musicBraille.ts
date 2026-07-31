@@ -1098,3 +1098,27 @@ export function findMusicStartCharIndex(brf: string): number {
   const score = parseBrailleMusic(text);
   return score.events.length > 0 ? score.events[0].charIndex : 0;
 }
+
+/**
+ * Heuristic: imported/pasted BRF is Music Braille (not literary) so import should
+ * skip liblouis back-translate and load into Music mode.
+ */
+export function isLikelyMusicBrailleBrf(brf: string): boolean {
+  const text = unicodeBrailleToAscii(brf || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!text.trim()) return false;
+
+  if (text.includes('.>') || text.includes('_>')) return true;
+
+  if (segmentPianoSystems(text).length > 0) return true;
+
+  const musicStart = findMusicLexStartIndex(text);
+  if (musicStart <= 0) return false;
+
+  const score = parseBrailleMusic(text);
+  if ((score.parseInfo?.pianoSystems ?? 0) > 0) return true;
+
+  const noteEvents = score.events.filter((e) => e.midiPitches.length > 0);
+  return noteEvents.length >= 4;
+}

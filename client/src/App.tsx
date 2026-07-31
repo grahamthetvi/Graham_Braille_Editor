@@ -70,6 +70,7 @@ import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from 
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
+import { isLikelyMusicBrailleBrf } from './utils/musicBraille';
 import type { BuildBrailleStlOptions } from './utils/brailleStl';
 import './App.css';
 
@@ -451,6 +452,15 @@ export default function App() {
     setFileContent(plainText);
   }, []);
 
+  const applyMusicBrfToEditor = useCallback((asciiBrf: string) => {
+    setIsMusicBrailleMode(true);
+    setLiterarySourceMode('none');
+    setShowBackTranslatedEditModal(false);
+    importedBrailleRef.current = '';
+    setInputText(asciiBrf);
+    setFileContent(asciiBrf);
+  }, []);
+
   const tryAutoBackTranslateUnicode = useCallback(
     (text: string): boolean => {
       if (isMusicBrailleModeRef.current) return false;
@@ -570,10 +580,8 @@ export default function App() {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
         const normalized = normalizeImportedBrf(raw);
-        // Music Braille mode: keep ASCII BRF as-is (literary back-translate would destroy it).
-        if (isMusicBrailleModeRef.current) {
-          setInputText(normalized);
-          setFileContent(normalized);
+        if (isLikelyMusicBrailleBrf(normalized) || isMusicBrailleModeRef.current) {
+          applyMusicBrfToEditor(normalized);
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -1239,6 +1247,21 @@ Accuracy: _____________ %
                     setIsMusicBrailleMode((s) => {
                       const next = !s;
                       if (next) {
+                        let candidate = inputTextRef.current;
+                        if (!isLikelyMusicBrailleBrf(candidate)) {
+                          const imported = importedBrailleRef.current;
+                          if (imported && isLikelyMusicBrailleBrf(imported)) {
+                            candidate = normalizeImportedBrf(imported);
+                          } else if (translatedText && isLikelyMusicBrailleBrf(translatedText)) {
+                            candidate = normalizeImportedBrf(translatedText);
+                          }
+                        } else {
+                          candidate = normalizeImportedBrf(candidate);
+                        }
+                        if (isLikelyMusicBrailleBrf(candidate)) {
+                          setInputText(candidate);
+                          setFileContent(candidate);
+                        }
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';

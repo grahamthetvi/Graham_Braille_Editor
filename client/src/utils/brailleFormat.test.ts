@@ -1,5 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf } from './brailleFormat';
+import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf, normalizeImportedBrf } from './brailleFormat';
+
+describe('normalizeImportedBrf', () => {
+  it('converts Unicode braille cells to ASCII BRF', () => {
+    const unicode = '⠠⠋⠘⠒⠥⠗⠀⠠⠑⠇⠊⠎⠑';
+    const normalized = normalizeImportedBrf(unicode);
+    expect(normalized).toBe(',F^3UR ,ELISE');
+    expect(normalized).not.toMatch(/[\u2800-\u28ff]/);
+  });
+
+  it('normalizes CRLF and form feeds before ASCII conversion', () => {
+    const normalized = normalizeImportedBrf(',hello\f,world');
+    expect(normalized).toBe(',hello\n\n,world');
+  });
+});
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {

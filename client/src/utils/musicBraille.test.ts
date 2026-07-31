@@ -3,12 +3,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
+import { normalizeImportedBrf } from './brailleFormat';
 import {
   DEFAULT_BEATS_PER_MEASURE,
   beatForCharIndex,
   beatsCapacityFromTimeSig,
   findMusicStartCharIndex,
   keySignatureDeltas,
+  isLikelyMusicBrailleBrf,
   mergeTiedEvents,
   midiDownInterval,
   parseBrailleMusic,
@@ -542,6 +544,47 @@ _>xx`;
     expect(notes.length).toBeGreaterThanOrEqual(2);
     expect(notes[0].midiPitches[0]).toBe(60);
     expect(notes[1].midiPitches[0]).toBe(62);
+  });
+});
+
+describe('isLikelyMusicBrailleBrf', () => {
+  it('detects Sao Mai piano Für Elise Unicode BRF', () => {
+    const full = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf'), 'utf8');
+    expect(isLikelyMusicBrailleBrf(full)).toBe(true);
+  });
+
+  it('rejects plain prose', () => {
+    expect(isLikelyMusicBrailleBrf('Für Elise in A Minor')).toBe(false);
+    expect(isLikelyMusicBrailleBrf('hello brave world')).toBe(false);
+  });
+});
+
+describe('import normalization matches paste for Für Elise', () => {
+  it('Unicode import normalizes to the same music parse as ASCII paste', () => {
+    const unicode = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf'), 'utf8');
+    const importedAscii = normalizeImportedBrf(unicode);
+    const pastedAscii = unicodeBrailleToAscii(unicode);
+
+    expect(importedAscii).toBe(pastedAscii);
+
+    const fromImport = parseBrailleMusic(importedAscii);
+    const fromPaste = parseBrailleMusic(pastedAscii);
+
+    expect(fromImport.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    expect(fromPaste.timeSignature).toEqual(fromImport.timeSignature);
+
+    const importNotes = fromImport.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort((a, b) => a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex);
+    const pasteNotes = fromPaste.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort((a, b) => a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex);
+
+    expect(importNotes.slice(0, 6).map((e) => e.midiPitches[0])).toEqual(
+      pasteNotes.slice(0, 6).map((e) => e.midiPitches[0]),
+    );
+    expect(importNotes[0].midiPitches[0]).toBe(76);
+    expect(importNotes[1].midiPitches[0]).toBe(75);
   });
 });
 
