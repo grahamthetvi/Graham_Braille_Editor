@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
+import { normalizeImportedBrf } from './brailleFormat';
 import {
   DEFAULT_BEATS_PER_MEASURE,
   beatForCharIndex,
   beatsCapacityFromTimeSig,
   findMusicStartCharIndex,
+  isLikelyMusicBrailleBrf,
   keySignatureDeltas,
   mergeTiedEvents,
   midiDownInterval,
@@ -542,6 +544,29 @@ _>xx`;
     expect(notes.length).toBeGreaterThanOrEqual(2);
     expect(notes[0].midiPitches[0]).toBe(60);
     expect(notes[1].midiPitches[0]).toBe(62);
+  });
+});
+
+describe('isLikelyMusicBrailleBrf', () => {
+  it('detects Für Elise fixture as music', () => {
+    const full = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf'), 'utf8');
+    expect(isLikelyMusicBrailleBrf(full)).toBe(true);
+  });
+
+  it('rejects plain literary text', () => {
+    expect(isLikelyMusicBrailleBrf('Für Elise in A Minor')).toBe(false);
+    expect(isLikelyMusicBrailleBrf('hello brave world')).toBe(false);
+  });
+
+  it('import normalization matches paste for Für Elise', () => {
+    const unicode = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf'), 'utf8');
+    const importedAscii = normalizeImportedBrf(unicode);
+    const pastedAscii = unicodeBrailleToAscii(unicode);
+    expect(importedAscii).toBe(pastedAscii);
+    const importedScore = parseBrailleMusic(importedAscii);
+    const pastedScore = parseBrailleMusic(pastedAscii);
+    expect(importedScore.timeSignature).toEqual(pastedScore.timeSignature);
+    expect(importedScore.events[0]?.midiPitches).toEqual(pastedScore.events[0]?.midiPitches);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   getRecoverableSessions,
   saveSession,
   migrateLegacyAutosave,
+  type SaveSessionOptions,
   type SessionMetadata,
 } from '../services/sessionStore';
 
@@ -15,10 +16,13 @@ export function useAutosave(
   enabled: boolean,
   isSecondaryInstance: boolean,
   isChecking: boolean,
-  onBackupsFound: (sessions: SessionMetadata[]) => void
+  onBackupsFound: (sessions: SessionMetadata[]) => void,
+  sessionOptions: SaveSessionOptions = {},
 ) {
   const [hasChecked, setHasChecked] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionOptionsRef = useRef(sessionOptions);
+  sessionOptionsRef.current = sessionOptions;
 
   // Initial Load: Migrate, Cleanup, and check for backups sequentially
   useEffect(() => {
@@ -62,7 +66,7 @@ export function useAutosave(
     }
 
     timerRef.current = setTimeout(() => {
-      saveSession(sessionId, currentText).catch(err => {
+      saveSession(sessionId, currentText, sessionOptionsRef.current).catch(err => {
         console.error('Failed to autosave session', err);
       });
     }, AUTOSAVE_DEBOUNCE_MS);
@@ -72,5 +76,13 @@ export function useAutosave(
         clearTimeout(timerRef.current);
       }
     };
-  }, [currentText, sessionId, hasChecked, isChecking, enabled]);
+  }, [
+    currentText,
+    sessionId,
+    hasChecked,
+    isChecking,
+    enabled,
+    sessionOptions.contentKind,
+    sessionOptions.isMusicBrailleMode,
+  ]);
 }

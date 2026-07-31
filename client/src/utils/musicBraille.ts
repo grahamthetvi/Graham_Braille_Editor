@@ -1082,6 +1082,30 @@ export function findMusicLexStartIndex(brf: string): number {
 }
 
 /**
+ * Heuristic: imported/pasted BRF is Music Braille (not literary) so intake
+ * should skip liblouis back-translate and load into Music mode.
+ */
+export function isLikelyMusicBrailleBrf(brf: string): boolean {
+  const text = unicodeBrailleToAscii(brf || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  if (!text.trim()) return false;
+
+  if (text.includes('.>') || text.includes('_>')) return true;
+
+  if (segmentPianoSystems(text).length > 0) return true;
+
+  const musicStart = findMusicLexStartIndex(text);
+  if (musicStart <= 0) return false;
+
+  const score = parseBrailleMusic(text);
+  if ((score.parseInfo?.pianoSystems ?? 0) > 0) return true;
+
+  const noteEvents = score.events.filter((e) => e.midiPitches.length > 0);
+  return noteEvents.length >= 4;
+}
+
+/**
  * Heuristic character offset where Music Braille (notes) likely begins after
  * literary front matter. Prefers a music heading (key/time) then the first
  * octave+note; falls back to the first octave+note in the file.
