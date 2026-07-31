@@ -14,6 +14,8 @@ interface StatusBarProps {
   isLoading: boolean;
   /** Translation progress 0–100 (only meaningful when isLoading is true). */
   progress: number;
+  /** Optional polite status announcement (e.g. Music Braille auto-load). */
+  announcement?: string;
 }
 
 /**
@@ -29,6 +31,7 @@ export function StatusBar({
   charCount,
   isLoading,
   progress,
+  announcement,
 }: StatusBarProps) {
   const { t } = useTranslation();
 
@@ -39,6 +42,11 @@ export function StatusBar({
       aria-live="polite"
       aria-label={t('statusBar.ariaLabel')}
     >
+      {announcement ? (
+        <span className="status-stat" title={announcement}>
+          {announcement}
+        </span>
+      ) : null}
       {bridgeUpdateAvailable ? (
         <a
           href="https://github.com/grahamthetvi/Graham_Braille_Editor/releases/latest"

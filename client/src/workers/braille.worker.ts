@@ -727,7 +727,8 @@ self.addEventListener('message', async (event: MessageEvent) => {
         self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText: '', brf });
       } else {
         const plainText = backTranslateBrfRespectingNemethPassages(brf, table);
-        self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText, brf });
+        const asciiBrf = unicodeBrailleToAscii(brf);
+        self.postMessage({ type: 'BACK_TRANSLATE_RESULT', plainText, brf: asciiBrf });
       }
     } catch (err) {
       self.postMessage({

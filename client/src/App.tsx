@@ -52,12 +52,11 @@ import { useMusicPlayback } from './hooks/useMusicPlayback';
 import { useAutosave } from './hooks/useAutosave';
 import { useActiveInstances } from './hooks/useActiveInstances';
 import { useScrollSync } from './hooks/useScrollSync';
-import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionText, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
+import { generateSessionId, markExported, discardSession, discardAllSessions, getSessionContents, getRecoverableSessions, type SessionMetadata } from './services/sessionStore';
 import { asciiToUnicodeBraille, isPredominantlyUnicodeBraille, unicodeBrailleToAscii } from './utils/braille';
 import {
   formatBrfPages,
   formatBrfForOutput,
-  normalizeImportedBrf,
   defaultBrfDownloadFilename,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
@@ -66,6 +65,13 @@ import {
   buildPlainTextToMatchBrailleWrap,
   convertToRtf,
 } from './utils/brailleFormat';
+import {
+  classifyBrfContent,
+  normalizeBrfBuffer,
+  shouldAutoRouteMusicOnTextChange,
+  type ContentKind,
+} from './utils/brfIntake';
+import { isLikelyMusicBrailleBrf } from './utils/musicBraille';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
@@ -447,9 +453,31 @@ export default function App() {
     importedBrailleRef.current = importedBraille;
     setLiterarySourceMode('importedLocked');
     setShowBackTranslatedEditModal(false);
+    setIsMusicBrailleMode(false);
     setInputText(plainText);
     setFileContent(plainText);
   }, []);
+
+  const [musicIntakeAnnouncement, setMusicIntakeAnnouncement] = useState('');
+
+  const applyMusicBrfToEditor = useCallback((asciiBrf: string) => {
+    setIsMusicBrailleMode(true);
+    setLiterarySourceMode('none');
+    setShowBackTranslatedEditModal(false);
+    importedBrailleRef.current = '';
+    setInputText(asciiBrf);
+    setFileContent(asciiBrf);
+  }, []);
+
+  const announceMusicLoaded = useCallback(() => {
+    setMusicIntakeAnnouncement('Loaded as Music Braille.');
+  }, []);
+
+  useEffect(() => {
+    if (!musicIntakeAnnouncement) return;
+    const timer = window.setTimeout(() => setMusicIntakeAnnouncement(''), 4000);
+    return () => window.clearTimeout(timer);
+  }, [musicIntakeAnnouncement]);
 
   const tryAutoBackTranslateUnicode = useCallback(
     (text: string): boolean => {
@@ -457,8 +485,14 @@ export default function App() {
       if (literarySourceModeRef.current === 'brailleEditing') return false;
       if (!isPredominantlyUnicodeBraille(text)) return false;
 
+      const { kind, normalized } = classifyBrfContent(text);
+      if (kind === 'music-brf') {
+        applyMusicBrfToEditor(normalized);
+        announceMusicLoaded();
+        return true;
+      }
+
       const gen = ++unicodeBackTranslateGenRef.current;
-      const normalized = normalizeImportedBrf(text);
       void backTranslateBrf(normalized, selectedTable)
         .then(({ plainText, brf }) => {
           if (gen !== unicodeBackTranslateGenRef.current) return;
@@ -471,21 +505,37 @@ export default function App() {
         });
       return true;
     },
-    [applyBackTranslatedPlain, backTranslateBrf, selectedTable],
+    [announceMusicLoaded, applyBackTranslatedPlain, applyMusicBrfToEditor, backTranslateBrf, selectedTable],
   );
 
   const handleTextChange = useCallback(
     (text: string) => {
+      const prev = inputTextRef.current;
       setInputText(text);
       if (isMusicBrailleModeRef.current) return;
       if (literarySourceModeRef.current === 'importedLocked') return;
       if (literarySourceModeRef.current === 'brailleEditing') return;
+
+      if (shouldAutoRouteMusicOnTextChange(prev, text)) {
+        const { normalized } = classifyBrfContent(text);
+        applyMusicBrfToEditor(normalized);
+        announceMusicLoaded();
+        return;
+      }
+
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
         translate(text, selectedTable, mathCode);
       }
     },
-    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
+    [
+      announceMusicLoaded,
+      applyMusicBrfToEditor,
+      tryAutoBackTranslateUnicode,
+      translate,
+      selectedTable,
+      mathCode,
+    ],
   );
 
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
@@ -508,6 +558,14 @@ export default function App() {
   const [drafts, setDrafts] = useState<SessionMetadata[]>([]);
   const [showDrafts, setShowDrafts] = useState(false);
 
+  const sessionContentKind = useMemo((): ContentKind => {
+    if (isMusicBrailleMode) return 'music-brf';
+    if (literarySourceMode === 'importedLocked' || literarySourceMode === 'brailleEditing') {
+      return 'literary-brf';
+    }
+    return 'plain';
+  }, [isMusicBrailleMode, literarySourceMode]);
+
   useAutosave(
     sessionId,
     inputText,
@@ -516,7 +574,11 @@ export default function App() {
     isChecking,
     (sessions) => {
       setDrafts(sessions);
-    }
+    },
+    {
+      contentKind: sessionContentKind,
+      isMusicBrailleMode,
+    },
   );
 
   function handleOpenDrafts() {
@@ -529,17 +591,44 @@ export default function App() {
   }
 
   function handleRestoreSession(id: string) {
-    getSessionText(id).then(text => {
-      if (text) {
-        setLiterarySourceMode('none');
-        importedBrailleRef.current = '';
-        setShowBackTranslatedEditModal(false);
-        setInputText(text);
-        setFileContent(text);
-        if (!text.trim()) return;
-        if (tryAutoBackTranslateUnicode(text)) return;
-        translate(text, selectedTable, mathCode);
+    getSessionContents(id).then(contents => {
+      if (!contents?.text) return;
+      const text = contents.text;
+      setShowBackTranslatedEditModal(false);
+      importedBrailleRef.current = '';
+
+      if (contents.isMusicBrailleMode || contents.contentKind === 'music-brf') {
+        applyMusicBrfToEditor(normalizeBrfBuffer(text));
+        announceMusicLoaded();
+        return;
       }
+
+      const { kind, normalized } = classifyBrfContent(text);
+      if (kind === 'music-brf') {
+        applyMusicBrfToEditor(normalized);
+        announceMusicLoaded();
+        return;
+      }
+
+      setIsMusicBrailleMode(false);
+      setLiterarySourceMode('none');
+      setInputText(text);
+      setFileContent(text);
+      if (!text.trim()) return;
+
+      if (kind === 'literary-brf') {
+        void backTranslateBrf(normalized, selectedTable)
+          .then(({ plainText, brf }) => {
+            applyBackTranslatedPlain(plainText, brf || normalized);
+          })
+          .catch((err: unknown) => {
+            console.error('[session restore brf]', err);
+          });
+        return;
+      }
+
+      if (tryAutoBackTranslateUnicode(text)) return;
+      translate(text, selectedTable, mathCode);
     }).catch(err => {
       console.error('Failed to restore session', err);
     });
@@ -569,11 +658,10 @@ export default function App() {
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
-        const normalized = normalizeImportedBrf(raw);
-        // Music Braille mode: keep ASCII BRF as-is (literary back-translate would destroy it).
-        if (isMusicBrailleModeRef.current) {
-          setInputText(normalized);
-          setFileContent(normalized);
+        const { kind, normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        if (kind === 'music-brf' || isMusicBrailleModeRef.current) {
+          applyMusicBrfToEditor(normalized);
+          if (kind === 'music-brf') announceMusicLoaded();
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -584,12 +672,30 @@ export default function App() {
             console.error('[brf import]', err);
           });
       } else {
+        const { kind, normalized } = classifyBrfContent(raw);
+        if (kind === 'music-brf') {
+          applyMusicBrfToEditor(normalized);
+          announceMusicLoaded();
+          return;
+        }
         setLiterarySourceMode('none');
         importedBrailleRef.current = '';
         setInputText(raw);
         setFileContent(raw);
-        if (isMusicBrailleModeRef.current) return;
-        // Unicode braille pasted into a .txt (or similar) should back-translate like .brf.
+        if (isMusicBrailleModeRef.current) {
+          applyMusicBrfToEditor(normalized);
+          return;
+        }
+        if (kind === 'literary-brf') {
+          void backTranslateBrf(normalized, selectedTable)
+            .then(({ plainText, brf }) => {
+              applyBackTranslatedPlain(plainText, brf || normalized);
+            })
+            .catch((err: unknown) => {
+              console.error('[file import brf]', err);
+            });
+          return;
+        }
         if (tryAutoBackTranslateUnicode(raw)) return;
         translate(raw, selectedTable, mathCode);
       }
@@ -625,18 +731,24 @@ export default function App() {
   }, []);
 
   // ── BRF download ─────────────────────────────────────────────────────────
-  /** ASCII BRF used for download/print: literary translate result, or braille-edit LHS. */
-  const literaryBrfSource = useMemo(() => {
+  /** ASCII BRF used for download/print/playback eligibility across modes. */
+  const canonicalBrfAscii = useMemo(() => {
+    if (isMusicBrailleMode) {
+      return inputText ? unicodeBrailleToAscii(inputText) : '';
+    }
     if (literarySourceMode === 'brailleEditing') {
       return inputText ? unicodeBrailleToAscii(inputText) : '';
     }
     return translatedText;
-  }, [literarySourceMode, inputText, translatedText]);
+  }, [isMusicBrailleMode, literarySourceMode, inputText, translatedText]);
+
+  /** @deprecated alias — literary download historically used this name. */
+  const literaryBrfSource = canonicalBrfAscii;
 
   function handleDownloadBrf() {
-    if (!literaryBrfSource) return;
+    if (!canonicalBrfAscii) return;
     const formatted = formatBrfForOutput(
-      literaryBrfSource,
+      canonicalBrfAscii,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
@@ -872,16 +984,16 @@ Accuracy: _____________ %
     ],
   );
   const formattedBrfForPrint = useMemo(() => {
-    if (!literaryBrfSource) return '';
+    if (!canonicalBrfAscii) return '';
     return formatBrfForOutput(
-      literaryBrfSource,
+      canonicalBrfAscii,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
     );
   }, [
-    literaryBrfSource,
+    canonicalBrfAscii,
     pageSettings.cellsPerRow,
     pageSettings.linesPerPage,
     pageSettings.showPageNumbers,
@@ -1239,6 +1351,11 @@ Accuracy: _____________ %
                     setIsMusicBrailleMode((s) => {
                       const next = !s;
                       if (next) {
+                        const candidate = normalizeBrfBuffer(inputTextRef.current);
+                        if (isLikelyMusicBrailleBrf(candidate)) {
+                          setInputText(candidate);
+                          setFileContent(candidate);
+                        }
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';
@@ -1852,11 +1969,12 @@ Accuracy: _____________ %
         bridgeConnected={bridgeConnected}
         bridgeUpdateAvailable={bridgeUpdateAvailable}
         useWebUSB={useWebUSB}
-        brfLength={isMusicBrailleMode ? inputText.length : literaryBrfSource.length}
+        brfLength={canonicalBrfAscii.length}
         wordCount={wordCount}
         charCount={charCount}
         isLoading={isLoading}
         progress={progress}
+        announcement={musicIntakeAnnouncement}
       />
 
       {/* ── Graphic Generator Modal ──────────────────────────────────────────── */}

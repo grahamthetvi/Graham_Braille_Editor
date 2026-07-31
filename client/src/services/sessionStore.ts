@@ -7,6 +7,7 @@ import {
   getAllFromStore,
   clearStore,
 } from './db';
+import type { ContentKind } from '../utils/brfIntake';
 
 const INDEX_KEY = 'graham-braille-editor-sessions-index';
 const LEGACY_AUTOSAVE_KEY = 'graham-braille-editor-text-backup';
@@ -17,6 +18,19 @@ export interface SessionMetadata {
   preview: string;
   updatedAt: number;
   isExported: boolean;
+}
+
+/** Persisted editor payload (text + optional intake routing metadata). */
+export interface SessionContents {
+  id: string;
+  text: string;
+  contentKind?: ContentKind;
+  isMusicBrailleMode?: boolean;
+}
+
+export interface SaveSessionOptions {
+  contentKind?: ContentKind;
+  isMusicBrailleMode?: boolean;
 }
 
 export function generateSessionId(): string {
@@ -56,16 +70,25 @@ export async function getRecoverableSessions(): Promise<SessionMetadata[]> {
 }
 
 export async function getSessionText(id: string): Promise<string | null> {
+  const contents = await getSessionContents(id);
+  return contents ? contents.text : null;
+}
+
+export async function getSessionContents(id: string): Promise<SessionContents | null> {
   try {
-    const item = await getFromStore<{ id: string; text: string }>(CONTENTS_STORE, id);
-    return item ? item.text : null;
+    const item = await getFromStore<SessionContents>(CONTENTS_STORE, id);
+    return item ?? null;
   } catch (err) {
-    console.error(`Failed to get session text for ID: ${id}`, err);
+    console.error(`Failed to get session contents for ID: ${id}`, err);
     return null;
   }
 }
 
-export async function saveSession(id: string, text: string): Promise<void> {
+export async function saveSession(
+  id: string,
+  text: string,
+  options: SaveSessionOptions = {},
+): Promise<void> {
   const trimmed = text.trim();
   
   if (trimmed === "") {
@@ -98,8 +121,15 @@ export async function saveSession(id: string, text: string): Promise<void> {
       isExported: existingMetadata ? existingMetadata.isExported : false,
     };
     
+    const contents: SessionContents = {
+      id,
+      text,
+      contentKind: options.contentKind,
+      isMusicBrailleMode: options.isMusicBrailleMode,
+    };
+
     await putToStore(METADATA_STORE, metadata);
-    await putToStore(CONTENTS_STORE, { id, text });
+    await putToStore(CONTENTS_STORE, contents);
   } catch (err) {
     console.error(`Failed to save session for ID: ${id}`, err);
   }

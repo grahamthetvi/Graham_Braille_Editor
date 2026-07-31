@@ -2,6 +2,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import {
   saveSession,
   getSessionText,
+  getSessionContents,
   getRecoverableSessions,
   markExported,
   cleanupOldSessions,
@@ -120,5 +121,20 @@ describe('sessionStore with IndexedDB', () => {
     expect(localStorage.getItem('graham-braille-editor-sessions-index')).toBeNull();
     expect(localStorage.getItem('graham-braille-editor-session-legacy-1')).toBeNull();
     expect(localStorage.getItem('graham-braille-editor-text-backup')).toBeNull();
+  });
+
+  it('persists contentKind and music mode with session contents', async () => {
+    await saveSession('session-music', 'a >/l#c8', {
+      contentKind: 'music-brf',
+      isMusicBrailleMode: true,
+    });
+
+    const contents = await getSessionContents('session-music');
+    expect(contents).toEqual({
+      id: 'session-music',
+      text: 'a >/l#c8',
+      contentKind: 'music-brf',
+      isMusicBrailleMode: true,
+    });
   });
 });
