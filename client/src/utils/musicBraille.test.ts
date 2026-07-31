@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
 import { normalizeImportedBrf } from './brailleFormat';
 import {
-  DEFAULT_BEATS_PER_MEASURE,
   beatForCharIndex,
   beatsCapacityFromTimeSig,
   findMusicStartCharIndex,
@@ -13,6 +12,7 @@ import {
   keySignatureDeltas,
   mergeTiedEvents,
   midiDownInterval,
+  nearestMidiForPitch,
   parseBrailleMusic,
   resolveWholeOrSixteenth,
 } from './musicBraille';
@@ -65,7 +65,8 @@ describe('parseBrailleMusic', () => {
     expect(score.totalMeasures).toBe(2);
     expect(score.events[0].measure).toBe(1);
     expect(score.events[1].measure).toBe(2);
-    expect(score.events[1].timeOffsetBeats).toBeCloseTo(DEFAULT_BEATS_PER_MEASURE, 5);
+    // Underfull first measure is not padded to 4/4 — next bar starts after the quarter.
+    expect(score.events[1].timeOffsetBeats).toBeCloseTo(1, 5);
   });
 
   it('parses rests', () => {
@@ -274,7 +275,8 @@ describe('parseBrailleMusic', () => {
     expect(score.events[1].midiPitches).toEqual([60]);
     expect(score.events[0].measure).toBe(1);
     expect(score.events[1].measure).toBe(2);
-    expect(score.events[1].timeOffsetBeats).toBeCloseTo(4, 5);
+    // Repeat inherits the previous measure's used length (no 4/4 silence pad).
+    expect(score.events[1].timeOffsetBeats).toBeCloseTo(1, 5);
   });
 });
 
@@ -315,6 +317,13 @@ describe('midiDownInterval', () => {
 
   it('moves an octave down', () => {
     expect(midiDownInterval(60, 'C', 8)).toBe(48);
+  });
+});
+
+describe('nearestMidiForPitch', () => {
+  it('picks D5 and C5 after B4 (Für Elise), not D4/C4', () => {
+    expect(nearestMidiForPitch('D', 0, 71)).toBe(74);
+    expect(nearestMidiForPitch('C', 0, 74)).toBe(72);
   });
 });
 
@@ -460,6 +469,24 @@ describe('literary front matter without piano hand signs', () => {
     // No C7+ garbage from literary capital commas.
     expect(notes.every((e) => e.midiPitches.every((p) => p < 96))).toBe(true);
   });
+
+  it('does not pad the typed pickup and follows nearest-octave after B4', () => {
+    const brf = `,FUR ELISE IN ,A ,MINOR
+
+#C8
+".&%z &%ef"j*ed`;
+    const score = parseBrailleMusic(brf);
+    expect(score.parseInfo?.pianoSystems).toBe(0);
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    // Pickup E D# then immediately next E — no silence to beat 1.5.
+    expect(notes[0].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(notes[1].timeOffsetBeats).toBeCloseTo(0.25, 5);
+    expect(notes[2].timeOffsetBeats).toBeCloseTo(0.5, 5);
+    // E5 D#5 E5 D#5 E5 B4 D5 C5 (nearest octave, not locked D4/C4)
+    expect(notes.map((e) => e.midiPitches[0])).toEqual([
+      76, 75, 76, 75, 76, 71, 74, 72,
+    ]);
+  });
 });
 
 describe('non-meter # markup', () => {
@@ -586,13 +613,15 @@ describe('full Für Elise golden regression', () => {
       );
     expect(notes.length).toBeGreaterThan(500);
 
-    // E5 D#5 E5 D#5 E5 B4 D4 C4 …
+    // E5 D#5 E5 D#5 E5 B4 D5 C5 …
     expect(notes[0].midiPitches[0]).toBe(76);
     expect(notes[1].midiPitches[0]).toBe(75);
     expect(notes[2].midiPitches[0]).toBe(76);
     expect(notes[3].midiPitches[0]).toBe(75);
     expect(notes[4].midiPitches[0]).toBe(76);
     expect(notes[5].midiPitches[0]).toBe(71);
+    expect(notes[6].midiPitches[0]).toBe(74);
+    expect(notes[7].midiPitches[0]).toBe(72);
 
     const capacity = score.parseInfo?.capacityBeats ?? 1.5;
     // No soft-overflow 2/4-beat tones; longer values must still fit the bar.
