@@ -60,6 +60,8 @@ export interface PlaybackState {
   isPaused: boolean;
   currentBeat: number;
   activeCharIndex: number | null;
+  /** Index into score.events for the highlighted / stepped note. */
+  activeEventIndex: number | null;
   bpm: number;
   /** Non-null when the last play attempt failed. */
   error: MusicPlaybackErrorKey | null;

@@ -796,6 +796,8 @@ Accuracy: _____________ %
     pause: pauseMusic,
     stop: stopMusic,
     setBPM: setMusicBpm,
+    stepNext: stepMusicNext,
+    stepPrev: stepMusicPrev,
   } = useMusicPlayback(
     isMusicBrailleMode ? musicBrfSource : '',
     isMusicBrailleMode ? musicCursorCharIndex : 0,
@@ -1791,6 +1793,8 @@ Accuracy: _____________ %
                   onPause={pauseMusic}
                   onStop={stopMusic}
                   onBpmChange={setMusicBpm}
+                  onStepPrev={stepMusicPrev}
+                  onStepNext={stepMusicNext}
                   playFromCursor={musicPlayFromCursor}
                   onPlayFromCursorChange={setMusicPlayFromCursor}
                   musicStartCharIndex={musicStartCharIndex}

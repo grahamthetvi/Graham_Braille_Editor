@@ -9,7 +9,7 @@ interface MusicBrailleGuideModalProps {
 export const MUSIC_BRAILLE_GUIDE_TEXT = `Music Braille Recommendation
 Graham Braille Editor
 
-Graham Braille Editor translates literary text and math into braille. For Music Braille playback, turn on **Music Player Mode** under Teaching Tools, then type or import ASCII Music Braille (BRF). The built-in player highlights each cell as it sounds.
+Graham Braille Editor translates literary text and math into braille. For Music Braille playback, turn on **Music Player Mode** under Teaching Tools, then type or import ASCII Music Braille (BRF). The built-in player highlights each cell as it sounds. Use **Next note** / **Prev note** to step one event at a time; each step plays the pitch and announces the note name and duration (for example, "C 4, quarter note").
 
 To create Music Braille from sheet music, we recommend this free workflow:
 

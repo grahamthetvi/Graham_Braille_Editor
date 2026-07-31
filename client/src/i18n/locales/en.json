@@ -211,6 +211,16 @@
         "title": "Stop and return to the beginning",
         "ariaLabel": "Stop Music Braille playback"
       },
+      "stepPrev": {
+        "label": "Prev note",
+        "title": "Go to the previous note and announce its name",
+        "ariaLabel": "Previous note, announce music term"
+      },
+      "stepNext": {
+        "label": "Next note",
+        "title": "Go to the next note and announce its name",
+        "ariaLabel": "Next note, announce music term"
+      },
       "musicStart": {
         "label": "Music start",
         "title": "Play from the first detected music notes (skips literary title text)",
@@ -234,8 +244,10 @@
         "flats": "{{count}} flat",
         "flats_plural": "{{count}} flats"
       },
+      "noteTerm": "{{term}} (cell {{index}})",
       "noteCell": "Cell {{index}}",
       "noteIdle": "Ready",
+      "stepOf": "Note {{current}} / {{total}}",
       "events": "{{count}} notes",
       "musicStartCell": "Music @ cell {{index}}",
       "errors": {
