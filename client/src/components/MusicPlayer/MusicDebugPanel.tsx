@@ -9,31 +9,29 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   midiToLabel,
   musicDebugLog,
-  type MusicDebugSnapshot,
 } from '../../services/audio/musicDebugLog';
 import './MusicDebugPanel.css';
 
-function downloadJson(snapshot: MusicDebugSnapshot): void {
-  const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+function downloadJson(json: string, capturedAt: string): void {
+  const blob = new Blob([json], {
     type: 'application/json',
   });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `music-debug-${snapshot.capturedAt.replace(/[:.]/g, '-')}.json`;
+  a.download = `music-debug-${capturedAt.replace(/[:.]/g, '-')}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-async function copyJson(snapshot: MusicDebugSnapshot): Promise<boolean> {
-  const text = JSON.stringify(snapshot, null, 2);
+async function copyJson(json: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(json);
     return true;
   } catch {
     try {
       const ta = document.createElement('textarea');
-      ta.value = text;
+      ta.value = json;
       ta.style.position = 'fixed';
       ta.style.left = '-9999px';
       document.body.appendChild(ta);
@@ -73,14 +71,22 @@ export function MusicDebugPanel() {
   }, []);
 
   const handleCopy = useCallback(async () => {
-    const ok = await copyJson(musicDebugLog.getSnapshot());
-    setCopyMsg(ok ? 'Copied snapshot to clipboard' : 'Copy failed — try Download');
+    const ok = await copyJson(musicDebugLog.getExportJson());
+    setCopyMsg(ok ? 'Copied compact snapshot' : 'Copy failed — try Download');
     window.setTimeout(() => setCopyMsg(null), 2500);
   }, []);
 
   const handleDownload = useCallback(() => {
-    downloadJson(musicDebugLog.getSnapshot());
-    setCopyMsg('Downloaded JSON snapshot');
+    const json = musicDebugLog.getExportJson();
+    let capturedAt = new Date().toISOString();
+    try {
+      const parsed = JSON.parse(json) as { at?: string };
+      if (parsed.at) capturedAt = parsed.at;
+    } catch {
+      /* keep fallback */
+    }
+    downloadJson(json, capturedAt);
+    setCopyMsg('Downloaded compact JSON');
     window.setTimeout(() => setCopyMsg(null), 2500);
   }, []);
 
@@ -250,7 +256,7 @@ export function MusicDebugPanel() {
           </div>
           {copyMsg ? <p className="music-debug__toast">{copyMsg}</p> : null}
           <p className="music-debug__footer">
-            Play the score that misbehaves, then Copy JSON and paste it into the chat.
+            Play the misbehaving passage, then Copy JSON (compact v2) into the chat.
           </p>
         </div>
       )}
