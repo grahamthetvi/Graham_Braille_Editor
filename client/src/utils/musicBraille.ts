@@ -184,6 +184,21 @@ function midiForPitch(
   return octaveMidiC + PITCH_SEMITONES[pitch] + accidentalDelta;
 }
 
+/**
+ * Braille music octave rule: without a new octave mark, place the pitch in the
+ * octave that makes it nearest the previous note (interval of a fourth or less
+ * when the score is correctly marked).
+ */
+export function nearestMidiForPitch(
+  pitch: PitchName,
+  accidentalDelta: number,
+  previousMidi: number,
+): number {
+  const pc =
+    (((PITCH_SEMITONES[pitch] + accidentalDelta) % 12) + 12) % 12;
+  return pc + 12 * Math.round((previousMidi - pc) / 12);
+}
+
 /** Diatonic interval downward from an anchor pitch (treble / right-hand default). */
 export function midiDownInterval(
   anchorMidi: number,
@@ -586,6 +601,10 @@ export function parseBrailleMusic(
   const absIndex = (i: number) => indexMap?.[i] ?? i;
 
   let currentOctaveMidiC = 60;
+  /** Set by an octave mark; consumed by the next note (explicit octave). */
+  let pendingOctaveMidiC: number | null = null;
+  /** Last written note MIDI — drives the nearest-octave rule. */
+  let previousNoteMidi: number | null = null;
   let measure = 1;
   let measureBeatOffset = 0;
   let scoreBeatBase = 0;
@@ -613,10 +632,9 @@ export function parseBrailleMusic(
     previousMeasureNotes = notes;
     previousMeasureLocalBase = scoreBeatBase;
     measurePending.length = 0;
-    // Sao Mai piano chunks often underfill because alignment spaces create
-    // false barlines, and pickups are written as short measures. Pad only for
-    // ordinary (non-piano) scores where a space means a full barline.
-    if (fromPiano && measureBeatsUsed > 1e-9 && measureBeatsUsed < capacity - 1e-9) {
+    // Underfull measures are pickups, false barlines (piano alignment spaces),
+    // or short bars — never pad them out to capacity (that inserts silence).
+    if (measureBeatsUsed > 1e-9 && measureBeatsUsed < capacity - 1e-9) {
       scoreBeatBase += measureBeatsUsed;
     } else {
       scoreBeatBase += Math.max(capacity, measureBeatsUsed);
@@ -683,9 +701,14 @@ export function parseBrailleMusic(
         midiPitches: [...e.midiPitches],
       }));
       allEvents.push(...duplicated);
+      const repeatedBeats = previousMeasureNotes.reduce(
+        (max, e) =>
+          Math.max(max, e.timeOffsetBeats + e.durationBeats - previousMeasureLocalBase),
+        0,
+      );
       previousMeasureNotes = duplicated;
       previousMeasureLocalBase = scoreBeatBase;
-      scoreBeatBase += capacity;
+      scoreBeatBase += repeatedBeats > 1e-9 ? repeatedBeats : capacity;
       measure += 1;
       atMeasureStart = true;
       pendingAccidental = null;
@@ -731,11 +754,12 @@ export function parseBrailleMusic(
       continue;
     }
 
-    // In-accord
+    // In-accord — new voice; do not inherit the other hand's octave cursor.
     if (ch === '<' && text[i + 1] === '>') {
       measureBeatOffset = 0;
       pendingAccidental = null;
       pendingNewVoice = true;
+      previousNoteMidi = null;
       i += 2;
       atMeasureStart = false;
       continue;
@@ -751,7 +775,8 @@ export function parseBrailleMusic(
 
     // Octave marks (`.` is octave 5; tie `.c` is handled after notes)
     if (ch in OCTAVE_MIDI_C) {
-      currentOctaveMidiC = OCTAVE_MIDI_C[ch];
+      pendingOctaveMidiC = OCTAVE_MIDI_C[ch];
+      currentOctaveMidiC = pendingOctaveMidiC;
       i += 1;
       atMeasureStart = false;
       continue;
@@ -828,7 +853,19 @@ export function parseBrailleMusic(
       }
 
       const accidentalDelta = resolveAccidental(shape.pitch);
-      const anchorMidi = midiForPitch(shape.pitch, currentOctaveMidiC, accidentalDelta);
+      let anchorMidi: number;
+      if (pendingOctaveMidiC != null) {
+        anchorMidi = midiForPitch(shape.pitch, pendingOctaveMidiC, accidentalDelta);
+        pendingOctaveMidiC = null;
+      } else if (previousNoteMidi != null) {
+        anchorMidi = nearestMidiForPitch(
+          shape.pitch,
+          accidentalDelta,
+          previousNoteMidi,
+        );
+      } else {
+        anchorMidi = midiForPitch(shape.pitch, currentOctaveMidiC, accidentalDelta);
+      }
       const pitches: number[] = [anchorMidi];
 
       while (i < text.length && normalizeBrfChar(text[i]) in INTERVAL_SIZE) {
@@ -848,8 +885,8 @@ export function parseBrailleMusic(
         i += 1;
       }
 
-      const writtenOctave = Math.floor(anchorMidi / 12) - 1;
-      currentOctaveMidiC = (writtenOctave + 1) * 12;
+      previousNoteMidi = anchorMidi;
+      currentOctaveMidiC = Math.floor(anchorMidi / 12) * 12;
 
       const inTriplet = tripletRemaining > 0;
       let longDur =
