@@ -6,8 +6,9 @@
  * - localStorage `graham.musicDebug=1`
  * - Ctrl+Shift+Alt+M (toggles)
  *
- * Captures parse summaries, schedule events, clock samples, and anomalies so a
- * session can be exported as JSON for remote debugging.
+ * Captures parse summaries, schedule events, clock samples, and anomalies.
+ * Copy/Download exports compact v2 JSON (columnar sched/clock, no pretty-print)
+ * so agent pastes stay small.
  */
 
 import type { MusicNoteEvent, MusicScoreAST, PlaybackState } from '../../types/musicBraille';
@@ -110,10 +111,54 @@ export interface MusicDebugSnapshot {
   anomalies: MusicDebugAnomaly[];
 }
 
-const MAX_SCHEDULE = 400;
-const MAX_CLOCK = 240;
-const MAX_TRANSPORT = 80;
-const MAX_ANOMALIES = 100;
+/**
+ * Agent-oriented export: columnar schedule/clock, short keys, no pretty-print
+ * padding. Keeps parse diagnosis (score + firstNotes + anomalies) while dropping
+ * absolute audio/wall clocks that balloon chat pastes.
+ */
+export interface MusicDebugCompactSnapshot {
+  v: 2;
+  at: string;
+  score: MusicDebugScoreSummary | null;
+  pb: {
+    playing: boolean;
+    paused: boolean;
+    beat: number;
+    ch: number | null;
+    ev: number | null;
+    bpm: number;
+    err: string | null;
+  } | null;
+  /** [kind, detail?, beat?, bpm?] */
+  transport: Array<[string, string | null, number | null, number | null]>;
+  /** Columns for `sched` rows. */
+  schedCols: readonly ['t', 'beat', 'dur', 'midi', 'ch', 'm'];
+  /**
+   * Scheduled sounding notes: delayFromOriginSec, beat, durationSec, midi[],
+   * charIndex, measure. Head+tail when the ring was truncated for export.
+   */
+  sched: Array<[number, number, number, number[], number, number]>;
+  schedN: number;
+  /** Columns for `clockHead` / `clockTail` rows. */
+  clockCols: readonly ['beat', 'ch', 'next', 'ahead'];
+  clockN: number;
+  clockHead: Array<[number, number | null, number, number]>;
+  clockTail: Array<[number, number | null, number, number]>;
+  /** [kind, detail] */
+  anomalies: Array<[string, string]>;
+}
+
+const MAX_SCHEDULE = 120;
+const MAX_CLOCK = 60;
+const MAX_TRANSPORT = 40;
+const MAX_ANOMALIES = 40;
+
+/** How many schedule rows to keep at each end of the export. */
+const EXPORT_SCHED_HEAD = 48;
+const EXPORT_SCHED_TAIL = 24;
+/** How many clock samples to keep at each end of the export. */
+const EXPORT_CLOCK_HEAD = 6;
+const EXPORT_CLOCK_TAIL = 6;
 
 type Listener = () => void;
 
@@ -141,6 +186,12 @@ function round(n: number, digits = 4): number {
 
 function histKey(beats: number): string {
   return round(beats, 4).toFixed(4);
+}
+
+/** Keep the first `head` and last `tail` rows when `rows` is longer. */
+function headAndTail<T>(rows: T[], head: number, tail: number): T[] {
+  if (rows.length <= head + tail) return rows;
+  return [...rows.slice(0, head), ...rows.slice(rows.length - tail)];
 }
 
 export function summarizeScore(
@@ -191,16 +242,78 @@ export function summarizeScore(
     pianoSystems: score.parseInfo?.pianoSystems ?? 0,
     capacityBeats: score.parseInfo?.capacityBeats ?? 4,
     literarySkipCharIndex: score.parseInfo?.literarySkipCharIndex ?? 0,
-    firstNotes: score.events.slice(0, 24).map((e) => ({
+    firstNotes: score.events.slice(0, 16).map((e) => ({
       t: round(e.timeOffsetBeats, 3),
       d: round(e.durationBeats, 3),
       midi: [...e.midiPitches],
-      type: e.type,
+      type: e.type === 'rest' ? 'r' : e.type === 'chord' ? 'c' : 'n',
       ch: e.charIndex,
       m: e.measure,
     })),
     highlightBackjumpCount,
   };
+}
+
+export function toCompactSnapshot(full: MusicDebugSnapshot): MusicDebugCompactSnapshot {
+  const schedRows = full.schedule.map(
+    (s): [number, number, number, number[], number, number] => [
+      round(s.delayFromOriginSec, 3),
+      round(s.beat, 3),
+      round(s.durationSec, 3),
+      s.midiPitches,
+      s.charIndex,
+      s.measure,
+    ],
+  );
+  const clockRows = full.clock.map(
+    (c): [number, number | null, number, number] => [
+      round(c.beat, 3),
+      c.activeCharIndex,
+      c.nextEventIndex,
+      c.scheduledAhead,
+    ],
+  );
+
+  return {
+    v: 2,
+    at: full.capturedAt,
+    score: full.score,
+    pb: full.playback
+      ? {
+          playing: full.playback.isPlaying,
+          paused: full.playback.isPaused,
+          beat: round(full.playback.currentBeat, 3),
+          ch: full.playback.activeCharIndex,
+          ev: full.playback.activeEventIndex,
+          bpm: full.playback.bpm,
+          err: full.playback.error,
+        }
+      : null,
+    transport: full.transport.map((t) => [
+      t.kind,
+      t.detail ?? null,
+      t.beat ?? null,
+      t.bpm ?? null,
+    ]),
+    schedCols: ['t', 'beat', 'dur', 'midi', 'ch', 'm'],
+    sched: headAndTail(schedRows, EXPORT_SCHED_HEAD, EXPORT_SCHED_TAIL),
+    schedN: schedRows.length,
+    clockCols: ['beat', 'ch', 'next', 'ahead'],
+    clockN: clockRows.length,
+    clockHead: clockRows.slice(0, EXPORT_CLOCK_HEAD),
+    clockTail:
+      clockRows.length > EXPORT_CLOCK_HEAD + EXPORT_CLOCK_TAIL
+        ? clockRows.slice(clockRows.length - EXPORT_CLOCK_TAIL)
+        : clockRows.length > EXPORT_CLOCK_HEAD
+          ? clockRows.slice(EXPORT_CLOCK_HEAD)
+          : [],
+    anomalies: full.anomalies.map((a) => [a.kind, a.detail]),
+  };
+}
+
+/** Compact single-line JSON for clipboard / download (agent-friendly size). */
+export function formatCompactSnapshotJson(full: MusicDebugSnapshot): string {
+  return JSON.stringify(toCompactSnapshot(full));
 }
 
 class MusicDebugLog {
@@ -355,8 +468,8 @@ class MusicDebugLog {
   logClock(sample: Omit<MusicDebugClockSample, 'wallMs'>): void {
     if (!this.enabled) return;
     const wallMs = this.wallMs();
-    // Throttle clock samples (~8 Hz) to keep the export readable.
-    if (wallMs - this.lastClockWallMs < 120 && this.clock.length > 0) return;
+    // Throttle clock samples (~4 Hz) — export only keeps a short head/tail.
+    if (wallMs - this.lastClockWallMs < 250 && this.clock.length > 0) return;
     this.lastClockWallMs = wallMs;
     this.clock.push({
       wallMs: round(wallMs, 1),
@@ -392,6 +505,11 @@ class MusicDebugLog {
       clock: [...this.clock],
       anomalies: [...this.anomalies],
     };
+  }
+
+  /** Compact JSON string for Copy / Download (much smaller than pretty v1). */
+  getExportJson(): string {
+    return formatCompactSnapshotJson(this.getSnapshot());
   }
 
   /** Live counts for the panel without cloning large arrays. */
@@ -432,6 +550,7 @@ declare global {
       disable: () => void;
       toggle: () => boolean;
       snapshot: () => MusicDebugSnapshot;
+      exportJson: () => string;
       clear: () => void;
     };
   }
@@ -443,6 +562,7 @@ if (typeof window !== 'undefined') {
     disable: () => musicDebugLog.setEnabled(false),
     toggle: () => musicDebugLog.toggle(),
     snapshot: () => musicDebugLog.getSnapshot(),
+    exportJson: () => musicDebugLog.getExportJson(),
     clear: () => musicDebugLog.clearSession(),
   };
 }
