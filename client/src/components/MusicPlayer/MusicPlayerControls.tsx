@@ -262,6 +262,16 @@ export function MusicPlayerControls({
         <span>
           {t('app.musicPlayer.musicStartCell', { index: musicStartCharIndex + 1 })}
         </span>
+        <span className="music-player__status-sep" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          {(score.parseInfo?.pianoSystems ?? 0) > 0
+            ? t('app.musicPlayer.pianoHands.yes', {
+                count: score.parseInfo?.pianoSystems ?? 0,
+              })
+            : t('app.musicPlayer.pianoHands.no')}
+        </span>
       </div>
 
       {error ? (
