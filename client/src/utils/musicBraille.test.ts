@@ -643,3 +643,50 @@ describe('full Für Elise golden regression', () => {
     expect(maxGap).toBeLessThanOrEqual(1.0 + 1e-6);
   });
 });
+
+describe('slash-L bar-over-bar Für Elise (>/l / >#l)', () => {
+  const fixturePath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    'fixtures/fur-elise-slash-l.brf',
+  );
+
+  it('detects piano systems and plays the opening with LH under A4', () => {
+    const brf = readFileSync(fixturePath, 'utf8');
+    expect(isLikelyMusicBrailleBrf(brf)).toBe(true);
+
+    const score = parseBrailleMusic(brf);
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 8 });
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(0);
+    expect(score.parseInfo?.capacityBeats).toBeCloseTo(1.5, 5);
+
+    const notes = score.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort(
+        (a, b) =>
+          a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex,
+      );
+
+    // E5 D#5 E5 D#5 E5 B4 D5 C5 …
+    expect(notes[0].midiPitches[0]).toBe(76);
+    expect(notes[1].midiPitches[0]).toBe(75);
+    expect(notes[2].midiPitches[0]).toBe(76);
+    expect(notes[3].midiPitches[0]).toBe(75);
+    expect(notes[4].midiPitches[0]).toBe(76);
+    expect(notes[5].midiPitches[0]).toBe(71);
+    expect(notes[6].midiPitches[0]).toBe(74);
+    expect(notes[7].midiPitches[0]).toBe(72);
+
+    // Contiguous pickup — no silence pad to beat 1.5
+    expect(notes[0].timeOffsetBeats).toBeCloseTo(0, 5);
+    expect(notes[1].timeOffsetBeats).toBeCloseTo(0.25, 5);
+    expect(notes[2].timeOffsetBeats).toBeCloseTo(0.5, 5);
+
+    // Next phrase: A4 with LH A2 sounding together (two-hand), not another E5 walk
+    const atTwo = notes.filter((e) => Math.abs(e.timeOffsetBeats - 2) < 1e-6);
+    expect(atTwo.some((e) => e.midiPitches[0] === 69)).toBe(true); // A4
+    expect(atTwo.some((e) => e.midiPitches[0] < 60)).toBe(true); // LH below middle C
+
+    // Far shorter than sequential single-staff (~330 beats for full typed dump)
+    expect(score.totalBeats).toBeLessThan(80);
+  });
+});

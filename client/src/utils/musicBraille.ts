@@ -510,9 +510,9 @@ function tryParseHashPrefix(
  * Accepts North American ASCII BRF and/or Unicode braille cells (U+2800–U+28FF);
  * Unicode is normalized to ASCII before lexing so pasted Unicode scores play.
  *
- * Sao Mai bar-over-bar piano scores (RH `.>` / LH `_>` systems) are detected and
- * linearized with in-accord so both hands sound together instead of as sequential
- * garbled measures.
+ * Sao Mai / slash-L bar-over-bar piano scores (RH `.>`|`>/l`, LH `_>`|`>#l`)
+ * are detected and linearized with in-accord so both hands sound together instead
+ * of as sequential garbled measures.
  */
 export function parseBrailleMusic(
   brf: string,
@@ -1128,7 +1128,14 @@ export function isLikelyMusicBrailleBrf(brf: string): boolean {
     .replace(/\r/g, '\n');
   if (!text.trim()) return false;
 
-  if (text.includes('.>') || text.includes('_>')) return true;
+  if (
+    text.includes('.>') ||
+    text.includes('_>') ||
+    text.toLowerCase().includes('>/l') ||
+    text.toLowerCase().includes('>#l')
+  ) {
+    return true;
+  }
 
   if (segmentPianoSystems(text).length > 0) return true;
 

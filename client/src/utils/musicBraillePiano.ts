@@ -1,14 +1,21 @@
 /**
- * Sao Mai / BANA bar-over-bar piano helpers.
+ * Sao Mai / BANA / slash-L bar-over-bar piano helpers.
  *
- * Real piano BRFs interleave right-hand (`.>`) and left-hand (`_>`) systems,
- * literary titles, word indicators, and dynamics. The note lexer only understands
- * note cells — this module strips markup and zips RH/LH measure chunks into
- * in-accord (`<>`) streams while preserving original character indices.
+ * Real piano BRFs interleave right-hand and left-hand systems, literary titles,
+ * word indicators, and dynamics. Supported hand signs:
+ * - Sao Mai / BANA: RH `.>` · LH `_>`
+ * - Slash-L dialect: RH `>/l` · LH `>#l`
+ *
+ * The note lexer only understands note cells — this module strips markup and
+ * zips RH/LH measure chunks into in-accord (`<>`) streams while preserving
+ * original character indices.
  */
 
 const HAND_RH = '.>';
 const HAND_LH = '_>';
+/** Slash-L dialect (ASCII Music Braille exports). */
+const HAND_RH_SLASH = '>/l';
+const HAND_LH_SLASH = '>#l';
 
 /** Upper-number letters a–j used for measure numbers (j=0). */
 const MEASURE_NUM = new Set('abcdefghijABCDEFGHIJ'.split(''));
@@ -17,6 +24,8 @@ const NOTE_REST_CELLS = 'defghij?:$]\\[|wnopqrstyz&=(!)xuvm';
 const NOTE_REST = new Set(NOTE_REST_CELLS.split(''));
 /** Interval cells that are valid only immediately after a note/rest. */
 const INTERVAL_AFTER_NOTE = new Set('/+#903-'.split(''));
+/** Octave marks that often open a note run after word indicators. */
+const OCTAVE_CHARS = '@^_".;,';
 
 export interface PianoChunk {
   /** Inclusive start index in the ASCII-normalized source. */
@@ -30,6 +39,11 @@ export interface PianoChunk {
 export interface PianoSystem {
   rh: PianoChunk[];
   lh: PianoChunk[];
+}
+
+export interface PianoHandSegment {
+  hand: 'rh' | 'lh';
+  chunks: PianoChunk[];
 }
 
 function isNoteLikeChar(ch: string): boolean {
@@ -50,6 +64,56 @@ function isMusicUtilityChar(ch: string): boolean {
     c === '#' ||
     c === '<' ||
     c === '>'
+  );
+}
+
+function looksLikeMusicCellAt(line: string, i: number): boolean {
+  if (i >= line.length) return false;
+  const ch = line[i];
+  const c = ch >= 'A' && ch <= 'Z' ? ch.toLowerCase() : ch;
+  if (NOTE_REST.has(c)) return true;
+  if (OCTAVE_CHARS.includes(ch) || ch === '.') return true;
+  if ('<%*'.includes(ch)) return true;
+  return false;
+}
+
+/**
+ * Match RH/LH hand signs at `i`. Returns the hand and index after the sign.
+ * Supports Sao Mai `.>` / `_>` and slash-L `>/l` / `>#l` (case-insensitive L).
+ */
+export function matchHandSignAt(
+  line: string,
+  i: number,
+): { hand: 'rh' | 'lh'; next: number } | null {
+  if (i >= line.length) return null;
+
+  const three = line.slice(i, i + 3).toLowerCase();
+  if (three === HAND_RH_SLASH) return { hand: 'rh', next: i + 3 };
+  if (three === HAND_LH_SLASH) return { hand: 'lh', next: i + 3 };
+
+  if (line.slice(i, i + 2) === HAND_RH) return { hand: 'rh', next: i + 2 };
+  if (line.slice(i, i + 2) === HAND_LH) return { hand: 'lh', next: i + 2 };
+
+  // Tolerate blank cells between Sao Mai prefix and `>`.
+  if (line[i] === '.' || line[i] === '_') {
+    const prefix = line[i];
+    let j = i + 1;
+    while (j < line.length && (line[j] === ' ' || line[j] === '\t')) j += 1;
+    if (line[j] === '>') {
+      return { hand: prefix === '.' ? 'rh' : 'lh', next: j + 1 };
+    }
+  }
+  return null;
+}
+
+/** True when the ASCII text uses slash-L or Sao Mai piano hand signs. */
+export function hasPianoHandSigns(asciiText: string): boolean {
+  const t = asciiText.toLowerCase();
+  return (
+    t.includes(HAND_RH_SLASH) ||
+    t.includes(HAND_LH_SLASH) ||
+    asciiText.includes(HAND_RH) ||
+    asciiText.includes(HAND_LH)
   );
 }
 
@@ -208,14 +272,25 @@ function sanitizeChunk(chunk: PianoChunk): PianoChunk | null {
 /**
  * Strip hand signs, word/dynamic indicators, and bare measure numbers from a
  * piano system line, returning space-separated note chunks with source maps.
+ *
+ * Mid-line hand switches (`>#l...>/l...`) yield multiple `segments`.
  */
 export function extractHandChunks(line: string, lineStart: number): {
   hand: 'rh' | 'lh' | null;
   chunks: PianoChunk[];
+  segments: PianoHandSegment[];
 } {
+  const segments: PianoHandSegment[] = [];
   let hand: 'rh' | 'lh' | null = null;
-  const chunks: PianoChunk[] = [];
+  let segmentChunks: PianoChunk[] = [];
   let i = 0;
+
+  const pushSegment = () => {
+    if (hand && segmentChunks.length > 0) {
+      segments.push({ hand, chunks: segmentChunks });
+      segmentChunks = [];
+    }
+  };
 
   // Leading spaces / measure number (optional letter or letter-letter like "AA")
   while (i < line.length && (line[i] === ' ' || line[i] === '\t')) i += 1;
@@ -224,7 +299,13 @@ export function extractHandChunks(line: string, lineStart: number): {
     while (i < line.length && MEASURE_NUM.has(line[i])) i += 1;
     // Only treat as measure number when followed by space/hand — not a note run.
     const next = line[i] ?? '';
-    if (next !== ' ' && next !== '\t' && next !== '.' && next !== '_') {
+    if (
+      next !== ' ' &&
+      next !== '\t' &&
+      next !== '.' &&
+      next !== '_' &&
+      next !== '>'
+    ) {
       // Rewind — this letter is music (e.g. note cell), not a measure number.
       i = numStart;
     } else {
@@ -232,22 +313,10 @@ export function extractHandChunks(line: string, lineStart: number): {
     }
   }
 
-  if (line.slice(i, i + 2) === HAND_RH) {
-    hand = 'rh';
-    i += 2;
-  } else if (line.slice(i, i + 2) === HAND_LH) {
-    hand = 'lh';
-    i += 2;
-  } else if (line[i] === '.' || line[i] === '_') {
-    // Tolerate blank cells between the octave/dot prefix and `>` (some exports
-    // insert alignment spaces inside the hand sign).
-    const prefix = line[i];
-    let j = i + 1;
-    while (j < line.length && (line[j] === ' ' || line[j] === '\t')) j += 1;
-    if (line[j] === '>') {
-      hand = prefix === '.' ? 'rh' : 'lh';
-      i = j + 1;
-    }
+  const leadingHand = matchHandSignAt(line, i);
+  if (leadingHand) {
+    hand = leadingHand.hand;
+    i = leadingHand.next;
   }
 
   // Optional dot-3 music hyphen / blank cells after hand sign
@@ -273,35 +342,45 @@ export function extractHandChunks(line: string, lineStart: number): {
       indexMap: chunkMap.slice(lead),
     };
     const cleaned = sanitizeChunk(raw);
-    if (cleaned) chunks.push(cleaned);
+    if (cleaned) segmentChunks.push(cleaned);
     chunkText = '';
     chunkMap = [];
     chunkStart = -1;
   };
 
   while (i < line.length) {
-    // Word / dynamic indicator: >word> or glued >PP / >P / >FF before music
+    // Hand signs (slash-L or Sao Mai) — before word/dynamic `>` stripping.
+    const nestedHand = matchHandSignAt(line, i);
+    if (nestedHand) {
+      flushChunk();
+      if (hand && hand !== nestedHand.hand) {
+        pushSegment();
+      }
+      hand = nestedHand.hand;
+      i = nestedHand.next;
+      while (i < line.length && line[i] === "'") i += 1;
+      continue;
+    }
+
+    // Word / dynamic indicator: >word> / >word' or glued >PP / >P / >FF
     if (line[i] === '>') {
       i += 1;
       const rest = line.slice(i);
-      const dyn = rest.match(/^([PpFfSs]{1,3})(?=[.@^_"';,\s]|$)/);
+      const dyn = rest.match(/^([PpFfSs]{1,3})(?=[.@^_"';,\s>]|$)/);
       if (dyn) {
         i += dyn[1].length;
         continue;
       }
-      // Literary word phrase until closing '>'
-      while (i < line.length && line[i] !== '>') i += 1;
-      if (i < line.length && line[i] === '>') i += 1;
-      continue;
-    }
-
-    // Nested hand signs mid-line
-    if (line.slice(i, i + 2) === HAND_RH || line.slice(i, i + 2) === HAND_LH) {
-      if (!hand) {
-        hand = line.slice(i, i + 2) === HAND_RH ? 'rh' : 'lh';
+      // Literary word phrase until closing '>', or "'" just before music cells
+      // (slash-L dialect: `>poco moto'.&%Z`).
+      while (i < line.length && line[i] !== '>') {
+        if (line[i] === "'" && looksLikeMusicCellAt(line, i + 1)) {
+          i += 1;
+          break;
+        }
+        i += 1;
       }
-      i += 2;
-      while (i < line.length && line[i] === "'") i += 1;
+      if (i < line.length && line[i] === '>') i += 1;
       continue;
     }
 
@@ -318,7 +397,6 @@ export function extractHandChunks(line: string, lineStart: number): {
 
     // Skip isolated literary commas / unrelated cells that aren't music utilities
     if (!isMusicUtilityChar(ch) && ch !== ' ') {
-      // Unknown markup — skip single cell
       i += 1;
       continue;
     }
@@ -331,13 +409,53 @@ export function extractHandChunks(line: string, lineStart: number): {
     i += 1;
   }
   flushChunk();
+  pushSegment();
 
-  return { hand, chunks };
+  // Unmarked continuation lines still produce note chunks (hand assigned later).
+  if (segments.length === 0 && segmentChunks.length > 0) {
+    // hand stayed null — expose chunks for implied-role pairing.
+    return { hand: null, chunks: segmentChunks, segments: [] };
+  }
+
+  const allChunks = segments.flatMap((s) => s.chunks);
+  return {
+    hand: segments[0]?.hand ?? hand,
+    chunks: allChunks,
+    segments,
+  };
+}
+
+/**
+ * Apply one hand's chunks into the open system (RH starts; LH completes).
+ */
+function applyHandToSystem(
+  systems: PianoSystem[],
+  current: PianoSystem | null,
+  hand: 'rh' | 'lh',
+  chunks: PianoChunk[],
+): PianoSystem | null {
+  if (chunks.length === 0) return current;
+
+  if (hand === 'rh') {
+    if (current && (current.rh.length || current.lh.length)) {
+      systems.push(current);
+    }
+    return { rh: chunks, lh: [] };
+  }
+
+  // lh
+  if (!current) current = { rh: [], lh: [] };
+  current.lh.push(...chunks);
+  systems.push(current);
+  return null;
 }
 
 /**
  * Group ASCII music lines into RH/LH systems for bar-over-bar piano scores.
  * Non-piano scores (no hand signs) return an empty list — caller keeps legacy parse.
+ *
+ * Continuation lines that omit hand signs inherit the next expected role
+ * (after RH → LH, after completed LH → RH).
  */
 export function segmentPianoSystems(asciiText: string): PianoSystem[] {
   const lines: Array<{ start: number; content: string }> = [];
@@ -352,6 +470,8 @@ export function segmentPianoSystems(asciiText: string): PianoSystem[] {
   const systems: PianoSystem[] = [];
   let current: PianoSystem | null = null;
   let sawHand = false;
+  /** Next role for an unmarked music line once a piano system has started. */
+  let expectHand: 'rh' | 'lh' | null = null;
 
   for (const line of lines) {
     const trimmed = line.content.trim();
@@ -360,28 +480,36 @@ export function segmentPianoSystems(asciiText: string): PianoSystem[] {
         systems.push(current);
         current = null;
       }
+      expectHand = null;
       continue;
     }
 
-    const { hand, chunks } = extractHandChunks(line.content, line.start);
+    const { hand, chunks, segments } = extractHandChunks(line.content, line.start);
+
+    if (segments.length > 0) {
+      sawHand = true;
+      for (const seg of segments) {
+        current = applyHandToSystem(systems, current, seg.hand, seg.chunks);
+        expectHand = seg.hand === 'rh' ? 'lh' : 'rh';
+      }
+      continue;
+    }
+
+    if (!hand && chunks.length > 0 && expectHand) {
+      // Continuation line without an explicit hand sign.
+      current = applyHandToSystem(systems, current, expectHand, chunks);
+      expectHand = expectHand === 'rh' ? 'lh' : 'rh';
+      continue;
+    }
+
     if (!hand) {
       // Time/key-only line or literary — ignore for segmentation
       continue;
     }
-    sawHand = true;
 
-    if (hand === 'rh') {
-      if (current && (current.rh.length || current.lh.length)) {
-        systems.push(current);
-      }
-      current = { rh: chunks, lh: [] };
-    } else {
-      // lh
-      if (!current) current = { rh: [], lh: [] };
-      current.lh.push(...chunks);
-      systems.push(current);
-      current = null;
-    }
+    sawHand = true;
+    current = applyHandToSystem(systems, current, hand, chunks);
+    expectHand = hand === 'rh' ? 'lh' : 'rh';
   }
   if (current && (current.rh.length || current.lh.length)) {
     systems.push(current);

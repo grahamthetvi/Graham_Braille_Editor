@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   alignHandChunks,
   extractHandChunks,
+  matchHandSignAt,
   sanitizePianoChunkText,
+  segmentPianoSystems,
   type PianoChunk,
 } from './musicBraillePiano';
 
@@ -70,5 +72,54 @@ describe('extractHandChunks landmine stripping', () => {
     expect(joined).not.toMatch(/l/);
     // Bare measure-start 0 fingering should not survive as its own token.
     expect(chunks.some((c) => c.text === '0')).toBe(false);
+  });
+});
+
+describe('slash-L hand signs (>/l RH, >#l LH)', () => {
+  it('matches dialect and Sao Mai hand signs', () => {
+    expect(matchHandSignAt('>/l#c8', 0)).toEqual({ hand: 'rh', next: 3 });
+    expect(matchHandSignAt('>#l#c8', 0)).toEqual({ hand: 'lh', next: 3 });
+    expect(matchHandSignAt('.>"?', 0)).toEqual({ hand: 'rh', next: 2 });
+    expect(matchHandSignAt('_>x', 0)).toEqual({ hand: 'lh', next: 2 });
+  });
+
+  it('extracts RH notes after >/l and word marks ending in apostrophe', () => {
+    const { hand, chunks } = extractHandChunks(
+      "a >/l#c8 >pp>poco moto'.&%Z &%Z&\")*ZY",
+      0,
+    );
+    expect(hand).toBe('rh');
+    expect(chunks.map((c) => c.text).join(' ')).toContain('.&%z');
+    expect(chunks.some((c) => c.text.includes('&'))).toBe(true);
+  });
+
+  it('extracts LH rests after >#l', () => {
+    const { hand, chunks } = extractHandChunks(
+      "  >#l#c8 >poco moto'x       m",
+      0,
+    );
+    expect(hand).toBe('lh');
+    expect(chunks.map((c) => c.text).join(' ')).toMatch(/x/);
+  });
+
+  it('segments bar-over-bar systems including unmarked continuation lines', () => {
+    const brf = `a >/l#c8 >pp>poco moto'.&%Z &%Z&")*ZY 
+  >#l#c8 >poco moto'x       m         
+b "Im"Y&! Jm&%()   Dm"&.&%Z &%Z&")*ZY 
+  ^!_&!mx ^&_&%(mx ^!_&!mx  m`;
+    const systems = segmentPianoSystems(brf);
+    expect(systems.length).toBeGreaterThanOrEqual(2);
+    expect(systems[0].rh.length).toBeGreaterThan(0);
+    expect(systems[0].lh.length).toBeGreaterThan(0);
+    // Measure b continues without repeating >/l / >#l
+    expect(systems[1].rh.length).toBeGreaterThan(0);
+    expect(systems[1].lh.length).toBeGreaterThan(0);
+  });
+
+  it('splits mid-line hand switches into segments', () => {
+    const { segments } = extractHandChunks('>#l^!_&!mm>/l"&c', 0);
+    expect(segments.length).toBe(2);
+    expect(segments[0].hand).toBe('lh');
+    expect(segments[1].hand).toBe('rh');
   });
 });
