@@ -144,7 +144,12 @@
         "ariaLabel": "Prompt kopieren, damit die KI Mathematik formatiert",
         "promptText": "Extrahiere reinen Text zum Zweck der Braille-Übersetzung. Bitte formatiere meinen Text so um, dass jeder mathematische Ausdruck, jede Gleichung und jede arithmetische Operation in LaTeX-Notation eingeschlossen wird: \\(...\\) für Inline-Mathematik und $$...$$ für abgesetzte Gleichungen. Lasse den gesamten nicht-mathematischen Text unverändert."
       },
-      "copied": "Kopiert!"
+      "copied": "Kopiert!",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {

@@ -144,7 +144,12 @@
         "ariaLabel": "نسخ الموجّه ليقوم الذكاء الاصطناعي بتنسيق الرياضيات",
         "promptText": "استخرج النص الخام لغرض ترجمته إلى برايل. يُرجى إعادة تنسيق النص بحيث يُحاط كل تعبير رياضي ومعادلة وعملية حسابية بترميز LaTeX: \\(...\\) للرياضيات المضمّنة في السطر و $$...$$ للمعادلات المعروضة. اترك بقية النص غير الرياضي كما هو دون تغيير."
       },
-      "copied": "تم النسخ!"
+      "copied": "تم النسخ!",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {

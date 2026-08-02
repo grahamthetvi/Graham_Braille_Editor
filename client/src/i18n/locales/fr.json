@@ -144,7 +144,12 @@
         "ariaLabel": "Copier l'invite pour que l'IA formate les mathématiques",
         "promptText": "Extrayez le texte brut à des fins de traduction en braille. Merci de reformater mon texte afin que chaque expression mathématique, équation et opération arithmétique soit encadrée par la notation LaTeX : \\(...\\) pour les mathématiques en ligne et $$...$$ pour les équations en mode affichage. Laissez tout le texte non mathématique inchangé."
       },
-      "copied": "Copié !"
+      "copied": "Copié !",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {

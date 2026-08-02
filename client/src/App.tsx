@@ -26,6 +26,7 @@ import { PerkinsViewer } from './components/PerkinsViewer';
 import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
+import { MusicBrailleAuditModal } from './components/MusicBrailleAuditModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
 import { MusicDebugPanel } from './components/MusicPlayer/MusicDebugPanel';
 import {
@@ -185,6 +186,7 @@ export default function App() {
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
   const [showMusicBrailleGuide, setShowMusicBrailleGuide] = useState(false);
+  const [showMusicBrailleAudit, setShowMusicBrailleAudit] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
@@ -1383,6 +1385,17 @@ Accuracy: _____________ %
                 </button>
 
                 <button
+                  className={`toolbar-btn${showMusicBrailleAudit ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowMusicBrailleAudit(true)}
+                  disabled={isPerkinsMode || !inputText.trim()}
+                  title={t('app.tools.auditBrf.title')}
+                  aria-label={t('app.tools.auditBrf.ariaLabel')}
+                  aria-expanded={showMusicBrailleAudit}
+                >
+                  {t('app.tools.auditBrf.label')}
+                </button>
+
+                <button
                   className="toolbar-btn"
                   onClick={() => setShowStlExportDialog(true)}
                   disabled={isPerkinsMode}
@@ -2010,6 +2023,25 @@ Accuracy: _____________ %
             setActiveTab('file');
           }}
           onClose={() => setShowMusicBrailleGuide(false)}
+        />
+      )}
+
+      {showMusicBrailleAudit && (
+        <MusicBrailleAuditModal
+          brfText={
+            isMusicBrailleMode
+              ? musicBrfSource || inputText
+              : inputText
+          }
+          onClose={() => setShowMusicBrailleAudit(false)}
+          onApplyFixes={(correctedBrf) => {
+            setInputText(correctedBrf);
+            setFileContent(correctedBrf);
+            setIsMusicBrailleMode(true);
+            setLiterarySourceMode('none');
+            setShowMusicBrailleAudit(false);
+            setActiveTab('file');
+          }}
         />
       )}
 
