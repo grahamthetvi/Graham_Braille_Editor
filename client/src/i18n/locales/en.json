@@ -132,6 +132,11 @@
         "title": "Treat the editor as Music Braille (ASCII BRF or Unicode braille cells). Import .brf without literary back-translation, preview cells, and play notes with Web Audio.",
         "ariaLabel": "Toggle Music Braille player mode"
       },
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      },
       "stl": {
         "label": "Door Sign (STL)",
         "title": "Export the paginated Braille preview as a 3D STL door sign (BANA midpoint dot spacing, millimeters) for 3D printing.",

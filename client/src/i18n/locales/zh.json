@@ -144,7 +144,12 @@
         "ariaLabel": "复制用于格式化数学内容的 AI 提示词",
         "promptText": "为盲文翻译目的提取原始文本。请重新格式化我的文本，使每个数学表达式、方程式和算术运算都用 LaTeX 表示法括起来：行内数学使用 \\(...\\)，展示公式使用 $$...$$。所有非数学的普通文字保持不变。"
       },
-      "copied": "已复制！"
+      "copied": "已复制！",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {

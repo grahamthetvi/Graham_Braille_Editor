@@ -144,7 +144,12 @@
         "ariaLabel": "ریاضی کو فارمیٹ کرنے کے لیے AI کا پرامپٹ کاپی کریں",
         "promptText": "بریل ترجمے کے مقصد کے لیے خام متن نکالیں۔ براہِ کرم میرے متن کو اس طرح دوبارہ فارمیٹ کریں کہ ہر ریاضیاتی اظہار، مساوات، اور حسابی عمل کو LaTeX نوٹیشن میں لپیٹا جائے: ان لائن ریاضی کے لیے \\(...\\) اور ڈسپلے مساوات کے لیے $$...$$۔ باقی تمام غیر ریاضیاتی متن جوں کا توں رہنے دیں۔"
       },
-      "copied": "کاپی ہو گیا!"
+      "copied": "کاپی ہو گیا!",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {
