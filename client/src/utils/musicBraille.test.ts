@@ -101,6 +101,33 @@ describe('parseBrailleMusic', () => {
     expect(score.events[1].midiPitches[0]).toBe(62);
   });
 
+  it('keeps RH nearest-octave across <> LH and the next measure', () => {
+    // Linearized piano pattern: RH ends on D#5, LH A2-E3-A3, then RH E-D#-E
+    // without octave marks. RH must resume from D#5 → E5, not from LH A3 → E3.
+    const brf = `a >/l#c8 .&%z
+  >#l^!_&!mx
+b >/l&%z&
+  >#lm`;
+    const score = parseBrailleMusic(brf);
+    expect(score.parseInfo?.pianoSystems).toBeGreaterThan(0);
+    const notes = score.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort(
+        (a, b) =>
+          a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex,
+      );
+    // Opening RH E5 (LH A2 may share beat 0)
+    expect(notes.some((e) => e.timeOffsetBeats === 0 && e.midiPitches[0] === 76)).toBe(
+      true,
+    );
+    expect(notes.some((e) => Math.abs(e.timeOffsetBeats - 0.25) < 1e-6 && e.midiPitches[0] === 75)).toBe(
+      true,
+    );
+    // Motif return after LH — E5 D#5 E5, not E3/D#3/E3
+    const returnNotes = notes.filter((e) => e.timeOffsetBeats >= 1.2);
+    expect(returnNotes.map((e) => e.midiPitches[0])).toEqual([76, 75, 76]);
+  });
+
   it('does not crush in-accord voices when parallel parts each fill the measure', () => {
     // Two half notes per voice (4 beats each). Summing both voices used to
     // exceed capacity and force 32nd-note values, so playback sounded like a
@@ -773,6 +800,16 @@ describe('slash-L bar-over-bar Für Elise (>/l / >#l)', () => {
     const atTwo = notes.filter((e) => Math.abs(e.timeOffsetBeats - 2) < 1e-6);
     expect(atTwo.some((e) => e.midiPitches[0] === 69)).toBe(true); // A4
     expect(atTwo.some((e) => e.midiPitches[0] < 60)).toBe(true); // LH below middle C
+
+    // Motif return after the first accompaniment phrase (not two octaves low).
+    const at575 = notes.filter((e) => Math.abs(e.timeOffsetBeats - 5.75) < 1e-6);
+    const at6 = notes.filter((e) => Math.abs(e.timeOffsetBeats - 6) < 1e-6);
+    const at625 = notes.filter((e) => Math.abs(e.timeOffsetBeats - 6.25) < 1e-6);
+    expect(at575.some((e) => e.midiPitches[0] === 76)).toBe(true); // E5
+    expect(at6.some((e) => e.midiPitches[0] === 75)).toBe(true); // D#5
+    expect(at625.some((e) => e.midiPitches[0] === 76)).toBe(true); // E5
+    expect(at575.some((e) => e.midiPitches[0] === 52)).toBe(false);
+    expect(at6.some((e) => e.midiPitches[0] === 51)).toBe(false);
 
     // With voltas expanded, still far shorter than sequential single-staff (~330).
     expect(score.totalBeats).toBeLessThan(120);
