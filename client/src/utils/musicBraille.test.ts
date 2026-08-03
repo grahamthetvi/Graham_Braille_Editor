@@ -7,6 +7,7 @@ import { normalizeImportedBrf } from './brailleFormat';
 import {
   beatForCharIndex,
   beatsCapacityFromTimeSig,
+  expandPrintRepeats,
   findMusicStartCharIndex,
   isLikelyMusicBrailleBrf,
   keySignatureDeltas,
@@ -15,6 +16,7 @@ import {
   nearestMidiForPitch,
   parseBrailleMusic,
   resolveWholeOrSixteenth,
+  type MeasureSpan,
 } from './musicBraille';
 import type { MusicNoteEvent } from '../types/musicBraille';
 describe('parseBrailleMusic', () => {
@@ -491,11 +493,97 @@ describe('literary front matter without piano hand signs', () => {
 
 describe('non-meter # markup', () => {
   it('does not treat #1 as a triplet prefix', () => {
-    // Without the fix, `#` is skipped and `1` starts a triplet (durations × 2/3).
+    // `#1` is a volta marker — must not start a triplet (durations × 2/3).
     const score = parseBrailleMusic('#1"?');
     expect(score.events).toHaveLength(1);
     expect(score.events[0].midiPitches).toEqual([60]);
     expect(score.events[0].durationBeats).toBeCloseTo(1, 5);
+  });
+});
+
+describe('print repeats and voltas', () => {
+  it('does not treat <7 / <2 as flat accidentals', () => {
+    // Begin-repeat then C4 — must stay C (60), not B (59) from a leftover `<`.
+    const begin = parseBrailleMusic('<7"?');
+    expect(begin.events[0].midiPitches).toEqual([60]);
+
+    // C4 then end-repeat — still C.
+    const end = parseBrailleMusic('"?<2');
+    expect(end.events[0].midiPitches).toEqual([60]);
+
+    // Bare flat still works.
+    const flat = parseBrailleMusic('<"?');
+    expect(flat.events[0].midiPitches).toEqual([59]);
+  });
+
+  it('expands first ending, jumps back, then takes the second ending', () => {
+    // A | #1 C <2 | #2 D  →  A C A D
+    const score = parseBrailleMusic('"! #1"?<2 #2":');
+    const notes = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(notes.map((e) => e.midiPitches[0])).toEqual([69, 60, 69, 62]);
+  });
+
+  it('expandPrintRepeats lays out beats contiguously across the jump', () => {
+    const spans: MeasureSpan[] = [
+      {
+        measure: 1,
+        beatsUsed: 1,
+        beginRepeat: false,
+        endRepeat: false,
+        volta: 0,
+        notes: [
+          {
+            id: 'a',
+            charIndex: 0,
+            measure: 1,
+            timeOffsetBeats: 0,
+            durationBeats: 1,
+            midiPitches: [69],
+            type: 'note',
+          },
+        ],
+      },
+      {
+        measure: 2,
+        beatsUsed: 1,
+        beginRepeat: false,
+        endRepeat: true,
+        volta: 1,
+        notes: [
+          {
+            id: 'b',
+            charIndex: 2,
+            measure: 2,
+            timeOffsetBeats: 1,
+            durationBeats: 1,
+            midiPitches: [60],
+            type: 'note',
+          },
+        ],
+      },
+      {
+        measure: 3,
+        beatsUsed: 1,
+        beginRepeat: false,
+        endRepeat: false,
+        volta: 2,
+        notes: [
+          {
+            id: 'c',
+            charIndex: 4,
+            measure: 3,
+            timeOffsetBeats: 2,
+            durationBeats: 1,
+            midiPitches: [62],
+            type: 'note',
+          },
+        ],
+      },
+    ];
+    const out = expandPrintRepeats(spans);
+    expect(out.map((e) => e.midiPitches[0])).toEqual([69, 60, 69, 62]);
+    expect(out[2].timeOffsetBeats).toBeCloseTo(2, 5);
+    expect(out[3].timeOffsetBeats).toBeCloseTo(3, 5);
   });
 });
 
@@ -686,7 +774,12 @@ describe('slash-L bar-over-bar Für Elise (>/l / >#l)', () => {
     expect(atTwo.some((e) => e.midiPitches[0] === 69)).toBe(true); // A4
     expect(atTwo.some((e) => e.midiPitches[0] < 60)).toBe(true); // LH below middle C
 
-    // Far shorter than sequential single-staff (~330 beats for full typed dump)
-    expect(score.totalBeats).toBeLessThan(80);
+    // With voltas expanded, still far shorter than sequential single-staff (~330).
+    expect(score.totalBeats).toBeLessThan(120);
+
+    // First-ending A (69) from the opening phrase should recur after the jump
+    // (common material before #1 appears twice).
+    const a4Hits = notes.filter((e) => e.midiPitches[0] === 69);
+    expect(a4Hits.length).toBeGreaterThanOrEqual(2);
   });
 });

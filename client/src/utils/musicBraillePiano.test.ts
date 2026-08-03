@@ -29,8 +29,14 @@ describe('sanitizePianoChunkText', () => {
     expect(sanitizePianoChunkText('*c"?', [0, 1, 2, 3]).text).toBe('"?');
   });
 
-  it('drops #nuance runs so #1 is not a triplet', () => {
-    expect(sanitizePianoChunkText('#1"[', [0, 1, 2, 3]).text).toBe('"[');
+  it('keeps volta #1/#2 and print-repeat <7/<2 for the lexer', () => {
+    expect(sanitizePianoChunkText('#1"[', [0, 1, 2, 3]).text).toBe('#1"[');
+    expect(sanitizePianoChunkText('<7.f', [0, 1, 2, 3]).text).toBe('<7.f');
+    expect(sanitizePianoChunkText('"[<2', [0, 1, 2, 3]).text).toBe('"[<2');
+  });
+
+  it('still drops other #nuance runs that are not voltas', () => {
+    expect(sanitizePianoChunkText('#3"[', [0, 1, 2, 3]).text).toBe('"[');
   });
 });
 
