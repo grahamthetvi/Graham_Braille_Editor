@@ -140,6 +140,16 @@ export function sanitizePianoChunkText(
     const ch = text[i];
     const abs = indexMap[i] ?? 0;
 
+    // Print-repeat barlines (BANA Table 17): must keep both cells so `<` is
+    // not left behind as a flat accidental.
+    if (ch === '<' && (text[i + 1] === '7' || text[i + 1] === '2')) {
+      push('<', abs);
+      push(text[i + 1], indexMap[i + 1] ?? abs);
+      i += 2;
+      lastWasNoteOrInterval = false;
+      continue;
+    }
+
     // Sao Mai LH chord/noise prefix: flat + orphan `c` (not a tie).
     if (ch === '<' && text[i + 1] === 'c') {
       i += 2;
@@ -154,8 +164,18 @@ export function sanitizePianoChunkText(
       continue;
     }
 
-    // Non-meter `#` nuances / endings (`#1`, `#2`) — drop so a following `1`
-    // is not lexed as a triplet prefix.
+    // Volta endings `#1` / `#2` — keep for the lexer (meter uses letters: `#c8`).
+    if (ch === '#' && (text[i + 1] === '1' || text[i + 1] === '2')) {
+      push('#', abs);
+      push(text[i + 1], indexMap[i + 1] ?? abs);
+      i += 2;
+      lastWasNoteOrInterval = false;
+      continue;
+    }
+
+    // Non-meter `#` nuances — drop so a following digit is not a triplet, and
+    // meter/key letters in chunks stay out of the note stream (`#c8` is read
+    // from the full source heading before piano linearization).
     if (ch === '#') {
       i += 1;
       while (i < text.length) {

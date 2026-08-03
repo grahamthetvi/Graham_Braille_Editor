@@ -2,8 +2,9 @@
  * Music Braille lexer/parser (BANA / North American conventions).
  * Input may be ASCII BRF and/or Unicode braille cells (normalized to ASCII).
  *
- * Supports time/key signatures, ties, triplets, bar repeats, in-accord,
- * and dual-duration disambiguation (whole↔16th online; measure-fill for others).
+ * Supports time/key signatures, ties, triplets, bar repeats, print repeats /
+ * voltas (#1/#2, <7/<2), in-accord, and dual-duration disambiguation
+ * (whole↔16th online; measure-fill for others).
  */
 
 import type {
@@ -451,6 +452,107 @@ export function mergeTiedEvents(events: MusicNoteEvent[]): MusicNoteEvent[] {
   return out;
 }
 
+/** One written measure with optional print-repeat / volta flags (BANA Table 17). */
+export interface MeasureSpan {
+  measure: number;
+  notes: MusicNoteEvent[];
+  /** Beat length used when laying out this span on the timeline. */
+  beatsUsed: number;
+  beginRepeat: boolean;
+  endRepeat: boolean;
+  /** 0 = normal, 1 = first ending, 2 = second ending. */
+  volta: 0 | 1 | 2;
+}
+
+/**
+ * Expand print repeats and first/second endings into a linear event list.
+ * Pass 1 plays through volta 1 and jumps at end-repeat; pass 2 skips volta 1
+ * and plays volta 2. When `<2` has no prior `<7`, jumps to the start of the
+ * current volta group (after the previous `#2`, or measure 0).
+ */
+export function expandPrintRepeats(
+  spans: MeasureSpan[],
+  nextId: () => string = (() => {
+    let n = 0;
+    return () => `xr${n++}`;
+  })(),
+): MusicNoteEvent[] {
+  const hasForm = spans.some(
+    (s) => s.beginRepeat || s.endRepeat || s.volta > 0,
+  );
+  if (!hasForm) {
+    return spans.flatMap((s) => s.notes.map((e) => ({ ...e, midiPitches: [...e.midiPitches] })));
+  }
+
+  const inferStart = (endIdx: number): number => {
+    for (let j = endIdx - 1; j >= 0; j--) {
+      if (spans[j].volta === 2) return j + 1;
+    }
+    return 0;
+  };
+
+  const out: MusicNoteEvent[] = [];
+  let beatBase = 0;
+  let pass = 1;
+  let i = 0;
+  const repeatStack: number[] = [];
+  const maxIter = Math.max(8, spans.length * 6);
+  let iter = 0;
+
+  const appendSpan = (span: MeasureSpan) => {
+    if (span.notes.length === 0) {
+      beatBase += span.beatsUsed;
+      return;
+    }
+    const spanStart = Math.min(...span.notes.map((e) => e.timeOffsetBeats));
+    for (const e of span.notes) {
+      out.push({
+        ...e,
+        id: nextId(),
+        timeOffsetBeats: beatBase + (e.timeOffsetBeats - spanStart),
+        midiPitches: [...e.midiPitches],
+      });
+    }
+    beatBase += span.beatsUsed;
+  };
+
+  while (i < spans.length && iter++ < maxIter) {
+    const span = spans[i];
+
+    if (span.beginRepeat && pass === 1) {
+      repeatStack.push(i);
+    }
+
+    if (span.volta === 1 && pass === 2) {
+      i += 1;
+      continue;
+    }
+    if (span.volta === 2 && pass === 1) {
+      i += 1;
+      continue;
+    }
+
+    appendSpan(span);
+
+    if (span.endRepeat && pass === 1) {
+      const start =
+        repeatStack.length > 0 ? repeatStack[repeatStack.length - 1]! : inferStart(i);
+      pass = 2;
+      i = start;
+      continue;
+    }
+
+    if (span.volta === 2) {
+      pass = 1;
+      if (repeatStack.length > 0) repeatStack.pop();
+    }
+
+    i += 1;
+  }
+
+  return out;
+}
+
 /**
  * Try to parse `#b%` / `#c<` (key) or `#d4` / `#d/d` / `#f8` (time) at index i.
  * Returns null if `#` is not a meter/key prefix here.
@@ -616,10 +718,13 @@ export function parseBrailleMusic(
 
   let eventCounter = 0;
   const measurePending: PendingEvent[] = [];
-  const allEvents: MusicNoteEvent[] = [];
+  const measureSpans: MeasureSpan[] = [];
   /** Finalized events for the previous measure (for bar repeat). */
   let previousMeasureNotes: MusicNoteEvent[] = [];
   let previousMeasureLocalBase = 0;
+  let curBeginRepeat = false;
+  let curEndRepeat = false;
+  let curVolta: 0 | 1 | 2 = 0;
 
   const flushMeasure = () => {
     const { notes, measureBeatsUsed } = materializeMeasure(
@@ -628,21 +733,31 @@ export function parseBrailleMusic(
       scoreBeatBase,
       { preferSixteenthWholes: fromPiano },
     );
-    allEvents.push(...notes);
+    const advance =
+      measureBeatsUsed > 1e-9 && measureBeatsUsed < capacity - 1e-9
+        ? measureBeatsUsed
+        : Math.max(capacity, measureBeatsUsed);
+    measureSpans.push({
+      measure,
+      notes,
+      beatsUsed: advance,
+      beginRepeat: curBeginRepeat,
+      endRepeat: curEndRepeat,
+      volta: curVolta,
+    });
     previousMeasureNotes = notes;
     previousMeasureLocalBase = scoreBeatBase;
     measurePending.length = 0;
     // Underfull measures are pickups, false barlines (piano alignment spaces),
     // or short bars — never pad them out to capacity (that inserts silence).
-    if (measureBeatsUsed > 1e-9 && measureBeatsUsed < capacity - 1e-9) {
-      scoreBeatBase += measureBeatsUsed;
-    } else {
-      scoreBeatBase += Math.max(capacity, measureBeatsUsed);
-    }
+    scoreBeatBase += advance;
     measureBeatOffset = 0;
     activeAccidentals.clear();
     pendingAccidental = null;
     atMeasureStart = true;
+    curBeginRepeat = false;
+    curEndRepeat = false;
+    curVolta = 0;
   };
 
   const applyTriplet = (beats: number): number => {
@@ -700,15 +815,23 @@ export function parseBrailleMusic(
           scoreBeatBase + (e.timeOffsetBeats - previousMeasureLocalBase),
         midiPitches: [...e.midiPitches],
       }));
-      allEvents.push(...duplicated);
       const repeatedBeats = previousMeasureNotes.reduce(
         (max, e) =>
           Math.max(max, e.timeOffsetBeats + e.durationBeats - previousMeasureLocalBase),
         0,
       );
+      const advance = repeatedBeats > 1e-9 ? repeatedBeats : capacity;
+      measureSpans.push({
+        measure,
+        notes: duplicated,
+        beatsUsed: advance,
+        beginRepeat: false,
+        endRepeat: false,
+        volta: 0,
+      });
       previousMeasureNotes = duplicated;
       previousMeasureLocalBase = scoreBeatBase;
-      scoreBeatBase += repeatedBeats > 1e-9 ? repeatedBeats : capacity;
+      scoreBeatBase += advance;
       measure += 1;
       atMeasureStart = true;
       pendingAccidental = null;
@@ -738,8 +861,18 @@ export function parseBrailleMusic(
         atMeasureStart = false;
         continue;
       }
-      // Non-meter `#` markup (e.g. `#1` position/nuance). Skip the marker and
-      // a following upper-number / digit run so `1` is not read as a triplet.
+      // Volta endings `#1` / `#2` (BANA Table 17) — not triplets.
+      const voltaDigit = text[i + 1];
+      if (voltaDigit === '1' || voltaDigit === '2') {
+        curVolta = voltaDigit === '1' ? 1 : 2;
+        i += 2;
+        if (i < text.length && text[i] === "'") i += 1;
+        pendingAccidental = null;
+        atMeasureStart = false;
+        continue;
+      }
+      // Non-meter `#` markup. Skip the marker and a following upper-number /
+      // digit run so `1` is not read as a triplet.
       i += 1;
       while (i < text.length) {
         const n = normalizeBrfChar(text[i]);
@@ -762,6 +895,22 @@ export function parseBrailleMusic(
       previousNoteMidi = null;
       i += 2;
       atMeasureStart = false;
+      continue;
+    }
+
+    // Print-repeat barlines (before bare `<` flat accidental).
+    if (ch === '<' && text[i + 1] === '7') {
+      curBeginRepeat = true;
+      i += 2;
+      atMeasureStart = false;
+      pendingAccidental = null;
+      continue;
+    }
+    if (ch === '<' && text[i + 1] === '2') {
+      curEndRepeat = true;
+      i += 2;
+      atMeasureStart = false;
+      pendingAccidental = null;
       continue;
     }
 
@@ -948,6 +1097,8 @@ export function parseBrailleMusic(
   if (measurePending.length > 0) {
     flushMeasure();
   }
+
+  const allEvents = expandPrintRepeats(measureSpans, () => `e${eventCounter++}`);
 
   const merged = mergeTiedEvents(
     allEvents.sort((a, b) => {
