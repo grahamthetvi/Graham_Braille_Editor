@@ -93,8 +93,9 @@ export interface PlaybackState {
    * Where the current BPM came from for UI:
    * - score: auto from detectedTempo / tempoChanges
    * - user: teacher/student moved the slider
+   * - default: no tempo found in the BRF; using fallback BPM
    */
-  tempoOrigin: 'score' | 'user';
+  tempoOrigin: 'score' | 'user' | 'default';
   /** Label for the score-derived tempo when origin is score (e.g. Allegro). */
   tempoLabel: string | null;
   /** Non-null when the last play attempt failed. */

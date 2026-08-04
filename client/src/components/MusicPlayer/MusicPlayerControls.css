@@ -80,6 +80,42 @@
   font-size: 0.8rem;
 }
 
+.music-player__tempo-notice {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.65rem 1rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated, var(--bg-surface));
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.music-player__tempo-notice-text {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.music-player__tempo-notice-title {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.music-player__tempo-notice-body {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.music-player__tempo-notice-dismiss {
+  flex-shrink: 0;
+  min-width: 5rem;
+}
+
 .braille-cell--music-active {
   outline: 2px solid var(--accent);
   outline-offset: 1px;

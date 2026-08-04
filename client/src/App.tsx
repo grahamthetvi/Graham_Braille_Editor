@@ -1915,6 +1915,7 @@ Accuracy: _____________ %
                   playFromCursor={musicPlayFromCursor}
                   onPlayFromCursorChange={setMusicPlayFromCursor}
                   musicStartCharIndex={musicStartCharIndex}
+                  documentBrf={musicBrfSource}
                   disabled={isPerkinsMode}
                 />
               )}

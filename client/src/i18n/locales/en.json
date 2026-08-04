@@ -235,7 +235,13 @@
         "label": "Tempo {{bpm}} BPM",
         "ariaLabel": "Playback tempo in beats per minute",
         "fromScore": "Tempo {{bpm}} BPM ({{label}})",
-        "fromUser": "Tempo {{bpm}} BPM (you set)"
+        "fromUser": "Tempo {{bpm}} BPM (you set)",
+        "fromDefault": "Tempo {{bpm}} BPM (not found in score)",
+        "missingNotice": {
+          "title": "No tempo marking found",
+          "body": "We could not find a metronome mark or tempo word in this braille score. Playback starts at {{bpm}} BPM. Use the Tempo slider to set the speed you want.",
+          "dismiss": "Dismiss"
+        }
       },
       "measure": "Measure {{current}} / {{total}}",
       "timeSignature": "{{beats}}/{{unit}}",

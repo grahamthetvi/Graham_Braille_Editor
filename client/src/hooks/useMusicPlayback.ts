@@ -34,7 +34,7 @@ import {
 import { speakMusicHint, cancelMusicSpeech } from '../utils/musicNoteSpeech';
 import { MusicSynthEngine } from '../services/audio/musicSynth';
 import { musicDebugLog } from '../services/audio/musicDebugLog';
-import { DEFAULT_SCORE_BPM } from '../utils/musicTempo';
+import { DEFAULT_SCORE_BPM, scoreTempoOriginAtBeat } from '../utils/musicTempo';
 
 const DEFAULT_BPM = DEFAULT_SCORE_BPM;
 const MIN_BPM = 40;
@@ -112,7 +112,7 @@ export function useMusicPlayback(
   playFromCursor = true,
 ): UseMusicPlaybackReturn {
   const [bpm, setBpmState] = useState(DEFAULT_BPM);
-  const [tempoOrigin, setTempoOrigin] = useState<'score' | 'user'>('score');
+  const [tempoOrigin, setTempoOrigin] = useState<'score' | 'user' | 'default'>('default');
   const [tempoLabel, setTempoLabel] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -140,7 +140,7 @@ export function useMusicPlayback(
   const bpmDebounceRef = useRef<number | null>(null);
   const stepRestTimerRef = useRef<number | null>(null);
   const userTempoOverrideRef = useRef(false);
-  const tempoOriginRef = useRef<'score' | 'user'>('score');
+  const tempoOriginRef = useRef<'score' | 'user' | 'default'>('default');
   const lastTempoChangeIdxRef = useRef(-1);
 
   const score = useMemo(() => parseBrailleMusic(brfString || ''), [brfString]);
@@ -213,10 +213,11 @@ export function useMusicPlayback(
       if (userTempoOverrideRef.current) return;
       const nextBpm = bpmAtBeat(nextScore, beat, DEFAULT_BPM);
       const label = tempoLabelAtBeat(nextScore, beat);
+      const origin = scoreTempoOriginAtBeat(nextScore, beat);
       bpmRef.current = nextBpm;
       setBpmState(nextBpm);
-      setTempoOrigin('score');
-      setTempoLabel(label);
+      setTempoOrigin(origin);
+      setTempoLabel(origin === 'score' ? label : null);
     },
     [],
   );
@@ -258,10 +259,13 @@ export function useMusicPlayback(
 
       if (!userTempoOverrideRef.current) {
         const scoreBpm = bpmAtBeat(scoreRef.current, fromBeat, bpmRef.current);
+        const origin = scoreTempoOriginAtBeat(scoreRef.current, fromBeat);
         bpmRef.current = scoreBpm;
         setBpmState(scoreBpm);
-        setTempoOrigin('score');
-        setTempoLabel(tempoLabelAtBeat(scoreRef.current, fromBeat));
+        setTempoOrigin(origin);
+        setTempoLabel(
+          origin === 'score' ? tempoLabelAtBeat(scoreRef.current, fromBeat) : null,
+        );
       }
 
       musicDebugLog.logTransport('reschedule', `fromBeat=${fromBeat.toFixed(3)}`, fromBeat, bpmRef.current);
@@ -530,10 +534,13 @@ export function useMusicPlayback(
 
       if (!userTempoOverrideRef.current) {
         const scoreBpm = bpmAtBeat(scoreRef.current, beat, bpmRef.current);
+        const origin = scoreTempoOriginAtBeat(scoreRef.current, beat);
         bpmRef.current = scoreBpm;
         setBpmState(scoreBpm);
-        setTempoOrigin('score');
-        setTempoLabel(tempoLabelAtBeat(scoreRef.current, beat));
+        setTempoOrigin(origin);
+        setTempoLabel(
+          origin === 'score' ? tempoLabelAtBeat(scoreRef.current, beat) : null,
+        );
       }
 
       const labels = formatMusicEventLabels(ev);
