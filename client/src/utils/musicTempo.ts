@@ -530,3 +530,34 @@ export function detectScoreTempo(
 ): ResolvedTempoMeta {
   return resolveTempoMeta(scanTempoMarks(asciiBrf), beatForChar);
 }
+
+/**
+ * UI origin when following the score (not a user slider override).
+ * Mid-score tempoChanges count as detected score tempo once reached.
+ */
+export function scoreTempoOriginAtBeat(
+  score: {
+    detectedTempo?: DetectedTempo;
+    tempoChanges?: MusicTempoChange[];
+  },
+  beat: number,
+): 'score' | 'default' {
+  const changes = score.tempoChanges ?? [];
+  for (const c of changes) {
+    if (c.timeOffsetBeats <= beat + 1e-9) return 'score';
+  }
+  const src = score.detectedTempo?.source;
+  if (!src || src === 'default') return 'default';
+  return 'score';
+}
+
+/** Short stable key for once-per-document UI (session dismiss). */
+export function fingerprintBrfDocument(brf: string): string {
+  const s = brf || '';
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `${s.length}:${h >>> 0}`;
+}

@@ -8,11 +8,13 @@ import {
   DEFAULT_SCORE_BPM,
   TEMPO_SCALE_RIT,
   detectScoreTempo,
+  fingerprintBrfDocument,
   interpretWordSignTempo,
   matchTempoWord,
   parseBrailleDigits,
   resolveTempoMeta,
   scanTempoMarks,
+  scoreTempoOriginAtBeat,
   tryParseMetronomeAt,
 } from './musicTempo';
 
@@ -129,5 +131,38 @@ describe('parseBrailleMusic tempo integration', () => {
     const score = parseBrailleMusic('v');
     expect(score.events[0].type).toBe('rest');
     expect(score.events[0].durationBeats).toBe(1);
+  });
+});
+
+describe('scoreTempoOriginAtBeat / fingerprint', () => {
+  it('returns default when no tempo was detected', () => {
+    const score = parseBrailleMusic('"?:$]');
+    expect(score.detectedTempo?.source).toBe('default');
+    expect(scoreTempoOriginAtBeat(score, 0)).toBe('default');
+  });
+
+  it('returns score for metronome and word-sign scores', () => {
+    expect(scoreTempoOriginAtBeat(parseBrailleMusic('?7#abj "?:$]'), 0)).toBe('score');
+    const piano = parseBrailleMusic(`a >/l#c8 >pp>poco moto'.&%Z &%Z&")*ZY
+  >#l#c8 >poco moto'x       m`);
+    expect(scoreTempoOriginAtBeat(piano, 0)).toBe('score');
+  });
+
+  it('returns score once a mid-score tempoChange is reached', () => {
+    const partial = {
+      detectedTempo: {
+        bpm: 120,
+        source: 'default' as const,
+        label: 'default',
+      },
+      tempoChanges: [{ timeOffsetBeats: 4, bpm: 102, label: 'rit.' }],
+    };
+    expect(scoreTempoOriginAtBeat(partial, 4)).toBe('score');
+    expect(scoreTempoOriginAtBeat(partial, 0)).toBe('default');
+  });
+
+  it('fingerprints documents stably', () => {
+    expect(fingerprintBrfDocument('abc')).toBe(fingerprintBrfDocument('abc'));
+    expect(fingerprintBrfDocument('abc')).not.toBe(fingerprintBrfDocument('abd'));
   });
 });

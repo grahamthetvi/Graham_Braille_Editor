@@ -1,8 +1,10 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { MusicScoreAST, PlaybackState } from '../../types/musicBraille';
 import { MAX_BPM, MIN_BPM } from '../../hooks/useMusicPlayback';
 import { musicDebugLog } from '../../services/audio/musicDebugLog';
 import { formatMusicEventLabels } from '../../utils/musicNoteLabel';
+import { fingerprintBrfDocument } from '../../utils/musicTempo';
 import './MusicPlayerControls.css';
 
 export interface MusicPlayerControlsProps {
@@ -21,6 +23,8 @@ export interface MusicPlayerControlsProps {
   onPlayFromCursorChange: (enabled: boolean) => void;
   /** Character index where music is estimated to begin (for status). */
   musicStartCharIndex?: number;
+  /** BRF source used to key the once-per-document missing-tempo notice. */
+  documentBrf?: string;
   disabled?: boolean;
 }
 
@@ -42,6 +46,7 @@ export function MusicPlayerControls({
   playFromCursor,
   onPlayFromCursorChange,
   musicStartCharIndex = 0,
+  documentBrf = '',
   disabled = false,
 }: MusicPlayerControlsProps) {
   const { t } = useTranslation();
@@ -56,6 +61,29 @@ export function MusicPlayerControls({
     activeEventIndex,
     error,
   } = playbackState;
+
+  const docKey = useMemo(() => fingerprintBrfDocument(documentBrf), [documentBrf]);
+  const [dismissedDocKeys, setDismissedDocKeys] = useState<Set<string>>(() => new Set());
+
+  // Clear dismiss state only when switching away from empty → content is unnecessary;
+  // dismissed keys accumulate for the session so revisiting the same doc stays quiet.
+  useEffect(() => {
+    // Ensure we do not keep showing the notice after the user sets a tempo.
+    if (tempoOrigin === 'user') {
+      setDismissedDocKeys((prev) => {
+        if (prev.has(docKey)) return prev;
+        const next = new Set(prev);
+        next.add(docKey);
+        return next;
+      });
+    }
+  }, [tempoOrigin, docKey]);
+
+  const showMissingTempoNotice =
+    !disabled &&
+    score.events.length > 0 &&
+    tempoOrigin === 'default' &&
+    !dismissedDocKeys.has(docKey);
 
   const activeEvent =
     activeEventIndex != null && activeEventIndex >= 0 && activeEventIndex < score.events.length
@@ -88,6 +116,15 @@ export function MusicPlayerControls({
         ? t('app.musicPlayer.keySignature.sharps', { count: keyCount })
         : t('app.musicPlayer.keySignature.flats', { count: -keyCount });
 
+  const tempoLabelText =
+    tempoOrigin === 'user'
+      ? t('app.musicPlayer.tempo.fromUser', { bpm })
+      : tempoOrigin === 'default'
+        ? t('app.musicPlayer.tempo.fromDefault', { bpm })
+        : tempoLabel
+          ? t('app.musicPlayer.tempo.fromScore', { bpm, label: tempoLabel })
+          : t('app.musicPlayer.tempo.label', { bpm });
+
   const canPlay = !disabled && score.events.length > 0;
   const canStep = canPlay;
   const stepPosition =
@@ -110,6 +147,32 @@ export function MusicPlayerControls({
       role="region"
       aria-label={t('app.musicPlayer.ariaLabel')}
     >
+      {showMissingTempoNotice ? (
+        <div className="music-player__tempo-notice" role="status" aria-live="polite">
+          <div className="music-player__tempo-notice-text">
+            <strong className="music-player__tempo-notice-title">
+              {t('app.musicPlayer.tempo.missingNotice.title')}
+            </strong>
+            <p className="music-player__tempo-notice-body">
+              {t('app.musicPlayer.tempo.missingNotice.body', { bpm })}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="toolbar-btn music-player__tempo-notice-dismiss"
+            onClick={() => {
+              setDismissedDocKeys((prev) => {
+                const next = new Set(prev);
+                next.add(docKey);
+                return next;
+              });
+            }}
+          >
+            {t('app.musicPlayer.tempo.missingNotice.dismiss')}
+          </button>
+        </div>
+      ) : null}
+
       <div className="music-player__transport">
         {!isPlaying ? (
           <button
@@ -201,13 +264,7 @@ export function MusicPlayerControls({
       </div>
 
       <label className="music-player__tempo">
-        <span className="music-player__tempo-label">
-          {tempoOrigin === 'user'
-            ? t('app.musicPlayer.tempo.fromUser', { bpm })
-            : tempoLabel
-              ? t('app.musicPlayer.tempo.fromScore', { bpm, label: tempoLabel })
-              : t('app.musicPlayer.tempo.label', { bpm })}
-        </span>
+        <span className="music-player__tempo-label">{tempoLabelText}</span>
         <input
           type="range"
           min={MIN_BPM}
@@ -286,5 +343,20 @@ export function MusicPlayerControls({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Pure helper for tests: whether the missing-tempo notice should show. */
+export function shouldShowMissingTempoNotice(opts: {
+  disabled?: boolean;
+  eventCount: number;
+  tempoOrigin: PlaybackState['tempoOrigin'];
+  dismissed: boolean;
+}): boolean {
+  return (
+    !opts.disabled &&
+    opts.eventCount > 0 &&
+    opts.tempoOrigin === 'default' &&
+    !opts.dismissed
   );
 }

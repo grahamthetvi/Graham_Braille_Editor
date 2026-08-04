@@ -61,7 +61,7 @@ describe('musicDebugLog helpers', () => {
         activeCharIndex: null,
         activeEventIndex: null,
         bpm: 120,
-        tempoOrigin: 'score',
+        tempoOrigin: 'default',
         tempoLabel: null,
         error: null,
       },
