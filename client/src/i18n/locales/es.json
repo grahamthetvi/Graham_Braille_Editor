@@ -9,6 +9,7 @@
       "file": "Archivo",
       "view": "Vista y diseño",
       "languagesCodes": "Idiomas y códigos",
+      "graphics": "Gráficos",
       "tools": "Herramientas didácticas",
       "help": "Ayuda y soporte"
     },
@@ -381,14 +382,14 @@
       },
       "graphics": {
         "heading": "Gráficos táctiles e impresión 3D",
-        "body": "Haga clic en Gráficos, dentro de la pestaña Herramientas, para abrir el editor de gráficos táctiles, donde puede diseñar diagramas táctiles para imprimir junto con su braille.",
+        "body": "Haga clic en Gráficos, dentro de la pestaña Gráficos, para abrir el editor de gráficos táctiles, donde puede diseñar diagramas táctiles para imprimir junto con su braille.",
         "shapesHeading": "Inventario de formas y formas personalizadas:",
         "simpleShapes": "Formas simples: líneas, rectángulos y polígonos ajustables.",
         "complexShapes": "Formas complejas: nube, media luna, rayo, estrella de 5 puntas, manzana y cruz. Formas como la cruz permiten ajustar directamente el ancho/alto de las barras.",
         "positioningTool": "Herramienta de posicionamiento: en el panel de Herramientas de lienzo, seleccione la herramienta de puntero para reposicionar texto o formas en su lienzo sin cambiar su tamaño.",
         "customElements": "Elementos personalizados: incluye detalles como un pincel, flores/margaritas (siempre representadas con centros rellenos para dar contraste) y colmillos de vampiro.",
         "dotPatternPreview": "Vista previa del patrón de puntos: el editor muestra las formas del lienzo como cuadrículas físicas de puntos braille en tiempo real.",
-        "stlNote": "Además, haga clic en Letrero de puerta (STL), dentro de la pestaña Herramientas, para exportar su diseño braille paginado como un archivo STL imprimible en 3D con el espaciado de puntos en el punto medio BANA estándar."
+        "stlNote": "Además, haga clic en Letrero de puerta (STL) en la pestaña Gráficos para exportar su diseño braille paginado como un archivo STL imprimible en 3D con el espaciado de puntos BANA estándar."
       }
     },
     "footer": {
