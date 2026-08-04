@@ -1179,6 +1179,94 @@ body {
   gap: 1.5rem;
 }
 
+.welcome-body--slideshow {
+  gap: 0;
+  min-height: 12rem;
+}
+
+.welcome-slide h3:focus {
+  outline: none;
+}
+
+.welcome-slide h3:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-footer--slideshow {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.welcome-slide-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.welcome-btn-nav {
+  padding: 0.45rem 1rem;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.welcome-btn-nav:hover:not(:disabled) {
+  background: var(--bg-surface);
+  border-color: var(--accent);
+}
+
+.welcome-btn-nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.welcome-btn-nav:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-step-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline: 0.25rem;
+}
+
+.welcome-step-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-overlay);
+  cursor: pointer;
+}
+
+.welcome-step-dot--active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.welcome-step-dot:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-step-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 2.75rem;
+  text-align: center;
+}
+
 .welcome-section {
   display: flex;
   gap: 1rem;
