@@ -26,6 +26,7 @@ import { PerkinsViewer } from './components/PerkinsViewer';
 import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
+import { MusicBrailleAuditModal } from './components/MusicBrailleAuditModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
 import { MusicDebugPanel } from './components/MusicPlayer/MusicDebugPanel';
 import {
@@ -184,11 +185,15 @@ export default function App() {
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
+  const [hasSeenMusicGuide, setHasSeenMusicGuide] = useState(
+    () => !!localStorage.getItem('graham-braille-music-guide-seen')
+  );
   const [showMusicBrailleGuide, setShowMusicBrailleGuide] = useState(false);
+  const [showMusicBrailleAudit, setShowMusicBrailleAudit] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
-  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'tools' | 'help'>('file');
+  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'graphics' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -211,6 +216,20 @@ export default function App() {
       setHasSeenPrivacyPolicy(true);
     }
     setShowPrivacyPolicy(false);
+  }
+
+  function openMusicGuideIfFirstTime() {
+    if (!hasSeenMusicGuide) {
+      setShowMusicBrailleGuide(true);
+    }
+  }
+
+  function handleMusicBrailleGuideClose() {
+    if (!hasSeenMusicGuide) {
+      localStorage.setItem('graham-braille-music-guide-seen', '1');
+      setHasSeenMusicGuide(true);
+    }
+    setShowMusicBrailleGuide(false);
   }
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
@@ -1142,6 +1161,14 @@ Accuracy: _____________ %
               {t('app.tabs.languagesCodes')}
             </button>
             <button 
+              className={`tab-btn${activeTab === 'graphics' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('graphics')}
+              role="tab"
+              aria-selected={activeTab === 'graphics'}
+            >
+              {t('app.tabs.graphics')}
+            </button>
+            <button 
               className={`tab-btn${activeTab === 'tools' ? ' tab-btn--active' : ''}`}
               onClick={() => setActiveTab('tools')}
               role="tab"
@@ -1314,6 +1341,30 @@ Accuracy: _____________ %
               </div>
             )}
 
+            {activeTab === 'graphics' && (
+              <div className="toolbar">
+                <button
+                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowGraphicsEditor(s => !s)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.graphics.title')}
+                  aria-label={t('app.tools.graphics.ariaLabel')}
+                >
+                  {t('app.tools.graphics.label')}
+                </button>
+
+                <button
+                  className="toolbar-btn"
+                  onClick={() => setShowStlExportDialog(true)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.stl.title')}
+                  aria-label={t('app.tools.stl.ariaLabel')}
+                >
+                  {t('app.tools.stl.label')}
+                </button>
+              </div>
+            )}
+
             {activeTab === 'tools' && (
               <div className="toolbar">
                 <button
@@ -1323,16 +1374,6 @@ Accuracy: _____________ %
                   title={t('app.tools.perkins.title')}
                 >
                   {t('app.tools.perkins.label')}
-                </button>
-
-                <button
-                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowGraphicsEditor(s => !s)}
-                  disabled={isPerkinsMode}
-                  title={t('app.tools.graphics.title')}
-                  aria-label={t('app.tools.graphics.ariaLabel')}
-                >
-                  {t('app.tools.graphics.label')}
                 </button>
 
                 <button
@@ -1359,6 +1400,7 @@ Accuracy: _____________ %
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';
+                        openMusicGuideIfFirstTime();
                       }
                       return next;
                     });
@@ -1383,13 +1425,14 @@ Accuracy: _____________ %
                 </button>
 
                 <button
-                  className="toolbar-btn"
-                  onClick={() => setShowStlExportDialog(true)}
-                  disabled={isPerkinsMode}
-                  title={t('app.tools.stl.title')}
-                  aria-label={t('app.tools.stl.ariaLabel')}
+                  className={`toolbar-btn${showMusicBrailleAudit ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowMusicBrailleAudit(true)}
+                  disabled={isPerkinsMode || !inputText.trim()}
+                  title={t('app.tools.auditBrf.title')}
+                  aria-label={t('app.tools.auditBrf.ariaLabel')}
+                  aria-expanded={showMusicBrailleAudit}
                 >
-                  {t('app.tools.stl.label')}
+                  {t('app.tools.auditBrf.label')}
                 </button>
 
                 <button
@@ -1985,6 +2028,7 @@ Accuracy: _____________ %
           onMathCodeChange={setMathCode}
           defaultCellsPerRow={pageSettings.cellsPerRow}
           defaultLinesPerPage={pageSettings.linesPerPage}
+          brailleTable={selectedTable}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowGraphicsEditor(false);
@@ -2007,10 +2051,29 @@ Accuracy: _____________ %
         <MusicBrailleGuideModal
           onInsertIntoEditor={(text) => {
             editorRef.current?.insertTextAtCursor(text);
-            setShowMusicBrailleGuide(false);
+            handleMusicBrailleGuideClose();
             setActiveTab('file');
           }}
-          onClose={() => setShowMusicBrailleGuide(false)}
+          onClose={handleMusicBrailleGuideClose}
+        />
+      )}
+
+      {showMusicBrailleAudit && (
+        <MusicBrailleAuditModal
+          brfText={
+            isMusicBrailleMode
+              ? musicBrfSource || inputText
+              : inputText
+          }
+          onClose={() => setShowMusicBrailleAudit(false)}
+          onApplyFixes={(correctedBrf) => {
+            setInputText(correctedBrf);
+            setFileContent(correctedBrf);
+            setIsMusicBrailleMode(true);
+            setLiterarySourceMode('none');
+            setShowMusicBrailleAudit(false);
+            setActiveTab('file');
+          }}
         />
       )}
 

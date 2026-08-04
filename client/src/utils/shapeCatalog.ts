@@ -132,7 +132,7 @@ export interface DrawingToolEntry {
 }
 
 export const DRAWING_TOOLS: DrawingToolEntry[] = [
-  { id: 'photo', label: 'Photo Overlay', keywords: ['trace', 'image', 'draw'] },
+  { id: 'photo', label: 'Tactile Design', keywords: ['trace', 'image', 'draw', 'label', 'braille', 'diagram', 'photo', 'overlay', 'stamp', 'inventory', 'shape'] },
   { id: 'raisedPrintText', label: 'Raised Print Text', keywords: ['jumbo', 'large print', 'letters'] },
 ];
 

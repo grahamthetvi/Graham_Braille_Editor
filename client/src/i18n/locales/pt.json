@@ -9,6 +9,7 @@
       "file": "Arquivo",
       "view": "Visualização e Layout",
       "languagesCodes": "Idiomas e Códigos",
+      "graphics": "Gráficos",
       "tools": "Ferramentas de Ensino",
       "help": "Ajuda e Suporte"
     },
@@ -144,7 +145,12 @@
         "ariaLabel": "Copiar prompt para a IA formatar matemática",
         "promptText": "Extraia o texto bruto para fins de tradução em braille. Por favor, reformate meu texto para que toda expressão matemática, equação e operação aritmética seja envolvida em notação LaTeX: \\(...\\) para matemática em linha e $$...$$ para equações em destaque. Deixe toda a prosa não matemática inalterada."
       },
-      "copied": "Copiado!"
+      "copied": "Copiado!",
+      "auditBrf": {
+        "label": "Audit BRF with AI",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
+        "ariaLabel": "Open Audit BRF with AI linter"
+      }
     },
     "help": {
       "userGuide": {
@@ -376,14 +382,14 @@
       },
       "graphics": {
         "heading": "Gráficos Táteis e Impressão 3D",
-        "body": "Clique em Gráficos na aba Ferramentas para abrir o Editor de Gráficos Táteis, onde você pode projetar diagramas táteis para imprimir junto com seu Braille.",
+        "body": "Clique em Gráficos na aba Gráficos para abrir o Editor de Gráficos Táteis, onde você pode projetar diagramas táteis para imprimir junto com seu Braille.",
         "shapesHeading": "Inventário de Formas e Formas Personalizadas:",
         "simpleShapes": "Formas Simples: Linhas, retângulos e polígonos ajustáveis.",
         "complexShapes": "Formas Complexas: Nuvem, Lua Crescente, Raio, Estrela de 5 Pontas, Maçã e Cruz. Formas como a Cruz permitem ajustar diretamente a largura/altura das barras.",
         "positioningTool": "Ferramenta de Posicionamento: No painel Ferramentas de Tela, selecione a ferramenta de ponteiro para reposicionar texto ou formas na sua tela sem redimensioná-los.",
         "customElements": "Elementos Personalizados: Inclui detalhes como um Pincel, flores de Margarida (sempre renderizadas com centros preenchidos para contraste) e Presas de Vampiro.",
         "dotPatternPreview": "Pré-visualização do Padrão de Pontos: O editor exibe as formas da tela como grades de pontos braille físicos em tempo real.",
-        "stlNote": "Além disso, clique em Placa de Porta (STL) na aba Ferramentas para exportar seu layout braille paginado como um arquivo STL imprimível em 3D com o espaçamento de pontos no ponto médio BANA padrão."
+        "stlNote": "Além disso, clique em Placa de Porta (STL) na aba Gráficos para exportar seu layout de braille paginado como um arquivo STL imprimível em 3D com espaçamento padrão de pontos BANA."
       }
     },
     "footer": {

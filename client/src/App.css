@@ -1179,6 +1179,94 @@ body {
   gap: 1.5rem;
 }
 
+.welcome-body--slideshow {
+  gap: 0;
+  min-height: 12rem;
+}
+
+.welcome-slide h3:focus {
+  outline: none;
+}
+
+.welcome-slide h3:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-footer--slideshow {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.welcome-slide-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.welcome-btn-nav {
+  padding: 0.45rem 1rem;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.welcome-btn-nav:hover:not(:disabled) {
+  background: var(--bg-surface);
+  border-color: var(--accent);
+}
+
+.welcome-btn-nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.welcome-btn-nav:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-step-dots {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-inline: 0.25rem;
+}
+
+.welcome-step-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-overlay);
+  cursor: pointer;
+}
+
+.welcome-step-dot--active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.welcome-step-dot:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.welcome-step-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 2.75rem;
+  text-align: center;
+}
+
 .welcome-section {
   display: flex;
   gap: 1rem;
@@ -1300,6 +1388,163 @@ body {
 
 .music-braille-guide-modal {
   max-width: 680px;
+}
+
+.music-braille-audit-modal {
+  max-width: 820px;
+}
+
+.music-braille-audit-body {
+  gap: 1.25rem;
+}
+
+.music-braille-audit-body h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.music-braille-audit-progress-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.45rem;
+}
+
+.music-braille-audit-progress-bar {
+  height: 0.4rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.music-braille-audit-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.music-braille-audit-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.music-braille-audit-summary p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.music-braille-audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.music-braille-audit-table-wrap {
+  overflow: auto;
+  max-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.music-braille-audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.music-braille-audit-table th,
+.music-braille-audit-table td {
+  padding: 0.4rem 0.55rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.music-braille-audit-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.music-braille-audit-row--critical td:nth-child(3) {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.music-braille-audit-row--warning td:nth-child(3) {
+  color: #c9852a;
+  font-weight: 600;
+}
+
+.music-braille-audit-empty,
+.music-braille-audit-hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.music-braille-audit-diff {
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-overlay);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.music-braille-audit-diff-line {
+  display: flex;
+  gap: 0.4rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.music-braille-audit-diff-line--add {
+  background: rgba(46, 160, 67, 0.18);
+}
+
+.music-braille-audit-diff-line--del {
+  background: rgba(248, 81, 73, 0.18);
+}
+
+.music-braille-audit-diff-gutter {
+  flex: 0 0 1rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.music-braille-audit-paste {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
+.music-braille-audit-paste:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.music-braille-audit-footer {
+  justify-content: flex-end;
 }
 
 .music-braille-guide-footer {
