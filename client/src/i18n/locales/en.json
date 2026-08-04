@@ -9,6 +9,7 @@
       "file": "File",
       "view": "View & Layout",
       "languagesCodes": "Languages & Codes",
+      "graphics": "Graphics",
       "tools": "Teaching Tools",
       "help": "Help & Support"
     },
@@ -486,11 +487,11 @@
       },
       "perkins": {
         "heading": "Perkins Viewer",
-        "body": "Click Perkins Viewer under the Tools tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document."
+        "body": "Click Perkins Viewer under the Teaching Tools tab to practice or demo 6-key Perkins entry directly in your browser. This mode overlays on the right panel, giving a dedicated interactive simulator for standard brailler practice without disrupting your primary document."
       },
       "largePrint": {
         "heading": "Large-Print (Jumbo) Braille",
-        "body": "For dual-media print/braille books or low-vision readers, you can insert large-print sections. Click Large Print under the Tools tab to configure size and insert blocks. In the right-hand preview panel, these blocks are translated and rendered as large-print Braille cells in BRF format, preserving tactile readability and alignment."
+        "body": "For dual-media print/braille books or low-vision readers, you can insert large-print sections. Click Large Print under the Teaching Tools tab to configure size and insert blocks. In the right-hand preview panel, these blocks are translated and rendered as large-print Braille cells in BRF format, preserving tactile readability and alignment."
       },
       "music": {
         "heading": "Music Braille",
@@ -498,14 +499,14 @@
       },
       "graphics": {
         "heading": "Tactile Graphics & 3D Printing",
-        "body": "Click Graphics under the Tools tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille. Photo Overlay / Tactile Design lets you draw freehand, stamp shapes, and place braille labels on the same canvas for diagrams (for example, a flower with labeled parts).",
+        "body": "Click Graphics under the Graphics tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille. Tactile Design lets you draw freehand, place Shape Inventory stamps with size and fill controls, and add braille labels on the same canvas for diagrams (for example, a flower with labeled parts).",
         "shapesHeading": "Shape Inventory & Custom Shapes:",
         "simpleShapes": "Simple Shapes: Lines, rectangles, and adjustable polygons.",
         "complexShapes": "Complex Shapes: Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross. Shapes like the Cross support adjusting the width/height of the bars directly.",
-        "positioningTool": "Canvas tools: Use the pointer to select and move braille labels and stamped shapes; pencil, line, stamp, and braille label tools build the diagram.",
+        "positioningTool": "Canvas tools: Use the pointer to select and move braille labels and stamped shapes; pencil, line, Shape Inventory, and braille label tools build the diagram.",
         "customElements": "Custom Elements: Includes details like a Paintbrush, Flower/Daisy blooms (always rendered with filled centers for contrast), and Vampire Fangs.",
         "dotPatternPreview": "Dot Pattern Preview: The editor displays canvas shapes as physical Braille dot grids in real-time.",
-        "stlNote": "Additionally, click Door Sign (STL) under the Tools tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing."
+        "stlNote": "Additionally, click Door Sign (STL) under the Graphics tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing."
       }
     },
     "footer": {

@@ -9,6 +9,7 @@
       "file": "Fichier",
       "view": "Affichage et mise en page",
       "languagesCodes": "Langues et codes",
+      "graphics": "Graphiques",
       "tools": "Outils pédagogiques",
       "help": "Aide et assistance"
     },
@@ -381,14 +382,14 @@
       },
       "graphics": {
         "heading": "Graphiques tactiles et impression 3D",
-        "body": "Cliquez sur Graphiques sous l'onglet Outils pour ouvrir l'éditeur de graphiques tactiles, où vous pouvez concevoir des diagrammes tactiles à imprimer avec votre braille.",
+        "body": "Cliquez sur Graphiques sous l'onglet Graphiques pour ouvrir l'éditeur de graphiques tactiles, où vous pouvez concevoir des diagrammes tactiles à imprimer avec votre braille.",
         "shapesHeading": "Inventaire des formes et formes personnalisées :",
         "simpleShapes": "Formes simples : lignes, rectangles et polygones ajustables.",
         "complexShapes": "Formes complexes : nuage, croissant de lune, éclair, étoile à 5 branches, pomme et croix. Des formes comme la croix permettent d'ajuster directement la largeur/hauteur des barres.",
         "positioningTool": "Outil de positionnement : dans le panneau Outils du canevas, sélectionnez l'outil pointeur pour repositionner du texte ou des formes sur votre canevas sans les redimensionner.",
         "customElements": "Éléments personnalisés : comprend des détails comme un pinceau, des fleurs/marguerites (toujours rendues avec des centres remplis pour le contraste) et des crocs de vampire.",
         "dotPatternPreview": "Aperçu du motif de points : l'éditeur affiche les formes du canevas sous forme de grilles de points braille physiques en temps réel.",
-        "stlNote": "De plus, cliquez sur Plaque de porte (STL) sous l'onglet Outils pour exporter votre mise en page braille paginée sous forme de fichier STL imprimable en 3D avec l'espacement des points au point médian BANA standard."
+        "stlNote": "De plus, cliquez sur Plaque de porte (STL) sous l'onglet Graphiques pour exporter votre mise en page braille paginée en fichier STL imprimable en 3D avec l'espacement de points BANA standard."
       }
     },
     "footer": {

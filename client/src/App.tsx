@@ -193,7 +193,7 @@ export default function App() {
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
   const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
-  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'tools' | 'help'>('file');
+  const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'graphics' | 'tools' | 'help'>('file');
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -1161,6 +1161,14 @@ Accuracy: _____________ %
               {t('app.tabs.languagesCodes')}
             </button>
             <button 
+              className={`tab-btn${activeTab === 'graphics' ? ' tab-btn--active' : ''}`}
+              onClick={() => setActiveTab('graphics')}
+              role="tab"
+              aria-selected={activeTab === 'graphics'}
+            >
+              {t('app.tabs.graphics')}
+            </button>
+            <button 
               className={`tab-btn${activeTab === 'tools' ? ' tab-btn--active' : ''}`}
               onClick={() => setActiveTab('tools')}
               role="tab"
@@ -1333,6 +1341,30 @@ Accuracy: _____________ %
               </div>
             )}
 
+            {activeTab === 'graphics' && (
+              <div className="toolbar">
+                <button
+                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowGraphicsEditor(s => !s)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.graphics.title')}
+                  aria-label={t('app.tools.graphics.ariaLabel')}
+                >
+                  {t('app.tools.graphics.label')}
+                </button>
+
+                <button
+                  className="toolbar-btn"
+                  onClick={() => setShowStlExportDialog(true)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.stl.title')}
+                  aria-label={t('app.tools.stl.ariaLabel')}
+                >
+                  {t('app.tools.stl.label')}
+                </button>
+              </div>
+            )}
+
             {activeTab === 'tools' && (
               <div className="toolbar">
                 <button
@@ -1342,16 +1374,6 @@ Accuracy: _____________ %
                   title={t('app.tools.perkins.title')}
                 >
                   {t('app.tools.perkins.label')}
-                </button>
-
-                <button
-                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowGraphicsEditor(s => !s)}
-                  disabled={isPerkinsMode}
-                  title={t('app.tools.graphics.title')}
-                  aria-label={t('app.tools.graphics.ariaLabel')}
-                >
-                  {t('app.tools.graphics.label')}
                 </button>
 
                 <button
@@ -1411,16 +1433,6 @@ Accuracy: _____________ %
                   aria-expanded={showMusicBrailleAudit}
                 >
                   {t('app.tools.auditBrf.label')}
-                </button>
-
-                <button
-                  className="toolbar-btn"
-                  onClick={() => setShowStlExportDialog(true)}
-                  disabled={isPerkinsMode}
-                  title={t('app.tools.stl.title')}
-                  aria-label={t('app.tools.stl.ariaLabel')}
-                >
-                  {t('app.tools.stl.label')}
                 </button>
 
                 <button

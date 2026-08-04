@@ -9,6 +9,7 @@
       "file": "Datei",
       "view": "Ansicht & Layout",
       "languagesCodes": "Sprachen & Codes",
+      "graphics": "Grafiken",
       "tools": "Unterrichtswerkzeuge",
       "help": "Hilfe & Support"
     },
@@ -381,14 +382,14 @@
       },
       "graphics": {
         "heading": "Taktile Grafiken & 3D-Druck",
-        "body": "Klicken Sie im Tab Werkzeuge auf Grafiken, um den Editor für taktile Grafiken zu öffnen, in dem Sie taktile Diagramme zum Drucken zusammen mit Ihrem Braille gestalten können.",
+        "body": "Klicken Sie im Tab Grafiken auf Grafiken, um den Editor für taktile Grafiken zu öffnen, in dem Sie taktile Diagramme zum Drucken zusammen mit Ihrem Braille gestalten können.",
         "shapesHeading": "Formeninventar & benutzerdefinierte Formen:",
         "simpleShapes": "Einfache Formen: Linien, Rechtecke und anpassbare Polygone.",
         "complexShapes": "Komplexe Formen: Wolke, Mondsichel, Blitz, 5-zackiger Stern, Apfel und Kreuz. Formen wie das Kreuz ermöglichen die direkte Anpassung von Breite/Höhe der Balken.",
         "positioningTool": "Positionierungswerkzeug: Wählen Sie im Bedienfeld Leinwand-Werkzeuge das Zeigerwerkzeug, um Text oder Formen auf Ihrer Leinwand neu zu positionieren, ohne sie in der Größe zu ändern.",
         "customElements": "Benutzerdefinierte Elemente: enthält Details wie einen Pinsel, Blumen/Gänseblümchen (immer mit gefüllten Mittelpunkten für Kontrast dargestellt) und Vampirzähne.",
         "dotPatternPreview": "Punktmuster-Vorschau: Der Editor zeigt Leinwandformen in Echtzeit als physische Braille-Punktraster an.",
-        "stlNote": "Klicken Sie außerdem im Tab Werkzeuge auf Türschild (STL), um Ihr paginiertes Braille-Layout als 3D-druckbare STL-Datei mit standardmäßigem BANA-Punktabstand am Mittelpunkt zu exportieren."
+        "stlNote": "Zusätzlich können Sie unter dem Tab Grafiken auf Türschild (STL) klicken, um Ihr paginiertes Braille-Layout als 3D-druckbare STL-Datei mit standardmäßigem BANA-Punktabstand zu exportieren."
       }
     },
     "footer": {
