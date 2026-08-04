@@ -71,6 +71,48 @@ export class MusicSynthEngine {
     this.playChord([midiPitch], startTime, durationSec);
   }
 
+  /**
+   * Soft pedagogical click for a rest (not a pitched note). Short square blip
+   * so students can feel measured silence without confusing it for melody.
+   */
+  playRestClick(startTimeSec: number): void {
+    const ctx = this.getOrCreateContext();
+    if (ctx.state === 'suspended') {
+      void ctx.resume();
+    }
+
+    const durationSec = 0.04;
+    const peak = 0.08;
+    const start = Math.max(startTimeSec, ctx.currentTime + 0.001);
+    const stopAt = start + durationSec;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1400, start);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(peak, start + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(start);
+    osc.stop(stopAt + 0.01);
+
+    const entry: ActiveVoice = { osc, gain };
+    this.activeNodes.add(entry);
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+      this.activeNodes.delete(entry);
+    };
+  }
+
   playChord(midiPitches: number[], startTimeSec: number, durationSec: number): void {
     if (!midiPitches.length || durationSec <= 0) return;
 

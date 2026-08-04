@@ -6,7 +6,11 @@
  * cell highlights and end-of-piece detection follow the same clock (no setTimeout).
  *
  * Step next/prev parks on a single event, sounds it once, and announces its
- * music term (pitch + duration) via speechSynthesis.
+ * music term (pitch + duration) via speechSynthesis. Rests get a soft click
+ * and a timed “felt” wait at the current BPM (Step is never blocked).
+ *
+ * Score tempo (metronome / tempo words) auto-applies until the user moves the
+ * slider; mid-score tempoChanges update BPM while playing.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,8 +34,9 @@ import {
 import { speakMusicHint, cancelMusicSpeech } from '../utils/musicNoteSpeech';
 import { MusicSynthEngine } from '../services/audio/musicSynth';
 import { musicDebugLog } from '../services/audio/musicDebugLog';
+import { DEFAULT_SCORE_BPM } from '../utils/musicTempo';
 
-const DEFAULT_BPM = 120;
+const DEFAULT_BPM = DEFAULT_SCORE_BPM;
 const MIN_BPM = 40;
 const MAX_BPM = 240;
 /** How far ahead (seconds) to schedule oscillators on the audio clock. */
@@ -40,7 +45,7 @@ const LOOKAHEAD_SEC = 1.25;
 const UI_UPDATE_MS = 50;
 /** Debounce tempo changes while playing so dragging the slider does not thrash. */
 const BPM_RESCHEDULE_MS = 150;
-/** How long a stepped note/rest sounds (seconds). */
+/** How long a stepped note sounds (seconds). */
 const STEP_SOUND_SEC = 0.45;
 
 /** Where a fresh (non-resume) Play should begin. */
@@ -74,6 +79,27 @@ function toErrorKey(err: unknown): MusicPlaybackErrorKey {
   return 'playbackFailed';
 }
 
+function bpmAtBeat(score: MusicScoreAST, beat: number, fallback: number): number {
+  const changes = score.tempoChanges ?? [];
+  let bpm = score.detectedTempo?.bpm ?? fallback;
+  for (const c of changes) {
+    if (c.timeOffsetBeats <= beat + 1e-9) bpm = c.bpm;
+    else break;
+  }
+  return clampBpm(bpm);
+}
+
+function tempoLabelAtBeat(score: MusicScoreAST, beat: number): string | null {
+  const changes = score.tempoChanges ?? [];
+  let label = score.detectedTempo?.label ?? null;
+  if (label === 'default') label = null;
+  for (const c of changes) {
+    if (c.timeOffsetBeats <= beat + 1e-9) label = c.label;
+    else break;
+  }
+  return label;
+}
+
 /**
  * @param brfString Music Braille source (ASCII BRF and/or Unicode braille cells)
  * @param cursorCharIndex Editor caret/selection start offset
@@ -86,6 +112,8 @@ export function useMusicPlayback(
   playFromCursor = true,
 ): UseMusicPlaybackReturn {
   const [bpm, setBpmState] = useState(DEFAULT_BPM);
+  const [tempoOrigin, setTempoOrigin] = useState<'score' | 'user'>('score');
+  const [tempoLabel, setTempoLabel] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
@@ -110,6 +138,10 @@ export function useMusicPlayback(
   const nextEventIndexRef = useRef(0);
   const lastUiUpdateMsRef = useRef(0);
   const bpmDebounceRef = useRef<number | null>(null);
+  const stepRestTimerRef = useRef<number | null>(null);
+  const userTempoOverrideRef = useRef(false);
+  const tempoOriginRef = useRef<'score' | 'user'>('score');
+  const lastTempoChangeIdxRef = useRef(-1);
 
   const score = useMemo(() => parseBrailleMusic(brfString || ''), [brfString]);
   const musicStartCharIndex = useMemo(
@@ -146,6 +178,10 @@ export function useMusicPlayback(
     activeEventIndexRef.current = activeEventIndex;
   }, [activeEventIndex]);
 
+  useEffect(() => {
+    tempoOriginRef.current = tempoOrigin;
+  }, [tempoOrigin]);
+
   const clearRaf = useCallback(() => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
@@ -160,20 +196,42 @@ export function useMusicPlayback(
     }
   }, []);
 
+  const clearStepRestTimer = useCallback(() => {
+    if (stepRestTimerRef.current != null) {
+      window.clearTimeout(stepRestTimerRef.current);
+      stepRestTimerRef.current = null;
+    }
+  }, []);
+
   const ensureSynth = useCallback(() => {
     if (!synthRef.current) synthRef.current = new MusicSynthEngine();
     return synthRef.current;
   }, []);
+
+  const applyScoreTempo = useCallback(
+    (nextScore: MusicScoreAST, beat = 0) => {
+      if (userTempoOverrideRef.current) return;
+      const nextBpm = bpmAtBeat(nextScore, beat, DEFAULT_BPM);
+      const label = tempoLabelAtBeat(nextScore, beat);
+      bpmRef.current = nextBpm;
+      setBpmState(nextBpm);
+      setTempoOrigin('score');
+      setTempoLabel(label);
+    },
+    [],
+  );
 
   const stopInternal = useCallback(
     (resetPosition: boolean) => {
       playGenRef.current += 1;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
       synthRef.current?.silence();
       playOriginRef.current = null;
       nextEventIndexRef.current = 0;
       lastUiUpdateMsRef.current = 0;
+      lastTempoChangeIdxRef.current = -1;
       isPlayingRef.current = false;
       isPausedRef.current = false;
       setIsPlaying(false);
@@ -186,7 +244,7 @@ export function useMusicPlayback(
       }
       musicDebugLog.logTransport('stop', resetPosition ? 'reset' : 'keep-position', pauseBeatRef.current);
     },
-    [clearBpmDebounce, clearRaf],
+    [clearBpmDebounce, clearRaf, clearStepRestTimer],
   );
 
   const scheduleFromBeat = useCallback(
@@ -194,8 +252,18 @@ export function useMusicPlayback(
       const gen = ++playGenRef.current;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
       const synth = ensureSynth();
       synth.silence();
+
+      if (!userTempoOverrideRef.current) {
+        const scoreBpm = bpmAtBeat(scoreRef.current, fromBeat, bpmRef.current);
+        bpmRef.current = scoreBpm;
+        setBpmState(scoreBpm);
+        setTempoOrigin('score');
+        setTempoLabel(tempoLabelAtBeat(scoreRef.current, fromBeat));
+      }
+
       musicDebugLog.logTransport('reschedule', `fromBeat=${fromBeat.toFixed(3)}`, fromBeat, bpmRef.current);
 
       try {
@@ -231,6 +299,13 @@ export function useMusicPlayback(
       nextEventIndexRef.current = idx;
       lastUiUpdateMsRef.current = 0;
 
+      const changes = ast.tempoChanges ?? [];
+      let changeIdx = -1;
+      for (let c = 0; c < changes.length; c++) {
+        if (changes[c].timeOffsetBeats <= fromBeat + 1e-9) changeIdx = c;
+      }
+      lastTempoChangeIdxRef.current = changeIdx;
+
       isPlayingRef.current = true;
       isPausedRef.current = false;
       setIsPlaying(true);
@@ -248,23 +323,75 @@ export function useMusicPlayback(
         const beat = origin.beatStart + (audioNow - origin.audioStart) / spb;
         pauseBeatRef.current = Math.min(beat, scoreNow.totalBeats);
 
+        // Mid-score tempo changes (only when following the score, not user override).
+        if (!userTempoOverrideRef.current) {
+          const tChanges = scoreNow.tempoChanges ?? [];
+          let nextChangeIdx = lastTempoChangeIdxRef.current;
+          for (let c = lastTempoChangeIdxRef.current + 1; c < tChanges.length; c++) {
+            if (tChanges[c].timeOffsetBeats <= beat + 1e-9) nextChangeIdx = c;
+            else break;
+          }
+          if (nextChangeIdx > lastTempoChangeIdxRef.current) {
+            lastTempoChangeIdxRef.current = nextChangeIdx;
+            const ch = tChanges[nextChangeIdx];
+            const newBpm = clampBpm(ch.bpm);
+            if (newBpm !== bpmRef.current) {
+              bpmRef.current = newBpm;
+              setBpmState(newBpm);
+              setTempoOrigin('score');
+              setTempoLabel(ch.label);
+              playOriginRef.current = { audioStart: audioNow, beatStart: beat };
+              // Re-find next event index from current beat under new tempo.
+              let ni = 0;
+              while (ni < scoreNow.events.length) {
+                const ev = scoreNow.events[ni];
+                if (ev.timeOffsetBeats + ev.durationBeats > beat + 1e-9) break;
+                ni += 1;
+              }
+              nextEventIndexRef.current = ni;
+              musicDebugLog.logTransport('bpm', `score→${newBpm}:${ch.label}`, beat, newBpm);
+            }
+          }
+        }
+
+        const originNow = playOriginRef.current;
+        if (!originNow) return;
+        const spbNow = 60 / bpmRef.current;
+        const beatNow =
+          originNow.beatStart + (engine.now() - originNow.audioStart) / spbNow;
+        pauseBeatRef.current = Math.min(beatNow, scoreNow.totalBeats);
+
         // Sliding lookahead: schedule voices that start soon on the audio clock.
-        const scheduleUntil = audioNow + LOOKAHEAD_SEC;
+        const scheduleUntil = engine.now() + LOOKAHEAD_SEC;
         let scheduledThisTick = 0;
         while (nextEventIndexRef.current < scoreNow.events.length) {
           const ev = scoreNow.events[nextEventIndexRef.current];
           const endBeat = ev.timeOffsetBeats + ev.durationBeats;
-          if (endBeat <= origin.beatStart + 1e-9) {
+          if (endBeat <= originNow.beatStart + 1e-9) {
             nextEventIndexRef.current += 1;
             continue;
           }
-          const startBeat = Math.max(ev.timeOffsetBeats, origin.beatStart);
-          const startTime = origin.audioStart + (startBeat - origin.beatStart) * spb;
+          const startBeat = Math.max(ev.timeOffsetBeats, originNow.beatStart);
+          const startTime =
+            originNow.audioStart + (startBeat - originNow.beatStart) * spbNow;
           if (startTime > scheduleUntil) break;
 
           const remainBeats = endBeat - startBeat;
-          const durSec = Math.max(0.05, remainBeats * spb * 0.92);
-          if (ev.type !== 'rest' && ev.midiPitches.length > 0) {
+          const durSec = Math.max(0.05, remainBeats * spbNow * 0.92);
+          if (ev.type === 'rest' || ev.midiPitches.length === 0) {
+            engine.playRestClick(startTime);
+            musicDebugLog.logSchedule({
+              audioTime: startTime,
+              beat: startBeat,
+              durationSec: 0.04,
+              midiPitches: [],
+              charIndex: ev.charIndex,
+              measure: ev.measure,
+              eventId: ev.id,
+              delayFromOriginSec: startTime - originNow.audioStart,
+            });
+            scheduledThisTick += 1;
+          } else {
             engine.playChord(ev.midiPitches, startTime, durSec);
             musicDebugLog.logSchedule({
               audioTime: startTime,
@@ -274,18 +401,18 @@ export function useMusicPlayback(
               charIndex: ev.charIndex,
               measure: ev.measure,
               eventId: ev.id,
-              delayFromOriginSec: startTime - origin.audioStart,
+              delayFromOriginSec: startTime - originNow.audioStart,
             });
             scheduledThisTick += 1;
           }
           nextEventIndexRef.current += 1;
         }
 
-        const activeIdx = eventIndexAtBeat(scoreNow.events, beat);
+        const activeIdx = eventIndexAtBeat(scoreNow.events, beatNow);
         const active = activeIdx >= 0 ? scoreNow.events[activeIdx] : null;
         musicDebugLog.logClock({
-          audioTime: audioNow,
-          beat,
+          audioTime: engine.now(),
+          beat: beatNow,
           activeCharIndex: active?.charIndex ?? null,
           nextEventIndex: nextEventIndexRef.current,
           scheduledAhead: scheduledThisTick,
@@ -295,12 +422,12 @@ export function useMusicPlayback(
           typeof performance !== 'undefined' ? performance.now() : Date.now();
         if (wallNow - lastUiUpdateMsRef.current >= UI_UPDATE_MS) {
           lastUiUpdateMsRef.current = wallNow;
-          setCurrentBeat(beat);
+          setCurrentBeat(beatNow);
           setActiveCharIndex(active?.charIndex ?? null);
           setActiveEventIndex(activeIdx >= 0 ? activeIdx : null);
         }
 
-        if (beat >= scoreNow.totalBeats - 1e-6) {
+        if (beatNow >= scoreNow.totalBeats - 1e-6) {
           stopInternal(true);
           return;
         }
@@ -310,7 +437,7 @@ export function useMusicPlayback(
 
       rafRef.current = requestAnimationFrame(tick);
     },
-    [clearBpmDebounce, clearRaf, ensureSynth, stopInternal],
+    [clearBpmDebounce, clearRaf, clearStepRestTimer, ensureSynth, stopInternal],
   );
 
   const play = useCallback(
@@ -354,6 +481,7 @@ export function useMusicPlayback(
     playGenRef.current += 1;
     clearRaf();
     clearBpmDebounce();
+    clearStepRestTimer();
     synthRef.current?.silence();
     playOriginRef.current = null;
     nextEventIndexRef.current = 0;
@@ -373,7 +501,7 @@ export function useMusicPlayback(
       setCurrentBeat(beat);
     }
     musicDebugLog.logTransport('pause', undefined, pauseBeatRef.current, bpmRef.current);
-  }, [clearBpmDebounce, clearRaf]);
+  }, [clearBpmDebounce, clearRaf, clearStepRestTimer]);
 
   const stop = useCallback(() => {
     setError(null);
@@ -383,9 +511,10 @@ export function useMusicPlayback(
 
   const parkOnEvent = useCallback(
     async (ev: MusicNoteEvent, index: number, announce: boolean) => {
-      playGenRef.current += 1;
+      const gen = ++playGenRef.current;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
 
       const beat = ev.timeOffsetBeats;
       pauseBeatRef.current = beat;
@@ -399,6 +528,14 @@ export function useMusicPlayback(
       setActiveCharIndex(ev.charIndex);
       setActiveEventIndex(index);
 
+      if (!userTempoOverrideRef.current) {
+        const scoreBpm = bpmAtBeat(scoreRef.current, beat, bpmRef.current);
+        bpmRef.current = scoreBpm;
+        setBpmState(scoreBpm);
+        setTempoOrigin('score');
+        setTempoLabel(tempoLabelAtBeat(scoreRef.current, beat));
+      }
+
       const labels = formatMusicEventLabels(ev);
       musicDebugLog.logTransport(
         'step',
@@ -407,11 +544,24 @@ export function useMusicPlayback(
         bpmRef.current,
       );
 
+      const restDurSec = Math.max(0.05, ev.durationBeats * (60 / bpmRef.current));
+
       try {
         const synth = ensureSynth();
         await synth.ensureReady();
+        if (gen !== playGenRef.current) return;
         synth.silence();
-        if (ev.type !== 'rest' && ev.midiPitches.length > 0) {
+        if (ev.type === 'rest' || ev.midiPitches.length === 0) {
+          synth.playRestClick(synth.now() + 0.02);
+          // Feel the full rest length; Step remains usable early (new park cancels).
+          stepRestTimerRef.current = window.setTimeout(() => {
+            stepRestTimerRef.current = null;
+            if (gen !== playGenRef.current) return;
+            const endBeat = ev.timeOffsetBeats + ev.durationBeats;
+            pauseBeatRef.current = endBeat;
+            setCurrentBeat(endBeat);
+          }, Math.round(restDurSec * 1000));
+        } else {
           const start = synth.now() + 0.02;
           const durSec = Math.max(
             0.12,
@@ -428,7 +578,7 @@ export function useMusicPlayback(
         speakMusicHint(labels.speech);
       }
     },
-    [clearBpmDebounce, clearRaf, ensureSynth],
+    [clearBpmDebounce, clearRaf, clearStepRestTimer, ensureSynth],
   );
 
   const stepNext = useCallback(() => {
@@ -440,6 +590,7 @@ export function useMusicPlayback(
       playGenRef.current += 1;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
       synthRef.current?.silence();
       playOriginRef.current = null;
       isPlayingRef.current = false;
@@ -453,7 +604,7 @@ export function useMusicPlayback(
     );
     if (idx < 0) return;
     void parkOnEvent(events[idx], idx, true);
-  }, [clearBpmDebounce, clearRaf, parkOnEvent]);
+  }, [clearBpmDebounce, clearRaf, clearStepRestTimer, parkOnEvent]);
 
   const stepPrev = useCallback(() => {
     const events = scoreRef.current.events;
@@ -463,6 +614,7 @@ export function useMusicPlayback(
       playGenRef.current += 1;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
       synthRef.current?.silence();
       playOriginRef.current = null;
       isPlayingRef.current = false;
@@ -476,11 +628,14 @@ export function useMusicPlayback(
     );
     if (idx < 0) return;
     void parkOnEvent(events[idx], idx, true);
-  }, [clearBpmDebounce, clearRaf, parkOnEvent]);
+  }, [clearBpmDebounce, clearRaf, clearStepRestTimer, parkOnEvent]);
 
   const setBPM = useCallback(
     (next: number) => {
       const clamped = clampBpm(next);
+      userTempoOverrideRef.current = true;
+      setTempoOrigin('user');
+      setTempoLabel(null);
       setBpmState(clamped);
 
       if (!isPlayingRef.current) {
@@ -504,18 +659,21 @@ export function useMusicPlayback(
   );
 
   // Stop playback when the BRF source changes (new parse / mode toggle).
-  // Keep the AudioContext alive — only silence voices.
+  // Re-apply score tempo unless the user overrides again on the new document.
   useEffect(() => {
     playGenRef.current += 1;
     clearRaf();
     clearBpmDebounce();
+    clearStepRestTimer();
     synthRef.current?.silence();
     playOriginRef.current = null;
     nextEventIndexRef.current = 0;
     pauseBeatRef.current = 0;
     lastUiUpdateMsRef.current = 0;
+    lastTempoChangeIdxRef.current = -1;
     isPlayingRef.current = false;
     isPausedRef.current = false;
+    userTempoOverrideRef.current = false;
     musicDebugLog.logTransport('score-reset');
     // Intentional reset of playback UI when the score text changes.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- media engine must resync React state with a new BRF source
@@ -525,18 +683,20 @@ export function useMusicPlayback(
     setActiveEventIndex(null);
     setCurrentBeat(0);
     setError(null);
-  }, [brfString, clearBpmDebounce, clearRaf]);
+    applyScoreTempo(score, 0);
+  }, [brfString, score, clearBpmDebounce, clearRaf, clearStepRestTimer, applyScoreTempo]);
 
   useEffect(() => {
     return () => {
       playGenRef.current += 1;
       clearRaf();
       clearBpmDebounce();
+      clearStepRestTimer();
       cancelMusicSpeech();
       synthRef.current?.dispose();
       synthRef.current = null;
     };
-  }, [clearBpmDebounce, clearRaf]);
+  }, [clearBpmDebounce, clearRaf, clearStepRestTimer]);
 
   const playbackState: PlaybackState = {
     isPlaying,
@@ -545,6 +705,8 @@ export function useMusicPlayback(
     activeCharIndex,
     activeEventIndex,
     bpm,
+    tempoOrigin,
+    tempoLabel,
     error,
   };
 
@@ -556,9 +718,21 @@ export function useMusicPlayback(
       activeCharIndex,
       activeEventIndex,
       bpm,
+      tempoOrigin,
+      tempoLabel,
       error,
     });
-  }, [isPlaying, isPaused, currentBeat, activeCharIndex, activeEventIndex, bpm, error]);
+  }, [
+    isPlaying,
+    isPaused,
+    currentBeat,
+    activeCharIndex,
+    activeEventIndex,
+    bpm,
+    tempoOrigin,
+    tempoLabel,
+    error,
+  ]);
 
   return {
     playbackState,

@@ -23,6 +23,11 @@ import {
   linearizePianoSystems,
   segmentPianoSystems,
 } from './musicBraillePiano';
+import {
+  resolveTempoMeta,
+  scanTempoMarks,
+  tryParseMetronomeAt,
+} from './musicTempo';
 
 /** Quarter-note beats in one measure when no time signature is parsed (4/4). */
 export const DEFAULT_BEATS_PER_MEASURE = 4;
@@ -883,6 +888,17 @@ export function parseBrailleMusic(
       continue;
     }
 
+    // Metronome indication (BANA §1.8) — not a sounding C note.
+    {
+      const metro = tryParseMetronomeAt(text, i);
+      if (metro) {
+        i += metro.length;
+        pendingAccidental = null;
+        atMeasureStart = false;
+        continue;
+      }
+    }
+
     // Time / key signature via "#" (not after a note — intervals handled below)
     if (ch === '#') {
       const parsed = tryParseHashPrefix(text, i);
@@ -1157,12 +1173,25 @@ export function parseBrailleMusic(
   const totalMeasures =
     merged.length === 0 ? 0 : Math.max(...merged.map((e) => e.measure));
 
+  const scoreForBeats: MusicScoreAST = {
+    events: merged,
+    totalBeats,
+    totalMeasures,
+    timeSignature,
+    keySignature,
+  };
+  const tempoMeta = resolveTempoMeta(scanTempoMarks(sourceAscii), (charIndex) =>
+    beatForCharIndex(scoreForBeats, charIndex),
+  );
+
   return {
     events: merged,
     totalBeats,
     totalMeasures,
     timeSignature,
     keySignature,
+    detectedTempo: tempoMeta.detectedTempo,
+    tempoChanges: tempoMeta.tempoChanges,
     parseInfo: {
       pianoSystems: pianoSystems.length,
       capacityBeats: capacity,
