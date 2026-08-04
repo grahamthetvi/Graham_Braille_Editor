@@ -49,6 +49,8 @@ export function MusicPlayerControls({
     isPlaying,
     isPaused,
     bpm,
+    tempoOrigin,
+    tempoLabel,
     currentBeat,
     activeCharIndex,
     activeEventIndex,
@@ -200,7 +202,11 @@ export function MusicPlayerControls({
 
       <label className="music-player__tempo">
         <span className="music-player__tempo-label">
-          {t('app.musicPlayer.tempo.label', { bpm })}
+          {tempoOrigin === 'user'
+            ? t('app.musicPlayer.tempo.fromUser', { bpm })
+            : tempoLabel
+              ? t('app.musicPlayer.tempo.fromScore', { bpm, label: tempoLabel })
+              : t('app.musicPlayer.tempo.label', { bpm })}
         </span>
         <input
           type="range"

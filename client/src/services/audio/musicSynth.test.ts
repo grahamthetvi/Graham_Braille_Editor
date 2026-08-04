@@ -131,6 +131,17 @@ describe('MusicSynthEngine', () => {
     await expect(engine.ensureReady()).rejects.toThrow(/not available/i);
   });
 
+  it('schedules a soft rest click', async () => {
+    const engine = new MusicSynthEngine();
+    await engine.ensureReady();
+    const ctx = createdContexts[0];
+    engine.playRestClick(0.05);
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(1);
+    expect(ctx.oscillators[0].type).toBe('square');
+    expect(ctx.oscillators[0].start).toHaveBeenCalled();
+    expect(ctx.oscillators[0].frequency.setValueAtTime).toHaveBeenCalled();
+  });
+
   it('clamps start times that are in the past', async () => {
     const engine = new MusicSynthEngine();
     await engine.ensureReady();

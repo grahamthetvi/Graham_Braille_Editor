@@ -23,6 +23,11 @@ import {
   linearizePianoSystems,
   segmentPianoSystems,
 } from './musicBraillePiano';
+import {
+  resolveTempoMeta,
+  scanTempoMarks,
+  tryParseMetronomeAt,
+} from './musicTempo';
 
 /** Quarter-note beats in one measure when no time signature is parsed (4/4). */
 export const DEFAULT_BEATS_PER_MEASURE = 4;
@@ -707,6 +712,40 @@ export function parseBrailleMusic(
   let pendingOctaveMidiC: number | null = null;
   /** Last written note MIDI — drives the nearest-octave rule. */
   let previousNoteMidi: number | null = null;
+  /**
+   * Per in-accord voice octave cursors. Piano linearization emits
+   * `RH <> LH[space]RH…`; without isolating hands, RH after a bar inherits LH.
+   */
+  type VoiceOctaveCursor = {
+    previousNoteMidi: number | null;
+    currentOctaveMidiC: number;
+  };
+  const voiceCursors: VoiceOctaveCursor[] = [
+    { previousNoteMidi: null, currentOctaveMidiC: 60 },
+  ];
+  let activeVoice = 0;
+  const saveActiveVoiceCursor = () => {
+    voiceCursors[activeVoice] = {
+      previousNoteMidi,
+      currentOctaveMidiC,
+    };
+  };
+  const loadVoiceCursor = (voice: number) => {
+    activeVoice = voice;
+    let cursor = voiceCursors[voice];
+    if (!cursor) {
+      cursor = { previousNoteMidi: null, currentOctaveMidiC: 60 };
+      voiceCursors[voice] = cursor;
+    }
+    previousNoteMidi = cursor.previousNoteMidi;
+    currentOctaveMidiC = cursor.currentOctaveMidiC;
+  };
+  const syncActiveVoiceCursor = () => {
+    voiceCursors[activeVoice] = {
+      previousNoteMidi,
+      currentOctaveMidiC,
+    };
+  };
   let measure = 1;
   let measureBeatOffset = 0;
   let scoreBeatBase = 0;
@@ -782,13 +821,16 @@ export function parseBrailleMusic(
     const raw = text[i];
     const ch = normalizeBrfChar(raw);
 
-    // Whitespace: measure boundary
+    // Whitespace: measure boundary — restore primary (RH) octave cursor so the
+    // next hand does not inherit the in-accord voice that just finished.
     if (/\s/.test(raw)) {
       while (i < text.length && /\s/.test(text[i])) i++;
       if (measurePending.length > 0) {
         flushMeasure();
         measure += 1;
       }
+      saveActiveVoiceCursor();
+      loadVoiceCursor(0);
       atMeasureStart = true;
       continue;
     }
@@ -846,6 +888,17 @@ export function parseBrailleMusic(
       continue;
     }
 
+    // Metronome indication (BANA §1.8) — not a sounding C note.
+    {
+      const metro = tryParseMetronomeAt(text, i);
+      if (metro) {
+        i += metro.length;
+        pendingAccidental = null;
+        atMeasureStart = false;
+        continue;
+      }
+    }
+
     // Time / key signature via "#" (not after a note — intervals handled below)
     if (ch === '#') {
       const parsed = tryParseHashPrefix(text, i);
@@ -887,12 +940,14 @@ export function parseBrailleMusic(
       continue;
     }
 
-    // In-accord — new voice; do not inherit the other hand's octave cursor.
+    // In-accord — switch to the next voice's octave cursor (new voices start
+    // with no previous note so LH must use its own octave marks).
     if (ch === '<' && text[i + 1] === '>') {
       measureBeatOffset = 0;
       pendingAccidental = null;
       pendingNewVoice = true;
-      previousNoteMidi = null;
+      saveActiveVoiceCursor();
+      loadVoiceCursor(activeVoice + 1);
       i += 2;
       atMeasureStart = false;
       continue;
@@ -926,6 +981,7 @@ export function parseBrailleMusic(
     if (ch in OCTAVE_MIDI_C) {
       pendingOctaveMidiC = OCTAVE_MIDI_C[ch];
       currentOctaveMidiC = pendingOctaveMidiC;
+      syncActiveVoiceCursor();
       i += 1;
       atMeasureStart = false;
       continue;
@@ -1036,6 +1092,7 @@ export function parseBrailleMusic(
 
       previousNoteMidi = anchorMidi;
       currentOctaveMidiC = Math.floor(anchorMidi / 12) * 12;
+      syncActiveVoiceCursor();
 
       const inTriplet = tripletRemaining > 0;
       let longDur =
@@ -1116,12 +1173,25 @@ export function parseBrailleMusic(
   const totalMeasures =
     merged.length === 0 ? 0 : Math.max(...merged.map((e) => e.measure));
 
+  const scoreForBeats: MusicScoreAST = {
+    events: merged,
+    totalBeats,
+    totalMeasures,
+    timeSignature,
+    keySignature,
+  };
+  const tempoMeta = resolveTempoMeta(scanTempoMarks(sourceAscii), (charIndex) =>
+    beatForCharIndex(scoreForBeats, charIndex),
+  );
+
   return {
     events: merged,
     totalBeats,
     totalMeasures,
     timeSignature,
     keySignature,
+    detectedTempo: tempoMeta.detectedTempo,
+    tempoChanges: tempoMeta.tempoChanges,
     parseInfo: {
       pianoSystems: pianoSystems.length,
       capacityBeats: capacity,

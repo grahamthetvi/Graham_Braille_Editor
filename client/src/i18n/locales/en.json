@@ -239,7 +239,9 @@
       },
       "tempo": {
         "label": "Tempo {{bpm}} BPM",
-        "ariaLabel": "Playback tempo in beats per minute"
+        "ariaLabel": "Playback tempo in beats per minute",
+        "fromScore": "Tempo {{bpm}} BPM ({{label}})",
+        "fromUser": "Tempo {{bpm}} BPM (you set)"
       },
       "measure": "Measure {{current}} / {{total}}",
       "timeSignature": "{{beats}}/{{unit}}",

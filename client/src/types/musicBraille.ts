@@ -42,6 +42,28 @@ export interface MusicScoreParseInfo {
   literarySkipCharIndex: number;
 }
 
+/** How the initial playback tempo was chosen from the score. */
+export type MusicTempoSource =
+  | 'metronome'
+  | 'tempoWord'
+  | 'wordSign'
+  | 'default';
+
+export interface DetectedTempo {
+  /** Quarter-note beats per minute. */
+  bpm: number;
+  source: MusicTempoSource;
+  /** Human-readable label (e.g. "Allegro", "♩=120"). */
+  label: string;
+}
+
+/** Mid-score absolute tempo change (already resolved from rit/accel/a tempo). */
+export interface MusicTempoChange {
+  timeOffsetBeats: number;
+  bpm: number;
+  label: string;
+}
+
 export interface MusicScoreAST {
   events: MusicNoteEvent[];
   totalBeats: number;
@@ -50,6 +72,10 @@ export interface MusicScoreAST {
   keySignature: KeySignature;
   /** Optional parse diagnostics for the music debug panel. */
   parseInfo?: MusicScoreParseInfo;
+  /** Best initial tempo from the score (metronome > word > default). */
+  detectedTempo?: DetectedTempo;
+  /** Absolute BPM changes after the opening tempo. */
+  tempoChanges?: MusicTempoChange[];
 }
 
 /** Stable keys for music playback errors (UI maps via i18n). */
@@ -63,6 +89,14 @@ export interface PlaybackState {
   /** Index into score.events for the highlighted / stepped note. */
   activeEventIndex: number | null;
   bpm: number;
+  /**
+   * Where the current BPM came from for UI:
+   * - score: auto from detectedTempo / tempoChanges
+   * - user: teacher/student moved the slider
+   */
+  tempoOrigin: 'score' | 'user';
+  /** Label for the score-derived tempo when origin is score (e.g. Allegro). */
+  tempoLabel: string | null;
   /** Non-null when the last play attempt failed. */
   error: MusicPlaybackErrorKey | null;
 }
