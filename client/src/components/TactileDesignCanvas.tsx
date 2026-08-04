@@ -8,7 +8,10 @@ import {
 } from '../utils/graphicBraille';
 import {
   SHAPE_CATEGORY_LABELS,
+  SHAPES_SECTION_CATEGORIES,
+  getShapeEntry,
   shapesInCategory,
+  type ShapeCatalogCategory,
 } from '../utils/shapeCatalog';
 import { asciiToUnicodeBraille } from '../utils/braille';
 import { BrailleCell } from './BrailleCell';
@@ -19,6 +22,7 @@ import {
   compositeDesignScene,
   type CanvasObject,
   type RaisedStampObject,
+  type StampObject,
 } from '../utils/tactileDesign';
 
 export type DesignTool =
@@ -85,7 +89,8 @@ export function TactileDesignCanvas({
   const [tool, setTool] = useState<DesignTool>('pencil');
   const [brushSize, setBrushSize] = useState(1);
   const [stampShape, setStampShape] = useState<InventoryShapeKind>('flower');
-  const [stampSize, setStampSize] = useState(8);
+  const [stampCategory, setStampCategory] = useState<ShapeCatalogCategory>('basics');
+  const [stampSize, setStampSize] = useState(15);
   const [stampFilled, setStampFilled] = useState(false);
   const [stampCrossParams, setStampCrossParams] = useState({
     lengthHorizontal: 10,
@@ -937,6 +942,44 @@ export function TactileDesignCanvas({
     setPhotoImage(null);
   };
 
+  const selectedStamp = useMemo(() => {
+    if (!selectedId) return null;
+    const obj = objects.find((o) => o.id === selectedId);
+    return obj?.kind === 'stamp' ? obj : null;
+  }, [objects, selectedId]);
+
+  const inventoryShapes = useMemo(() => {
+    if (stampCategory === 'math') return shapesInCategory('math');
+    return shapesInCategory(stampCategory);
+  }, [stampCategory]);
+
+  /** Apply size/fill/cross params to the currently selected stamp object, if any. */
+  const updateSelectedStamp = useCallback(
+    (patch: Partial<{ size: number; filled: boolean; shape: InventoryShapeKind; crossParams: StampObject['crossParams'] }>) => {
+      if (!selectedStamp) return;
+      setObjects((list) =>
+        list.map((obj) => {
+          if (obj.id !== selectedStamp.id || obj.kind !== 'stamp') return obj;
+          return { ...obj, ...patch };
+        }),
+      );
+    },
+    [selectedStamp],
+  );
+
+  // When pointer selects a stamp, mirror its settings into the inventory controls
+  useEffect(() => {
+    if (!selectedStamp) return;
+    setStampShape(selectedStamp.shape);
+    setStampSize(selectedStamp.size);
+    setStampFilled(selectedStamp.filled);
+    setStampCrossParams({ ...selectedStamp.crossParams });
+    const entry = getShapeEntry(selectedStamp.shape);
+    if (entry) {
+      setStampCategory(entry.category);
+    }
+  }, [selectedStamp?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toolOptions: { id: DesignTool; labelKey: string }[] = [
     { id: 'pointer', labelKey: 'graphics.tactile.tools.pointer' },
     { id: 'pencil', labelKey: 'graphics.tactile.tools.pencil' },
@@ -1018,86 +1061,208 @@ export function TactileDesignCanvas({
             </div>
           )}
 
-          {tool === 'stamp' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-              <select
-                value={stampShape}
-                onChange={(e) => setStampShape(e.target.value as InventoryShapeKind)}
-                style={{ padding: '1px 3px', fontSize: '0.75rem', maxWidth: '90px' }}
-              >
-                {(['basics', 'science', 'history', 'math', 'everyday'] as const).map((cat) => (
-                  <optgroup key={cat} label={SHAPE_CATEGORY_LABELS[cat]}>
-                    {shapesInCategory(cat).map((s) => (
-                      <option key={s.kind} value={s.kind}>
-                        {s.shortLabel}
-                      </option>
-                    ))}
-                  </optgroup>
+          {(tool === 'stamp' || !!selectedStamp) && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ fontWeight: 700 }}>{t('graphics.tactile.inventoryHeading')}</div>
+              <div style={{ fontSize: '0.72rem', opacity: 0.8 }}>{t('graphics.tactile.inventoryHint')}</div>
+              {selectedStamp && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--accent)' }}>
+                  {t('graphics.tactile.editSelectedStamp')}
+                </div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                {[...SHAPES_SECTION_CATEGORIES, 'math' as const].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`toolbar-btn${stampCategory === cat ? ' toolbar-btn--active' : ''}`}
+                    onClick={() => {
+                      setStampCategory(cat);
+                      const first = shapesInCategory(cat)[0];
+                      if (first && getShapeEntry(stampShape)?.category !== cat) {
+                        setStampShape(first.kind);
+                        if (selectedStamp) updateSelectedStamp({ shape: first.kind });
+                      }
+                    }}
+                    style={{ padding: '2px 8px', fontSize: '0.75rem', textTransform: 'none' }}
+                  >
+                    {SHAPE_CATEGORY_LABELS[cat]}
+                  </button>
                 ))}
-              </select>
-              <input
-                type="number"
-                min={2}
-                max={30}
-                value={stampSize}
-                onChange={(e) => setStampSize(parseInt(e.target.value, 10) || 5)}
-                style={{ width: '30px', fontSize: '0.75rem' }}
-                title={t('graphics.tactile.stampSize')}
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.75rem' }}>
-                <input type="checkbox" checked={stampFilled} onChange={(e) => setStampFilled(e.target.checked)} />
-                {t('graphics.tactile.fill')}
-              </label>
-            </div>
-          )}
-
-          {tool === 'stamp' && stampShape === 'cross' && (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <label>
-                H-Len:{' '}
+              </div>
+              <div
+                role="listbox"
+                aria-label={t('graphics.tactile.inventoryHeading')}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                  gap: '0.35rem',
+                  maxHeight: '140px',
+                  overflowY: 'auto',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  padding: '0.35rem',
+                  background: 'var(--bg-input)',
+                }}
+              >
+                {inventoryShapes.map((shape) => {
+                  const active = stampShape === shape.kind;
+                  return (
+                    <button
+                      key={shape.kind}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      className={`toolbar-btn${active ? ' toolbar-btn--active' : ''}`}
+                      onClick={() => {
+                        setStampShape(shape.kind);
+                        if (selectedStamp) updateSelectedStamp({ shape: shape.kind });
+                        else if (tool !== 'stamp') setTool('stamp');
+                      }}
+                      style={{ textTransform: 'none', textAlign: 'center', padding: '0.4rem 0.3rem', fontSize: '0.75rem' }}
+                    >
+                      {shape.shortLabel}
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: '0.75rem', opacity: 0.85 }}>
+                {t('graphics.tactile.selectedShape', {
+                  label: getShapeEntry(stampShape)?.label ?? stampShape,
+                })}
+                {getShapeEntry(stampShape)
+                  ? ` · ${SHAPE_CATEGORY_LABELS[getShapeEntry(stampShape)!.category]}`
+                  : ''}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 'bold', whiteSpace: 'nowrap' }}>
+                    {t('graphics.tactile.sizeRadius')}:
+                  </span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={40}
+                    value={stampSize}
+                    onChange={(e) => {
+                      const next = Math.max(1, parseInt(e.target.value, 10) || 1);
+                      setStampSize(next);
+                      if (selectedStamp) updateSelectedStamp({ size: next });
+                    }}
+                    style={{ width: '56px', padding: '2px 4px', fontSize: '0.8rem' }}
+                  />
+                </label>
                 <input
-                  type="number"
-                  min={2}
-                  value={stampCrossParams.lengthHorizontal}
-                  onChange={(e) =>
-                    setStampCrossParams((p) => ({
-                      ...p,
-                      lengthHorizontal: parseInt(e.target.value, 10) || 10,
-                    }))
-                  }
-                  style={{ width: '32px', fontSize: '0.7rem' }}
-                />
-              </label>
-              <label>
-                V-Thick:{' '}
-                <input
-                  type="number"
+                  type="range"
                   min={1}
-                  value={stampCrossParams.thicknessVertical}
-                  onChange={(e) =>
-                    setStampCrossParams((p) => ({
-                      ...p,
-                      thicknessVertical: parseInt(e.target.value, 10) || 2,
-                    }))
-                  }
-                  style={{ width: '32px', fontSize: '0.7rem' }}
+                  max={40}
+                  value={stampSize}
+                  onChange={(e) => {
+                    const next = parseInt(e.target.value, 10);
+                    setStampSize(next);
+                    if (selectedStamp) updateSelectedStamp({ size: next });
+                  }}
+                  style={{ width: '120px' }}
+                  aria-label={t('graphics.tactile.sizeRadius')}
                 />
-              </label>
-              <label>
-                H-Thick:{' '}
-                <input
-                  type="number"
-                  min={1}
-                  value={stampCrossParams.thicknessHorizontal}
-                  onChange={(e) =>
-                    setStampCrossParams((p) => ({
-                      ...p,
-                      thicknessHorizontal: parseInt(e.target.value, 10) || 2,
-                    }))
-                  }
-                  style={{ width: '32px', fontSize: '0.7rem' }}
-                />
-              </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={stampFilled}
+                    onChange={(e) => {
+                      const next = e.target.checked;
+                      setStampFilled(next);
+                      if (selectedStamp) updateSelectedStamp({ filled: next });
+                    }}
+                  />
+                  {t('graphics.tactile.filledSolid')}
+                </label>
+              </div>
+              {stampShape === 'cross' && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: '0.5rem',
+                    borderTop: '1px dashed var(--border-color)',
+                    paddingTop: '0.5rem',
+                  }}
+                >
+                  <div style={{ gridColumn: '1 / -1', fontWeight: 700, fontSize: '0.8rem' }}>
+                    {t('graphics.tactile.crossParams')}
+                  </div>
+                  <label>
+                    {t('graphics.tactile.crossHLen')}:{' '}
+                    <input
+                      type="number"
+                      min={2}
+                      value={stampCrossParams.lengthHorizontal}
+                      onChange={(e) => {
+                        const next = {
+                          ...stampCrossParams,
+                          lengthHorizontal: parseInt(e.target.value, 10) || 10,
+                        };
+                        setStampCrossParams(next);
+                        if (selectedStamp) updateSelectedStamp({ crossParams: next });
+                      }}
+                      style={{ width: '48px', fontSize: '0.75rem' }}
+                    />
+                  </label>
+                  <label>
+                    {t('graphics.tactile.crossVThick')}:{' '}
+                    <input
+                      type="number"
+                      min={1}
+                      value={stampCrossParams.thicknessVertical}
+                      onChange={(e) => {
+                        const next = {
+                          ...stampCrossParams,
+                          thicknessVertical: parseInt(e.target.value, 10) || 2,
+                        };
+                        setStampCrossParams(next);
+                        if (selectedStamp) updateSelectedStamp({ crossParams: next });
+                      }}
+                      style={{ width: '48px', fontSize: '0.75rem' }}
+                    />
+                  </label>
+                  <label>
+                    {t('graphics.tactile.crossHThick')}:{' '}
+                    <input
+                      type="number"
+                      min={1}
+                      value={stampCrossParams.thicknessHorizontal}
+                      onChange={(e) => {
+                        const next = {
+                          ...stampCrossParams,
+                          thicknessHorizontal: parseInt(e.target.value, 10) || 2,
+                        };
+                        setStampCrossParams(next);
+                        if (selectedStamp) updateSelectedStamp({ crossParams: next });
+                      }}
+                      style={{ width: '48px', fontSize: '0.75rem' }}
+                    />
+                  </label>
+                  <label>
+                    {t('graphics.tactile.crossRatio')}:{' '}
+                    <input
+                      type="number"
+                      step={0.05}
+                      min={0.1}
+                      max={0.9}
+                      value={stampCrossParams.heightRatio}
+                      onChange={(e) => {
+                        const next = {
+                          ...stampCrossParams,
+                          heightRatio: parseFloat(e.target.value) || 0.35,
+                        };
+                        setStampCrossParams(next);
+                        if (selectedStamp) updateSelectedStamp({ crossParams: next });
+                      }}
+                      style={{ width: '56px', fontSize: '0.75rem' }}
+                    />
+                  </label>
+                </div>
+              )}
             </div>
           )}
 

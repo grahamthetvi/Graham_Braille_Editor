@@ -968,10 +968,21 @@
         "eraser": "Eraser",
         "line": "Line",
         "leader": "Leader line",
-        "stamp": "Stamp",
+        "stamp": "Shape Inventory",
         "label": "Braille label",
         "raisedStamp": "Raised print stamp"
-      }
+      },
+      "inventoryHeading": "Shape Inventory",
+      "inventoryHint": "Pick a shape, set size and fill, then click the canvas to place it. Use Pointer to move or delete placed shapes.",
+      "sizeRadius": "Size (radius in dots)",
+      "filledSolid": "Filled (solid)",
+      "selectedShape": "Selected: {{label}}",
+      "crossParams": "Cross parameters",
+      "crossHLen": "Horizontal bar length",
+      "crossVThick": "Vertical bar thickness",
+      "crossHThick": "Horizontal bar thickness",
+      "crossRatio": "Crossbar height ratio",
+      "editSelectedStamp": "Editing selected stamp — changes apply immediately."
     },
     "cancel": "Cancel",
     "insert": "Insert Graphic",
