@@ -28,6 +28,8 @@ export type BackTranslateBrfResult = { plainText: string; brf: string };
 export interface UseBrailleReturn {
   /** Call this with plain text and an optional liblouis table filename and math code. */
   translate: (text: string, table?: string, mathCode?: MathCode) => void;
+  /** One-shot translate that resolves with the ASCII BRF result. */
+  translateAsync: (text: string, table?: string, mathCode?: MathCode) => Promise<string>;
   /** Translates only the math portions of the text and returns the new text via a Promise. */
   convertMath: (text: string, mathCode?: MathCode) => Promise<string>;
   /**
@@ -77,6 +79,12 @@ export function useBraille(): UseBrailleReturn {
   const isWorkerReadyRef = useRef(false);
   const pendingTranslateRef = useRef<{ text: string; table: string; mathCode: MathCode } | null>(null);
 
+  const pendingTranslatePromiseRef = useRef<{
+    resolve: (result: string) => void;
+    reject: (e: Error) => void;
+    sourceText: string;
+  } | null>(null);
+
   // -------------------------------------------------------------------------
   // Spawn / tear down the worker
   // -------------------------------------------------------------------------
@@ -116,6 +124,11 @@ export function useBraille(): UseBrailleReturn {
         setProgress(100);
         setIsLoading(false);
         setError(null);
+        const pending = pendingTranslatePromiseRef.current;
+        if (pending && pending.sourceText === msg.sourceText) {
+          pendingTranslatePromiseRef.current = null;
+          pending.resolve(msg.result);
+        }
       } else if (msg.type === 'CONVERT_MATH_RESULT') {
         const resolve = convertMathResolvers.current.shift();
         if (resolve) resolve(msg.result);
@@ -131,6 +144,9 @@ export function useBraille(): UseBrailleReturn {
         const pendingBt = pendingBackTranslateRef.current;
         pendingBackTranslateRef.current = null;
         if (pendingBt) pendingBt.reject(new Error(msg.error));
+        const pendingTr = pendingTranslatePromiseRef.current;
+        pendingTranslatePromiseRef.current = null;
+        if (pendingTr) pendingTr.reject(new Error(msg.error));
         setError(msg.error);
         setIsLoading(false);
       }
@@ -141,6 +157,9 @@ export function useBraille(): UseBrailleReturn {
       const pendingBt = pendingBackTranslateRef.current;
       pendingBackTranslateRef.current = null;
       if (pendingBt) pendingBt.reject(new Error(e.message));
+      const pendingTr = pendingTranslatePromiseRef.current;
+      pendingTranslatePromiseRef.current = null;
+      if (pendingTr) pendingTr.reject(new Error(e.message));
       setError(`Worker error: ${e.message}`);
       setIsLoading(false);
     });
@@ -184,6 +203,22 @@ export function useBraille(): UseBrailleReturn {
     workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
   }, [startWorkerTask]);
 
+  const translateAsync = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth'): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (!workerRef.current) {
+        reject(new Error('Worker not ready'));
+        return;
+      }
+      if (!isWorkerReadyRef.current) {
+        reject(new Error('Worker still initialising'));
+        return;
+      }
+      pendingTranslatePromiseRef.current = { resolve, reject, sourceText: text };
+      startWorkerTask();
+      workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
+    });
+  }, [startWorkerTask]);
+
   // -------------------------------------------------------------------------
   // Public convertMath function
   // -------------------------------------------------------------------------
@@ -221,6 +256,7 @@ export function useBraille(): UseBrailleReturn {
 
   return {
     translate,
+    translateAsync,
     convertMath,
     backTranslateBrf,
     translatedText,

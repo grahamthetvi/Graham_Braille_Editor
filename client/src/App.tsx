@@ -2015,6 +2015,7 @@ Accuracy: _____________ %
           onMathCodeChange={setMathCode}
           defaultCellsPerRow={pageSettings.cellsPerRow}
           defaultLinesPerPage={pageSettings.linesPerPage}
+          brailleTable={selectedTable}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowGraphicsEditor(false);

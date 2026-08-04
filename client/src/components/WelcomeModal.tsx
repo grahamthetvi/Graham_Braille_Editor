@@ -26,12 +26,6 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
   }, [slideIndex]);
 
   useEffect(() => {
-    if (isLastSlide) {
-      primaryBtnRef.current?.focus();
-    }
-  }, []);
-
-  useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         onClose();

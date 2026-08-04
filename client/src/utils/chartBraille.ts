@@ -48,6 +48,116 @@ export class GridCanvas {
         }
     }
 
+    clearPoint(x: number, y: number) {
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            this.data[y][x] = false;
+        }
+    }
+
+    /**
+     * Paint a single braille cell (ASCII BRF or Unicode U+2800–U+28FF) at cell coordinates.
+     * Dot layout matches renderToBRF (dots 1–6 in a 2×3 block).
+     */
+    paintBrailleCell(cellX: number, cellY: number, asciiOrUnicode: string): void {
+        const charWidth = Math.floor(this.width / 2);
+        const charHeight = Math.floor(this.height / 3);
+        if (cellX < 0 || cellY < 0 || cellX >= charWidth || cellY >= charHeight) return;
+        if (!asciiOrUnicode) return;
+
+        const ch = asciiOrUnicode[0];
+        let codePoint = ch.charCodeAt(0);
+
+        // Map ASCII/BRF (incl. lowercase) to Unicode braille offset
+        if (codePoint >= 0x20 && codePoint <= 0x7F) {
+            let mapped = codePoint;
+            if (mapped >= 0x60 && mapped <= 0x7F) mapped -= 0x20;
+            const index = mapped - 0x20;
+            if (index >= 0 && index < 64) {
+                codePoint = 0x2800 + BRF_TO_UNICODE_OFFSETS[index];
+            }
+        }
+
+        if (codePoint < 0x2800 || codePoint > 0x28FF) {
+            // Space / empty: clear the cell
+            if (ch === ' ' || codePoint === 0x20) {
+                const bx = cellX * 2;
+                const by = cellY * 3;
+                this.clearPoint(bx, by);
+                this.clearPoint(bx, by + 1);
+                this.clearPoint(bx, by + 2);
+                this.clearPoint(bx + 1, by);
+                this.clearPoint(bx + 1, by + 1);
+                this.clearPoint(bx + 1, by + 2);
+            }
+            return;
+        }
+
+        const offset = codePoint - 0x2800;
+        const bx = cellX * 2;
+        const by = cellY * 3;
+        // Set or clear each of the 6 dots so labels overwrite cleanly
+        const d1 = (offset & 0x01) !== 0;
+        const d2 = (offset & 0x02) !== 0;
+        const d3 = (offset & 0x04) !== 0;
+        const d4 = (offset & 0x08) !== 0;
+        const d5 = (offset & 0x10) !== 0;
+        const d6 = (offset & 0x20) !== 0;
+        if (d1) this.setPoint(bx, by); else this.clearPoint(bx, by);
+        if (d2) this.setPoint(bx, by + 1); else this.clearPoint(bx, by + 1);
+        if (d3) this.setPoint(bx, by + 2); else this.clearPoint(bx, by + 2);
+        if (d4) this.setPoint(bx + 1, by); else this.clearPoint(bx + 1, by);
+        if (d5) this.setPoint(bx + 1, by + 1); else this.clearPoint(bx + 1, by + 1);
+        if (d6) this.setPoint(bx + 1, by + 2); else this.clearPoint(bx + 1, by + 2);
+    }
+
+    /**
+     * Paint a horizontal ASCII BRF (or Unicode braille) string starting at cell (cellX, cellY).
+     * Newlines advance to the next cell row. Stops at canvas bounds unless maxCells wraps lines.
+     */
+    paintBrailleString(
+        cellX: number,
+        cellY: number,
+        asciiBrf: string,
+        opts?: { maxCells?: number },
+    ): { cellsWide: number; linesUsed: number } {
+        const charWidth = Math.floor(this.width / 2);
+        const charHeight = Math.floor(this.height / 3);
+        const maxCells = opts?.maxCells && opts.maxCells > 0 ? opts.maxCells : charWidth - cellX;
+        let x = cellX;
+        let y = cellY;
+        let lineStartX = cellX;
+        let cellsWide = 0;
+        let linesUsed = 1;
+        let colOnLine = 0;
+
+        for (let i = 0; i < asciiBrf.length; i++) {
+            const ch = asciiBrf[i];
+            if (ch === '\n' || ch === '\r') {
+                if (ch === '\r' && asciiBrf[i + 1] === '\n') i++;
+                y += 1;
+                x = lineStartX;
+                colOnLine = 0;
+                linesUsed += 1;
+                if (y >= charHeight) break;
+                continue;
+            }
+            if (y < 0 || y >= charHeight) break;
+            if (colOnLine >= maxCells || x >= charWidth) {
+                y += 1;
+                x = lineStartX;
+                colOnLine = 0;
+                linesUsed += 1;
+                if (y >= charHeight) break;
+            }
+            this.paintBrailleCell(x, y, ch);
+            x += 1;
+            colOnLine += 1;
+            cellsWide = Math.max(cellsWide, colOnLine);
+        }
+
+        return { cellsWide, linesUsed: Math.min(linesUsed, Math.max(0, charHeight - cellY)) };
+    }
+
     drawLine(x0: number, y0: number, x1: number, y1: number) {
         x0 = Math.round(x0);
         y0 = Math.round(y0);
