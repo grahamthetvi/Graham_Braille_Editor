@@ -239,8 +239,13 @@
         "fromDefault": "Tempo {{bpm}} BPM (not found in score)",
         "missingNotice": {
           "title": "No tempo marking found",
-          "body": "We could not find a metronome mark or tempo word in this braille score. Playback starts at {{bpm}} BPM. Use the Tempo slider to set the speed you want.",
-          "dismiss": "Dismiss"
+          "body": "We could not find a metronome mark or tempo word in this braille score. Playback starts at {{bpm}} BPM — pick a pace below, or use the Tempo slider.",
+          "slowExpressive": "Slow / expressive · {{bpm}} BPM",
+          "slowExpressiveAria": "Set tempo to {{bpm}} BPM for slow or expressive pieces",
+          "moderateUpbeat": "Moderate / upbeat · {{bpm}} BPM",
+          "moderateUpbeatAria": "Set tempo to {{bpm}} BPM for moderate or upbeat pieces",
+          "setMyself": "I'll set it myself",
+          "setMyselfAria": "Keep {{bpm}} BPM and dismiss; adjust the Tempo slider yourself"
         }
       },
       "measure": "Measure {{current}} / {{total}}",

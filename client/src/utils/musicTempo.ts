@@ -14,6 +14,10 @@ import type {
 /** Quarter-note BPM when no score tempo is found. */
 export const DEFAULT_SCORE_BPM = 120;
 
+/** Midpoints of the missing-tempo pace presets (user picks when score has no mark). */
+export const PRESET_SLOW_EXPRESSIVE_BPM = 78;
+export const PRESET_MODERATE_UPBEAT_BPM = 114;
+
 /** Relative pace scales until the next absolute mark or `a tempo`. */
 export const TEMPO_SCALE_RIT = 0.85;
 export const TEMPO_SCALE_RALL = 0.8;

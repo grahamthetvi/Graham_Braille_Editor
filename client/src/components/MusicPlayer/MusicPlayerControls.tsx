@@ -4,7 +4,11 @@ import type { MusicScoreAST, PlaybackState } from '../../types/musicBraille';
 import { MAX_BPM, MIN_BPM } from '../../hooks/useMusicPlayback';
 import { musicDebugLog } from '../../services/audio/musicDebugLog';
 import { formatMusicEventLabels } from '../../utils/musicNoteLabel';
-import { fingerprintBrfDocument } from '../../utils/musicTempo';
+import {
+  PRESET_MODERATE_UPBEAT_BPM,
+  PRESET_SLOW_EXPRESSIVE_BPM,
+  fingerprintBrfDocument,
+} from '../../utils/musicTempo';
 import './MusicPlayerControls.css';
 
 export interface MusicPlayerControlsProps {
@@ -23,7 +27,7 @@ export interface MusicPlayerControlsProps {
   onPlayFromCursorChange: (enabled: boolean) => void;
   /** Character index where music is estimated to begin (for status). */
   musicStartCharIndex?: number;
-  /** BRF source used to key the once-per-document missing-tempo notice. */
+  /** BRF source used to key the once-per-document missing-tempo pace picker. */
   documentBrf?: string;
   disabled?: boolean;
 }
@@ -32,6 +36,7 @@ export interface MusicPlayerControlsProps {
  * Compact playback bar for Music Braille — Play / Pause / Stop / Step + tempo.
  * Includes a default-on "From cursor" toggle and a "Music start" jump button.
  * Status shows the current note name and music duration term.
+ * When the score has no tempo mark, offers slow / moderate pace presets.
  */
 export function MusicPlayerControls({
   playbackState,
@@ -65,10 +70,18 @@ export function MusicPlayerControls({
   const docKey = useMemo(() => fingerprintBrfDocument(documentBrf), [documentBrf]);
   const [dismissedDocKeys, setDismissedDocKeys] = useState<Set<string>>(() => new Set());
 
-  // Clear dismiss state only when switching away from empty → content is unnecessary;
-  // dismissed keys accumulate for the session so revisiting the same doc stays quiet.
+  const dismissMissingTempoPicker = () => {
+    setDismissedDocKeys((prev) => {
+      if (prev.has(docKey)) return prev;
+      const next = new Set(prev);
+      next.add(docKey);
+      return next;
+    });
+  };
+
+  // Dismissed keys accumulate for the session so revisiting the same doc stays quiet.
   useEffect(() => {
-    // Ensure we do not keep showing the notice after the user sets a tempo.
+    // Hide the picker after the user sets a tempo (preset or slider).
     if (tempoOrigin === 'user') {
       setDismissedDocKeys((prev) => {
         if (prev.has(docKey)) return prev;
@@ -79,11 +92,12 @@ export function MusicPlayerControls({
     }
   }, [tempoOrigin, docKey]);
 
-  const showMissingTempoNotice =
-    !disabled &&
-    score.events.length > 0 &&
-    tempoOrigin === 'default' &&
-    !dismissedDocKeys.has(docKey);
+  const showMissingTempoPicker = shouldShowMissingTempoNotice({
+    disabled,
+    eventCount: score.events.length,
+    tempoOrigin,
+    dismissed: dismissedDocKeys.has(docKey),
+  });
 
   const activeEvent =
     activeEventIndex != null && activeEventIndex >= 0 && activeEventIndex < score.events.length
@@ -147,7 +161,7 @@ export function MusicPlayerControls({
       role="region"
       aria-label={t('app.musicPlayer.ariaLabel')}
     >
-      {showMissingTempoNotice ? (
+      {showMissingTempoPicker ? (
         <div className="music-player__tempo-notice" role="status" aria-live="polite">
           <div className="music-player__tempo-notice-text">
             <strong className="music-player__tempo-notice-title">
@@ -157,19 +171,40 @@ export function MusicPlayerControls({
               {t('app.musicPlayer.tempo.missingNotice.body', { bpm })}
             </p>
           </div>
-          <button
-            type="button"
-            className="toolbar-btn music-player__tempo-notice-dismiss"
-            onClick={() => {
-              setDismissedDocKeys((prev) => {
-                const next = new Set(prev);
-                next.add(docKey);
-                return next;
-              });
-            }}
-          >
-            {t('app.musicPlayer.tempo.missingNotice.dismiss')}
-          </button>
+          <div className="music-player__tempo-notice-actions">
+            <button
+              type="button"
+              className="toolbar-btn toolbar-btn--primary music-player__tempo-preset"
+              onClick={() => onBpmChange(PRESET_SLOW_EXPRESSIVE_BPM)}
+              aria-label={t('app.musicPlayer.tempo.missingNotice.slowExpressiveAria', {
+                bpm: PRESET_SLOW_EXPRESSIVE_BPM,
+              })}
+            >
+              {t('app.musicPlayer.tempo.missingNotice.slowExpressive', {
+                bpm: PRESET_SLOW_EXPRESSIVE_BPM,
+              })}
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn toolbar-btn--primary music-player__tempo-preset"
+              onClick={() => onBpmChange(PRESET_MODERATE_UPBEAT_BPM)}
+              aria-label={t('app.musicPlayer.tempo.missingNotice.moderateUpbeatAria', {
+                bpm: PRESET_MODERATE_UPBEAT_BPM,
+              })}
+            >
+              {t('app.musicPlayer.tempo.missingNotice.moderateUpbeat', {
+                bpm: PRESET_MODERATE_UPBEAT_BPM,
+              })}
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn music-player__tempo-notice-dismiss"
+              onClick={dismissMissingTempoPicker}
+              aria-label={t('app.musicPlayer.tempo.missingNotice.setMyselfAria', { bpm })}
+            >
+              {t('app.musicPlayer.tempo.missingNotice.setMyself')}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -346,7 +381,7 @@ export function MusicPlayerControls({
   );
 }
 
-/** Pure helper for tests: whether the missing-tempo notice should show. */
+/** Pure helper for tests: whether the missing-tempo pace picker should show. */
 export function shouldShowMissingTempoNotice(opts: {
   disabled?: boolean;
   eventCount: number;
