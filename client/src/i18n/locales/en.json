@@ -492,13 +492,17 @@
         "heading": "Large-Print (Jumbo) Braille",
         "body": "For dual-media print/braille books or low-vision readers, you can insert large-print sections. Click Large Print under the Tools tab to configure size and insert blocks. In the right-hand preview panel, these blocks are translated and rendered as large-print Braille cells in BRF format, preserving tactile readability and alignment."
       },
+      "music": {
+        "heading": "Music Braille",
+        "body": "Graham does not yet convert sheet music into Music Braille automatically. For Music Braille, open Music Player Mode under Teaching Tools or Music Braille Guide under Help & Support. We recommend creating or exporting MusicXML in MuseScore, converting it with Sao Mai Braille (SMB desktop or online), then optionally importing the .brf here to preview or emboss. You can also Add to translation page so the instructions themselves can be embossed as braille."
+      },
       "graphics": {
         "heading": "Tactile Graphics & 3D Printing",
-        "body": "Click Graphics under the Tools tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille.",
+        "body": "Click Graphics under the Tools tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille. Photo Overlay / Tactile Design lets you draw freehand, stamp shapes, and place braille labels on the same canvas for diagrams (for example, a flower with labeled parts).",
         "shapesHeading": "Shape Inventory & Custom Shapes:",
         "simpleShapes": "Simple Shapes: Lines, rectangles, and adjustable polygons.",
         "complexShapes": "Complex Shapes: Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross. Shapes like the Cross support adjusting the width/height of the bars directly.",
-        "positioningTool": "Positioning Tool: In the Canvas Tools panel, select the pointer tool to reposition text or shapes on your canvas without resizing them.",
+        "positioningTool": "Canvas tools: Use the pointer to select and move braille labels and stamped shapes; pencil, line, stamp, and braille label tools build the diagram.",
         "customElements": "Custom Elements: Includes details like a Paintbrush, Flower/Daisy blooms (always rendered with filled centers for contrast), and Vampire Fangs.",
         "dotPatternPreview": "Dot Pattern Preview: The editor displays canvas shapes as physical Braille dot grids in real-time.",
         "stlNote": "Additionally, click Door Sign (STL) under the Tools tab to export your paginated braille layout as a 3D-printable STL file with standard BANA midpoint dot spacing."
@@ -510,8 +514,12 @@
     },
     "buttons": {
       "getStarted": "Get Started",
-      "closeGuide": "Close Guide"
-    }
+      "closeGuide": "Close Guide",
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "stepIndicator": "Slide {{current}} of {{total}}",
+    "goToSlide": "Go to slide {{n}}"
   },
 
   "privacy": {

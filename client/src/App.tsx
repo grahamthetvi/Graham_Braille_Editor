@@ -185,6 +185,9 @@ export default function App() {
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
+  const [hasSeenMusicGuide, setHasSeenMusicGuide] = useState(
+    () => !!localStorage.getItem('graham-braille-music-guide-seen')
+  );
   const [showMusicBrailleGuide, setShowMusicBrailleGuide] = useState(false);
   const [showMusicBrailleAudit, setShowMusicBrailleAudit] = useState(false);
   const [showStlExportDialog, setShowStlExportDialog] = useState(false);
@@ -213,6 +216,20 @@ export default function App() {
       setHasSeenPrivacyPolicy(true);
     }
     setShowPrivacyPolicy(false);
+  }
+
+  function openMusicGuideIfFirstTime() {
+    if (!hasSeenMusicGuide) {
+      setShowMusicBrailleGuide(true);
+    }
+  }
+
+  function handleMusicBrailleGuideClose() {
+    if (!hasSeenMusicGuide) {
+      localStorage.setItem('graham-braille-music-guide-seen', '1');
+      setHasSeenMusicGuide(true);
+    }
+    setShowMusicBrailleGuide(false);
   }
 
   const [bridgeConnected, setBridgeConnected] = useState(false);
@@ -1361,6 +1378,7 @@ Accuracy: _____________ %
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';
+                        openMusicGuideIfFirstTime();
                       }
                       return next;
                     });
@@ -2019,10 +2037,10 @@ Accuracy: _____________ %
         <MusicBrailleGuideModal
           onInsertIntoEditor={(text) => {
             editorRef.current?.insertTextAtCursor(text);
-            setShowMusicBrailleGuide(false);
+            handleMusicBrailleGuideClose();
             setActiveTab('file');
           }}
-          onClose={() => setShowMusicBrailleGuide(false)}
+          onClose={handleMusicBrailleGuideClose}
         />
       )}
 
