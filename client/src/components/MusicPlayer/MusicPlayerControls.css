@@ -111,6 +111,18 @@
   line-height: 1.35;
 }
 
+.music-player__tempo-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 100%;
+}
+
+.music-player__tempo-preset {
+  min-width: 0;
+}
+
 .music-player__tempo-notice-dismiss {
   flex-shrink: 0;
   min-width: 5rem;
