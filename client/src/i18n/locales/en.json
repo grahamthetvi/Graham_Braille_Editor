@@ -134,9 +134,24 @@
         "ariaLabel": "Toggle Music Braille player mode"
       },
       "auditBrf": {
-        "label": "Audit BRF with AI",
-        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
-        "ariaLabel": "Open Audit BRF with AI linter"
+        "label": "Audit Music BRF",
+        "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload. Available when Music Player Mode is on with BRF loaded.",
+        "ariaLabel": "Open Audit Music BRF linter"
+      },
+      "graphicsMath": {
+        "label": "Math",
+        "title": "Open tactile Math graphics (clock, fraction, number line, graphs, charts)",
+        "ariaLabel": "Open Math tactile graphics"
+      },
+      "graphicsShapes": {
+        "label": "Shapes",
+        "title": "Open the Shape Inventory and custom polygons",
+        "ariaLabel": "Open Shapes tactile graphics"
+      },
+      "graphicsDrawing": {
+        "label": "Drawing",
+        "title": "Open Photo Overlay and Raised Print Text drawing tools",
+        "ariaLabel": "Open Drawing tactile graphics"
       },
       "stl": {
         "label": "Door Sign (STL)",
@@ -512,7 +527,7 @@
       },
       "graphics": {
         "heading": "Tactile Graphics & 3D Printing",
-        "body": "Click Graphics under the Graphics tab to open the Tactile Graphics Editor, where you can design tactile diagrams to print alongside your Braille. Tactile Design lets you draw freehand, place Shape Inventory stamps with size and fill controls, and add braille labels on the same canvas for diagrams (for example, a flower with labeled parts).",
+        "body": "Use the Graphics tab buttons — Math, Shapes, Drawing, and Door Sign (STL) — to open tactile tools or export a 3D door sign. Tactile Design lets you draw freehand, place Shape Inventory stamps with size and fill controls, and add braille labels on the same canvas for diagrams (for example, a flower with labeled parts).",
         "shapesHeading": "Shape Inventory & Custom Shapes:",
         "simpleShapes": "Simple Shapes: Lines, rectangles, and adjustable polygons.",
         "complexShapes": "Complex Shapes: Cloud, Crescent Moon, Lightning Bolt, 5-Pointed Star, Apple, and Cross. Shapes like the Cross support adjusting the width/height of the bars directly.",

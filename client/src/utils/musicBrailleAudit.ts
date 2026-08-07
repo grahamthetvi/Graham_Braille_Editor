@@ -87,9 +87,28 @@ const MUSIC_UTILITY = new Set(
 );
 
 /** Build the one-click AI review payload for the active BRF buffer. */
-export function buildMusicBrailleAuditPayload(brf: string): string {
+export function buildMusicBrailleAuditPayload(
+  brf: string,
+  issues: AuditIssue[] = [],
+): string {
   const body = brf.replace(/\s+$/u, '');
+  const findings =
+    issues.length === 0
+      ? 'Local linter findings: none (still review octave marks, measure math, and hand alignment).'
+      : [
+          'Local linter findings (address these first):',
+          ...issues.map((issue, idx) => {
+            const measure =
+              issue.measure != null ? `Measure ${issue.measure}` : 'File-level';
+            const at =
+              issue.charIndex != null ? ` @char ${issue.charIndex}` : '';
+            return `${idx + 1}. [${issue.severity}] ${measure}${at} — ${issue.issueType}: ${issue.description}`;
+          }),
+        ].join('\n');
+
   return `${MUSIC_BRAILLE_AUDIT_SYSTEM_PROMPT}
+
+${findings}
 
 --- BEGIN BRF ---
 ${body}
@@ -614,7 +633,7 @@ export function auditMusicBraille(brf: string): MusicBrailleAuditResult {
     issues,
     measureUsage,
     correctedBrf,
-    aiPayload: buildMusicBrailleAuditPayload(asciiBrf),
+    aiPayload: buildMusicBrailleAuditPayload(asciiBrf, issues),
     criticalCount,
     warningCount,
   };

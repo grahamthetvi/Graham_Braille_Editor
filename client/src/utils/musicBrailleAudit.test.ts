@@ -25,6 +25,23 @@ describe('buildMusicBrailleAuditPayload', () => {
     expect(payload).toContain('>/l#c8 ".&');
     expect(payload).toContain('--- END BRF ---');
   });
+
+  it('embeds local linter findings when provided', () => {
+    const payload = buildMusicBrailleAuditPayload('>/l#c8 ".&', [
+      {
+        id: 'math-1',
+        measure: 2,
+        issueType: 'measure_imbalance',
+        description: 'Short by 0.5 beats',
+        severity: 'critical',
+        charIndex: 12,
+      },
+    ]);
+    expect(payload).toContain('Local linter findings');
+    expect(payload).toContain('Measure 2');
+    expect(payload).toContain('Short by 0.5 beats');
+    expect(payload).toContain('@char 12');
+  });
 });
 
 describe('edge-case resilience (Für Elise benchmarks)', () => {

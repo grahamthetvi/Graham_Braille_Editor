@@ -1483,6 +1483,28 @@ body {
   font-weight: 600;
 }
 
+.music-braille-audit-row--jumpable {
+  cursor: pointer;
+}
+
+.music-braille-audit-row--jumpable:hover,
+.music-braille-audit-row--jumpable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.music-braille-audit-row--jumpable {
+  cursor: pointer;
+}
+
+.music-braille-audit-row--jumpable:hover,
+.music-braille-audit-row--jumpable:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
 .music-braille-audit-empty,
 .music-braille-audit-hint {
   margin: 0 0 0.5rem;

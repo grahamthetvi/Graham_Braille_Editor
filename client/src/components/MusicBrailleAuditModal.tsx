@@ -22,6 +22,8 @@ interface MusicBrailleAuditModalProps {
   onClose: () => void;
   /** Write corrected BRF into the active editor buffer. */
   onApplyFixes: (correctedBrf: string) => void;
+  /** Reveal a finding at a source character index in the editor. */
+  onJumpToChar?: (charIndex: number) => void;
 }
 
 const PROGRESS_LABELS: Record<Exclude<AuditProgressStep, 'idle' | 'done' | 'error'>, string> = {
@@ -64,15 +66,16 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 /**
- * Review drawer/modal for "Audit BRF with AI".
+ * Review drawer/modal for "Audit Music BRF".
  * Runs a local structural linter with staged progress, builds a copyable AI
- * payload, shows a measure-by-measure issue table, and offers Apply Fixes
- * for local or pasted AI corrections.
+ * payload (including local findings), shows a measure-by-measure issue table,
+ * and offers Apply Fixes for local or pasted AI corrections.
  */
 export function MusicBrailleAuditModal({
   brfText,
   onClose,
   onApplyFixes,
+  onJumpToChar,
 }: MusicBrailleAuditModalProps) {
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const [step, setStep] = useState<AuditProgressStep>('idle');
@@ -108,7 +111,7 @@ export function MusicBrailleAuditModal({
     async function run() {
       try {
         if (!brfText.trim()) {
-          setErrorMessage('No BRF text is loaded in the editor.');
+          setErrorMessage('No Music Braille BRF is loaded in the editor.');
           setStep('error');
           return;
         }
@@ -171,6 +174,11 @@ export function MusicBrailleAuditModal({
     setApplyStatus('applied');
   }
 
+  function handleJumpToIssue(issue: AuditIssue) {
+    if (issue.charIndex == null || !onJumpToChar) return;
+    onJumpToChar(issue.charIndex);
+  }
+
   const progressPct =
     step === 'done' || step === 'error'
       ? 100
@@ -182,7 +190,7 @@ export function MusicBrailleAuditModal({
     <div
       className="welcome-overlay music-braille-audit-overlay"
       onClick={onClose}
-      aria-label="Close BRF audit"
+      aria-label="Close Music BRF audit"
     >
       <div
         className="welcome-modal music-braille-audit-modal"
@@ -192,12 +200,12 @@ export function MusicBrailleAuditModal({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="welcome-header">
-          <h2 id="music-braille-audit-title">Audit BRF with AI</h2>
+          <h2 id="music-braille-audit-title">Audit Music BRF</h2>
           <button
             ref={closeBtnRef}
             className="welcome-close"
             onClick={onClose}
-            aria-label="Close BRF audit"
+            aria-label="Close Music BRF audit"
             type="button"
           >
             ✕
@@ -270,31 +278,59 @@ export function MusicBrailleAuditModal({
                     Copy the AI payload for a deeper specialist review.
                   </p>
                 ) : (
-                  <div className="music-braille-audit-table-wrap">
-                    <table className="music-braille-audit-table">
-                      <thead>
-                        <tr>
-                          <th scope="col">Measure</th>
-                          <th scope="col">Error type</th>
-                          <th scope="col">Severity</th>
-                          <th scope="col">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tableIssues.map((issue) => (
-                          <tr
-                            key={issue.id}
-                            className={`music-braille-audit-row music-braille-audit-row--${issue.severity}`}
-                          >
-                            <td>{issue.measure ?? '—'}</td>
-                            <td>{ISSUE_TYPE_LABEL[issue.issueType]}</td>
-                            <td>{issue.severity}</td>
-                            <td>{issue.description}</td>
+                  <>
+                    <p className="music-braille-audit-hint">
+                      Click a finding with a known location to jump to that cell in the editor.
+                    </p>
+                    <div className="music-braille-audit-table-wrap">
+                      <table className="music-braille-audit-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Measure</th>
+                            <th scope="col">Error type</th>
+                            <th scope="col">Severity</th>
+                            <th scope="col">Description</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {tableIssues.map((issue) => {
+                            const canJump =
+                              issue.charIndex != null && typeof onJumpToChar === 'function';
+                            return (
+                              <tr
+                                key={issue.id}
+                                className={`music-braille-audit-row music-braille-audit-row--${issue.severity}${
+                                  canJump ? ' music-braille-audit-row--jumpable' : ''
+                                }`}
+                                tabIndex={canJump ? 0 : undefined}
+                                role={canJump ? 'button' : undefined}
+                                aria-label={
+                                  canJump
+                                    ? `Jump to ${ISSUE_TYPE_LABEL[issue.issueType]} in measure ${
+                                        issue.measure ?? 'unknown'
+                                      }`
+                                    : undefined
+                                }
+                                onClick={() => handleJumpToIssue(issue)}
+                                onKeyDown={(e) => {
+                                  if (!canJump) return;
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleJumpToIssue(issue);
+                                  }
+                                }}
+                              >
+                                <td>{issue.measure ?? '—'}</td>
+                                <td>{ISSUE_TYPE_LABEL[issue.issueType]}</td>
+                                <td>{issue.severity}</td>
+                                <td>{issue.description}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </section>
 
