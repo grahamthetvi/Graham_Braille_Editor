@@ -26,6 +26,7 @@ import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
+import { TableEditorModal } from './components/TableEditorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { MusicBrailleAuditModal } from './components/MusicBrailleAuditModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
@@ -188,6 +189,7 @@ export default function App() {
   const [graphicsInitialSection, setGraphicsInitialSection] =
     useState<GraphicsSection>('math');
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
+  const [showTableEditor, setShowTableEditor] = useState(false);
   const [hasSeenMusicGuide, setHasSeenMusicGuide] = useState(
     () => !!localStorage.getItem('graham-braille-music-guide-seen')
   );
@@ -1433,6 +1435,16 @@ Accuracy: _____________ %
                 </button>
 
                 <button
+                  className={`toolbar-btn${showTableEditor ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowTableEditor(s => !s)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.table.title')}
+                  aria-label={t('app.tools.table.ariaLabel')}
+                >
+                  {t('app.tools.table.label')}
+                </button>
+
+                <button
                   className={`toolbar-btn${isMusicBrailleMode ? ' toolbar-btn--active' : ''}`}
                   onClick={() => {
                     setIsMusicBrailleMode((s) => {
@@ -2094,6 +2106,19 @@ Accuracy: _____________ %
             setShowAlphabetGenerator(false);
           }}
           onClose={() => setShowAlphabetGenerator(false)}
+        />
+      )}
+
+      {showTableEditor && (
+        <TableEditorModal
+          brailleTable={selectedTable}
+          mathCode={mathCode}
+          cellsPerRow={pageSettings.cellsPerRow}
+          onInsert={(text) => {
+            editorRef.current?.insertTextAtCursor(text);
+            setShowTableEditor(false);
+          }}
+          onClose={() => setShowTableEditor(false)}
         />
       )}
 

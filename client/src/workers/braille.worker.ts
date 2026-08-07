@@ -421,7 +421,7 @@ async function translateDocumentWithMathAndPositions(
   if (!liblouis) return { result: '', outputPos: [] };
 
   const outputPos = new Array<number>(text.length).fill(-1);
-  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n:::)|(:::jumbo([^\n]*)\n([\s\S]*?)\n:::)/gs;
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n:::)|(:::table\n([\s\S]*?)\n:::)|(:::jumbo([^\n]*)\n([\s\S]*?)\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -442,13 +442,13 @@ async function translateDocumentWithMathAndPositions(
     const matchStart = match.index;
     const matchLen = match[0].length;
 
-    if (match[9] !== undefined) {
+    if (match[11] !== undefined) {
       // Jumbo / large-print block: translate the inner text to BRF format (ASCII braille),
       // tagged with the jumbo marker + font size so the preview renders it as big print/braille.
-      const params = match[10] ?? '';
+      const params = match[12] ?? '';
       const sizeMatch = params.match(/size\s*=\s*(\d+)/);
       const jumboSize = sizeMatch ? sizeMatch[1] : '48';
-      const lines = match[11].split('\n');
+      const lines = match[13].split('\n');
       const translatedLines: string[] = [];
       for (const l of lines) {
         if (!l.trim()) {
@@ -463,6 +463,13 @@ async function translateDocumentWithMathAndPositions(
         outputPos[matchStart + i] = result.length + Math.floor(i * jumboContent.length / matchLen);
       }
       result += jumboContent;
+    } else if (match[9] !== undefined) {
+      const lines = match[10].split('\n');
+      const tableContent = '\n' + lines.map(l => '\u0001' + l).join('\n') + '\n';
+      for (let i = 0; i < matchLen; i++) {
+        outputPos[matchStart + i] = result.length + Math.floor(i * tableContent.length / matchLen);
+      }
+      result += tableContent;
     } else if (match[7] !== undefined) {
       const lines = match[8].split('\n');
       const graphicContent = '\n' + lines.map(l => '\u0001' + l).join('\n') + '\n';
@@ -664,8 +671,8 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
  * blocks in the original text, leaving the non-math text untouched.
  */
 async function convertMathOnly(text: string, mathCode: string): Promise<string> {
-  // Regex to match block math $$...$$, inline math \(...\), and chart blocks :::chart\n...\n:::
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)|(:::jumbo[^\n]*\n[\s\S]*?\n:::)/gs;
+  // Regex to match block math $$...$$, inline math \(...\), and chart/graphic/table/jumbo blocks
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)|(:::table\n[\s\S]*?\n:::)|(:::jumbo[^\n]*\n[\s\S]*?\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -682,8 +689,11 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
       // Just pass the graphic block through untouched
       result += match[6];
     } else if (match[7] !== undefined) {
-      // Just pass the jumbo (large-print) block through untouched
+      // Just pass the table block through untouched
       result += match[7];
+    } else if (match[8] !== undefined) {
+      // Just pass the jumbo (large-print) block through untouched
+      result += match[8];
     } else {
       // Determine which capture group matched (block is match[2], inline is match[4])
       const latex = match[2] !== undefined ? match[2] : match[4];

@@ -150,6 +150,11 @@
         "label": "Audit BRF with AI",
         "title": "Run a Music Braille structural audit (measure math, octave marks, corruption, hand alignment) and build an AI review payload",
         "ariaLabel": "Open Audit BRF with AI linter"
+      },
+      "table": {
+        "label": "Table",
+        "title": "Insert a Braille Formats table (Simple, Listed, Stairstep, or Linear), with optional CSV import",
+        "ariaLabel": "Open Table Editor"
       }
     },
     "help": {
@@ -1105,6 +1110,49 @@
       "exportButton": "Télécharger le MP3",
       "cancel": "Annuler",
       "closeAriaLabel": "Fermer l'export audio"
+    }
+  },
+  "tableEditor": {
+    "ariaLabel": "Table Editor",
+    "title": "Table Editor",
+    "close": "Close",
+    "rows": "Rows",
+    "columns": "Columns",
+    "format": {
+      "label": "Table type",
+      "auto": "Auto",
+      "simple": "Simple",
+      "listed": "Listed",
+      "stairstep": "Stairstep",
+      "linear": "Linear"
+    },
+    "tableTitle": "Table title (optional)",
+    "firstRowHeadings": "First row is column headings",
+    "columnGap": "Column gap (Simple)",
+    "gap1": "1 cell",
+    "gap2": "2 cells",
+    "guideDots": "Guide dots",
+    "transcriberNote": "Transcriber's note",
+    "tnAutoHint": "Filled automatically for Auto when an alternate format is chosen",
+    "blankCellNote": "Blank-cell note",
+    "cellAria": "Row {{row}}, column {{col}}",
+    "csv": {
+      "pasteHint": "Paste CSV (comma, semicolon, or tab)",
+      "pastePlaceholder": "Animal,Size\ncat,small\ndog,large",
+      "loadFromPaste": "Load from pasted text",
+      "loadFile": "Load CSV file…",
+      "readError": "Could not read that file."
+    },
+    "preview": "Braille preview",
+    "previewEmpty": "Enter cell text to preview the table.",
+    "updating": "Updating…",
+    "cancel": "Cancel",
+    "insert": "Insert table",
+    "errors": {
+      "invalid": "Table is not valid.",
+      "workerNotReady": "Braille engine is still loading. Try again in a moment.",
+      "previewFailed": "Could not build the table preview.",
+      "noPreview": "Nothing to insert yet."
     }
   }
 }
