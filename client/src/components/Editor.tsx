@@ -38,6 +38,8 @@ export interface EditorHandle {
   replaceRange: (startOffset: number, endOffset: number, text: string) => void;
   /** Imperatively sync scroll position (0–1) without React state. */
   setScrollPercentage: (percentage: number) => void;
+  /** Move caret to a UTF-16 offset, reveal it, and focus. */
+  setCursorOffset: (offset: number) => void;
   /** Focus the Monaco editor. */
   focus: () => void;
 }
@@ -187,6 +189,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
         editor.setScrollTop(targetTop);
       }
+    },
+    setCursorOffset: (offset: number) => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      if (!editor || !model) return;
+      const clamped = Math.max(0, Math.min(Math.floor(offset), model.getValueLength()));
+      const pos = model.getPositionAt(clamped);
+      editor.setPosition(pos);
+      editor.revealPositionInCenter(pos);
+      editor.focus();
     },
     focus: () => {
       editorRef.current?.focus();

@@ -14,6 +14,7 @@ import {
 } from './i18n/locales';
 import { Editor, type EditorHandle } from './components/Editor';
 import { GraphicGeneratorModal } from './components/GraphicGeneratorModal';
+import type { GraphicsSection } from './utils/shapeCatalog';
 import { PrintPanel } from './components/PrintPanel';
 import { ExportPanel } from './components/ExportPanel';
 import { AudioExportDialog } from './components/AudioExportDialog';
@@ -184,6 +185,8 @@ export default function App() {
     () => !!localStorage.getItem('graham-braille-privacy-seen')
   );
   const [showGraphicsEditor, setShowGraphicsEditor] = useState(false);
+  const [graphicsInitialSection, setGraphicsInitialSection] =
+    useState<GraphicsSection>('math');
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
   const [hasSeenMusicGuide, setHasSeenMusicGuide] = useState(
     () => !!localStorage.getItem('graham-braille-music-guide-seen')
@@ -1344,13 +1347,54 @@ Accuracy: _____________ %
             {activeTab === 'graphics' && (
               <div className="toolbar">
                 <button
-                  className={`toolbar-btn${showGraphicsEditor ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowGraphicsEditor(s => !s)}
+                  className={`toolbar-btn${
+                    showGraphicsEditor && graphicsInitialSection === 'math'
+                      ? ' toolbar-btn--active'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setGraphicsInitialSection('math');
+                    setShowGraphicsEditor(true);
+                  }}
                   disabled={isPerkinsMode}
-                  title={t('app.tools.graphics.title')}
-                  aria-label={t('app.tools.graphics.ariaLabel')}
+                  title={t('app.tools.graphicsMath.title')}
+                  aria-label={t('app.tools.graphicsMath.ariaLabel')}
                 >
-                  {t('app.tools.graphics.label')}
+                  {t('app.tools.graphicsMath.label')}
+                </button>
+
+                <button
+                  className={`toolbar-btn${
+                    showGraphicsEditor && graphicsInitialSection === 'shapes'
+                      ? ' toolbar-btn--active'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setGraphicsInitialSection('shapes');
+                    setShowGraphicsEditor(true);
+                  }}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.graphicsShapes.title')}
+                  aria-label={t('app.tools.graphicsShapes.ariaLabel')}
+                >
+                  {t('app.tools.graphicsShapes.label')}
+                </button>
+
+                <button
+                  className={`toolbar-btn${
+                    showGraphicsEditor && graphicsInitialSection === 'drawing'
+                      ? ' toolbar-btn--active'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    setGraphicsInitialSection('drawing');
+                    setShowGraphicsEditor(true);
+                  }}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.graphicsDrawing.title')}
+                  aria-label={t('app.tools.graphicsDrawing.ariaLabel')}
+                >
+                  {t('app.tools.graphicsDrawing.label')}
                 </button>
 
                 <button
@@ -1427,7 +1471,7 @@ Accuracy: _____________ %
                 <button
                   className={`toolbar-btn${showMusicBrailleAudit ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowMusicBrailleAudit(true)}
-                  disabled={isPerkinsMode || !inputText.trim()}
+                  disabled={isPerkinsMode || !isMusicBrailleMode || !inputText.trim()}
                   title={t('app.tools.auditBrf.title')}
                   aria-label={t('app.tools.auditBrf.ariaLabel')}
                   aria-expanded={showMusicBrailleAudit}
@@ -2024,11 +2068,13 @@ Accuracy: _____________ %
       {/* ── Graphic Generator Modal ──────────────────────────────────────────── */}
       {showGraphicsEditor && (
         <GraphicGeneratorModal
+          key={graphicsInitialSection}
           mathCode={mathCode}
           onMathCodeChange={setMathCode}
           defaultCellsPerRow={pageSettings.cellsPerRow}
           defaultLinesPerPage={pageSettings.linesPerPage}
           brailleTable={selectedTable}
+          initialSection={graphicsInitialSection}
           onInsert={(brf) => {
             editorRef.current?.insertTextAtCursor(brf);
             setShowGraphicsEditor(false);
@@ -2066,6 +2112,13 @@ Accuracy: _____________ %
               : inputText
           }
           onClose={() => setShowMusicBrailleAudit(false)}
+          onJumpToChar={(charIndex) => {
+            setShowMusicBrailleAudit(false);
+            setActiveTab('file');
+            requestAnimationFrame(() => {
+              editorRef.current?.setCursorOffset(charIndex);
+            });
+          }}
           onApplyFixes={(correctedBrf) => {
             setInputText(correctedBrf);
             setFileContent(correctedBrf);

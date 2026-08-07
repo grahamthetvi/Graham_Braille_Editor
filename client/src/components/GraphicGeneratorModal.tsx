@@ -41,6 +41,8 @@ interface GraphicGeneratorModalProps {
   defaultCellsPerRow: number;
   defaultLinesPerPage: number;
   brailleTable?: string;
+  /** Which sidebar section to open on (Math / Shapes / Drawing). */
+  initialSection?: GraphicsSection;
   onInsert: (block: string) => void;
   onClose: () => void;
 }
@@ -58,17 +60,32 @@ type GraphicType =
   | 'graph'
   | 'chart';
 
+function defaultsForSection(section: GraphicsSection): {
+  section: GraphicsSection;
+  graphicType: GraphicType;
+} {
+  if (section === 'shapes') {
+    return { section: 'shapes', graphicType: 'shapeInventory' };
+  }
+  if (section === 'drawing') {
+    return { section: 'drawing', graphicType: 'photo' };
+  }
+  return { section: 'math', graphicType: 'clock' };
+}
+
 export function GraphicGeneratorModal({
   mathCode,
   onMathCodeChange,
   defaultCellsPerRow,
   defaultLinesPerPage,
   brailleTable = DEFAULT_TABLE,
+  initialSection = 'math',
   onInsert,
   onClose
 }: GraphicGeneratorModalProps) {
-  const [graphicType, setGraphicType] = useState<GraphicType>('clock');
-  const [section, setSection] = useState<GraphicsSection>('math');
+  const opened = defaultsForSection(initialSection);
+  const [graphicType, setGraphicType] = useState<GraphicType>(opened.graphicType);
+  const [section, setSection] = useState<GraphicsSection>(opened.section);
   const [shapesCategory, setShapesCategory] = useState<Exclude<ShapeCatalogCategory, 'math'>>('basics');
   const [searchQuery, setSearchQuery] = useState('');
   const [tactilePreview, setTactilePreview] = useState<GraphicResult>({ brf: '', summary: '' });
