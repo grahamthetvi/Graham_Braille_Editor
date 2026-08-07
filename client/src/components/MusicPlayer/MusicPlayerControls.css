@@ -33,6 +33,8 @@
   max-width: 18rem;
   color: var(--text-secondary);
   font-size: 0.8rem;
+  /* Keep slow←→fast orientation even in RTL UI locales. */
+  direction: ltr;
 }
 
 .music-player__tempo-label {

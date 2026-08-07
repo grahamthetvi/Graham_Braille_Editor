@@ -47,6 +47,18 @@ const UI_UPDATE_MS = 50;
 const BPM_RESCHEDULE_MS = 150;
 /** How long a stepped note sounds (seconds). */
 const STEP_SOUND_SEC = 0.45;
+const REST_CLICKS_STORAGE_KEY = 'graham-music-rest-clicks';
+
+function readRestClicksEnabled(): boolean {
+  try {
+    const raw = localStorage.getItem(REST_CLICKS_STORAGE_KEY);
+    if (raw === '0' || raw === 'false') return false;
+    if (raw === '1' || raw === 'true') return true;
+  } catch {
+    // ignore
+  }
+  return true;
+}
 
 /** Where a fresh (non-resume) Play should begin. */
 export type MusicPlayFrom = 'cursor' | 'document' | 'music';
@@ -60,6 +72,9 @@ export interface UseMusicPlaybackReturn {
   pause: () => void;
   stop: () => void;
   setBPM: (bpm: number) => void;
+  /** Soft click on rests during play/step (persisted). */
+  restClicksEnabled: boolean;
+  setRestClicksEnabled: (enabled: boolean) => void;
   /** Advance one event; plays and announces the note/term. */
   stepNext: () => void;
   /** Go back one event; plays and announces the note/term. */
@@ -114,6 +129,7 @@ export function useMusicPlayback(
   const [bpm, setBpmState] = useState(DEFAULT_BPM);
   const [tempoOrigin, setTempoOrigin] = useState<'score' | 'user' | 'default'>('default');
   const [tempoLabel, setTempoLabel] = useState<string | null>(null);
+  const [restClicksEnabled, setRestClicksEnabledState] = useState(readRestClicksEnabled);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentBeat, setCurrentBeat] = useState(0);
@@ -141,6 +157,7 @@ export function useMusicPlayback(
   const stepRestTimerRef = useRef<number | null>(null);
   const userTempoOverrideRef = useRef(false);
   const tempoOriginRef = useRef<'score' | 'user' | 'default'>('default');
+  const restClicksEnabledRef = useRef(restClicksEnabled);
   const lastTempoChangeIdxRef = useRef(-1);
 
   const score = useMemo(() => parseBrailleMusic(brfString || ''), [brfString]);
@@ -182,6 +199,20 @@ export function useMusicPlayback(
     tempoOriginRef.current = tempoOrigin;
   }, [tempoOrigin]);
 
+  useEffect(() => {
+    restClicksEnabledRef.current = restClicksEnabled;
+  }, [restClicksEnabled]);
+
+  const setRestClicksEnabled = useCallback((enabled: boolean) => {
+    setRestClicksEnabledState(enabled);
+    restClicksEnabledRef.current = enabled;
+    try {
+      localStorage.setItem(REST_CLICKS_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const clearRaf = useCallback(() => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
@@ -211,9 +242,12 @@ export function useMusicPlayback(
   const applyScoreTempo = useCallback(
     (nextScore: MusicScoreAST, beat = 0) => {
       if (userTempoOverrideRef.current) return;
-      const nextBpm = bpmAtBeat(nextScore, beat, DEFAULT_BPM);
-      const label = tempoLabelAtBeat(nextScore, beat);
       const origin = scoreTempoOriginAtBeat(nextScore, beat);
+      const nextBpm =
+        origin === 'default'
+          ? DEFAULT_BPM
+          : bpmAtBeat(nextScore, beat, DEFAULT_BPM);
+      const label = tempoLabelAtBeat(nextScore, beat);
       bpmRef.current = nextBpm;
       setBpmState(nextBpm);
       setTempoOrigin(origin);
@@ -383,7 +417,9 @@ export function useMusicPlayback(
           const remainBeats = endBeat - startBeat;
           const durSec = Math.max(0.05, remainBeats * spbNow * 0.92);
           if (ev.type === 'rest' || ev.midiPitches.length === 0) {
-            engine.playRestClick(startTime);
+            if (restClicksEnabledRef.current) {
+              engine.playRestClick(startTime);
+            }
             musicDebugLog.logSchedule({
               audioTime: startTime,
               beat: startBeat,
@@ -559,7 +595,9 @@ export function useMusicPlayback(
         if (gen !== playGenRef.current) return;
         synth.silence();
         if (ev.type === 'rest' || ev.midiPitches.length === 0) {
-          synth.playRestClick(synth.now() + 0.02);
+          if (restClicksEnabledRef.current) {
+            synth.playRestClick(synth.now() + 0.02);
+          }
           // Feel the full rest length; Step remains usable early (new park cancels).
           stepRestTimerRef.current = window.setTimeout(() => {
             stepRestTimerRef.current = null;
@@ -749,6 +787,8 @@ export function useMusicPlayback(
     pause,
     stop,
     setBPM,
+    restClicksEnabled,
+    setRestClicksEnabled,
     stepNext,
     stepPrev,
   };
