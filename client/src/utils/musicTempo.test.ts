@@ -55,6 +55,13 @@ describe('tryParseMetronomeAt', () => {
   it('does not treat a plain quarter C as a metronome', () => {
     expect(tryParseMetronomeAt('?"?:$', 0)).toBeNull();
   });
+
+  it('rejects zero or out-of-range metronome numbers instead of clamping to max/default', () => {
+    expect(tryParseMetronomeAt('#j7y', 0)).toBeNull();
+    expect(tryParseMetronomeAt('#a7y', 0)).toBeNull();
+    expect(tryParseMetronomeAt('?7#bij', 0)).toBeNull(); // 210 > 208
+    expect(tryParseMetronomeAt('y7#fj', 0)?.bpm).toBe(240); // whole=60 → ♩=240
+  });
 });
 
 describe('matchTempoWord / word signs', () => {

@@ -269,6 +269,12 @@
           "setMyselfAria": "Keep {{bpm}} BPM and dismiss; adjust the Tempo slider yourself"
         }
       },
+      "restClicks": {
+        "label": "Rest clicks",
+        "titleOn": "Rest clicks are on — soft clicks play on rests",
+        "titleOff": "Rest clicks are off — rests are silent",
+        "ariaLabel": "Toggle soft clicks on rests during playback"
+      },
       "measure": "Measure {{current}} / {{total}}",
       "timeSignature": "{{beats}}/{{unit}}",
       "keySignature": {

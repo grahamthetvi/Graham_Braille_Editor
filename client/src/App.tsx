@@ -930,6 +930,8 @@ Accuracy: _____________ %
     pause: pauseMusic,
     stop: stopMusic,
     setBPM: setMusicBpm,
+    restClicksEnabled,
+    setRestClicksEnabled,
     stepNext: stepMusicNext,
     stepPrev: stepMusicPrev,
   } = useMusicPlayback(
@@ -1997,6 +1999,8 @@ Accuracy: _____________ %
                   onPause={pauseMusic}
                   onStop={stopMusic}
                   onBpmChange={setMusicBpm}
+                  restClicksEnabled={restClicksEnabled}
+                  onRestClicksChange={setRestClicksEnabled}
                   onStepPrev={stepMusicPrev}
                   onStepNext={stepMusicNext}
                   playFromCursor={musicPlayFromCursor}

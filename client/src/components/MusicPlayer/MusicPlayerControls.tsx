@@ -20,6 +20,8 @@ export interface MusicPlayerControlsProps {
   onPause: () => void;
   onStop: () => void;
   onBpmChange: (bpm: number) => void;
+  restClicksEnabled: boolean;
+  onRestClicksChange: (enabled: boolean) => void;
   onStepPrev: () => void;
   onStepNext: () => void;
   /** When true (default), Play starts at the editor caret. */
@@ -46,6 +48,8 @@ export function MusicPlayerControls({
   onPause,
   onStop,
   onBpmChange,
+  restClicksEnabled,
+  onRestClicksChange,
   onStepPrev,
   onStepNext,
   playFromCursor,
@@ -295,6 +299,22 @@ export function MusicPlayerControls({
           aria-label={t('app.musicPlayer.fromCursor.ariaLabel')}
         >
           {t('app.musicPlayer.fromCursor.label')}
+        </button>
+
+        <button
+          type="button"
+          className={`toolbar-btn music-player__btn${restClicksEnabled ? ' toolbar-btn--active' : ''}`}
+          onClick={() => onRestClicksChange(!restClicksEnabled)}
+          disabled={disabled}
+          aria-pressed={restClicksEnabled}
+          title={
+            restClicksEnabled
+              ? t('app.musicPlayer.restClicks.titleOn')
+              : t('app.musicPlayer.restClicks.titleOff')
+          }
+          aria-label={t('app.musicPlayer.restClicks.ariaLabel')}
+        >
+          {t('app.musicPlayer.restClicks.label')}
         </button>
       </div>
 

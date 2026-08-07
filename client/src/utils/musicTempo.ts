@@ -114,13 +114,20 @@ export function parseBrailleDigits(
   return { value, nextIndex: i };
 }
 
+/** Typical printed metronome number range (marks per minute for the written note). */
+const METRONOME_MPM_MIN = 40;
+const METRONOME_MPM_MAX = 208;
+
 function quarterBpmFromMetronome(
   noteValueBeats: number,
   marksPerMinute: number,
-): number {
-  if (noteValueBeats <= 0 || marksPerMinute <= 0) return DEFAULT_SCORE_BPM;
+): number | null {
+  if (noteValueBeats <= 0 || marksPerMinute <= 0) return null;
+  if (marksPerMinute < METRONOME_MPM_MIN || marksPerMinute > METRONOME_MPM_MAX) {
+    return null;
+  }
   // If eighth=120, quarter BPM = 60; if half=60, quarter BPM = 120.
-  return clampBpm(marksPerMinute * (noteValueBeats / 1));
+  return clampBpm(marksPerMinute * noteValueBeats);
 }
 
 /**
@@ -153,13 +160,15 @@ export function tryParseMetronomeAt(
       if (openParen && text.slice(end, end + 2) === ",'") end += 2;
       const noteBeats = METRONOME_C_SHAPES[cShape];
       const bpm = quarterBpmFromMetronome(noteBeats, num.value);
-      return {
-        charIndex: i,
-        kind: 'metronome',
-        label: `♩=${bpm}`,
-        bpm,
-        length: end - i,
-      };
+      if (bpm != null) {
+        return {
+          charIndex: i,
+          kind: 'metronome',
+          label: `♩=${bpm}`,
+          bpm,
+          length: end - i,
+        };
+      }
     }
   }
 
@@ -173,13 +182,15 @@ export function tryParseMetronomeAt(
         if (openParen && text.slice(end, end + 2) === ",'") end += 2;
         const noteBeats = METRONOME_C_SHAPES[shape];
         const bpm = quarterBpmFromMetronome(noteBeats, num.value);
-        return {
-          charIndex: i,
-          kind: 'metronome',
-          label: `♩=${bpm}`,
-          bpm,
-          length: end - i,
-        };
+        if (bpm != null) {
+          return {
+            charIndex: i,
+            kind: 'metronome',
+            label: `♩=${bpm}`,
+            bpm,
+            length: end - i,
+          };
+        }
       }
     }
   }
