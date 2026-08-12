@@ -2,29 +2,38 @@ import { useTranslation } from 'react-i18next';
 
 type ExportPanelProps = {
   onDownloadBrf: () => void;
+  onEmailBrf: () => void;
   onDownloadPrintLayout: () => void;
   onOpenAudio: () => void;
   canDownloadBrf: boolean;
+  canEmailBrf: boolean;
   canDownloadPrintLayout: boolean;
   canExportAudio: boolean;
   mp3Exporting: boolean;
   mp3ExportStatus: string | null;
+  /** Shown when Gmail compose popup was blocked; includes fallback URL. */
+  emailBrfFallbackUrl: string | null;
+  onDismissEmailBrfFallback?: () => void;
   disabled?: boolean;
 };
 
 /**
- * Compact export bar under the File toolbar — BRF, print layout, and audio.
+ * Compact export bar under the File toolbar — BRF, email BRF, print layout, and audio.
  * Audio opens a dedicated dialog for engine choice.
  */
 export function ExportPanel({
   onDownloadBrf,
+  onEmailBrf,
   onDownloadPrintLayout,
   onOpenAudio,
   canDownloadBrf,
+  canEmailBrf,
   canDownloadPrintLayout,
   canExportAudio,
   mp3Exporting,
   mp3ExportStatus,
+  emailBrfFallbackUrl,
+  onDismissEmailBrfFallback,
   disabled = false,
 }: ExportPanelProps) {
   const { t } = useTranslation();
@@ -47,6 +56,18 @@ export function ExportPanel({
         >
           <span className="export-action-label">{t('exportPanel.actions.brf')}</span>
           <span className="export-action-hint">{t('exportPanel.actions.brfHint')}</span>
+        </button>
+
+        <button
+          type="button"
+          className="toolbar-btn export-action-btn"
+          onClick={onEmailBrf}
+          disabled={disabled || !canEmailBrf}
+          title={t('exportPanel.email.buttonTitle')}
+          aria-label={t('exportPanel.email.buttonAriaLabel')}
+        >
+          <span className="export-action-label">{t('exportPanel.actions.emailBrf')}</span>
+          <span className="export-action-hint">{t('exportPanel.actions.emailBrfHint')}</span>
         </button>
 
         <button
@@ -78,6 +99,27 @@ export function ExportPanel({
           <span className="export-action-hint">{t('exportPanel.actions.audioHint')}</span>
         </button>
       </div>
+
+      {emailBrfFallbackUrl && (
+        <p className="export-panel-email-fallback" role="status">
+          {t('exportPanel.email.popupBlocked')}{' '}
+          <a href={emailBrfFallbackUrl} target="_blank" rel="noopener noreferrer">
+            {t('exportPanel.email.openGmailLink')}
+          </a>
+          {onDismissEmailBrfFallback && (
+            <>
+              {' '}
+              <button
+                type="button"
+                className="export-panel-email-fallback-dismiss"
+                onClick={onDismissEmailBrfFallback}
+              >
+                {t('exportPanel.email.dismissFallback')}
+              </button>
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }
