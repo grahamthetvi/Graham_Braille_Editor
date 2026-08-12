@@ -744,6 +744,58 @@ export function defaultBrfDownloadFilename(): string {
   return `braille-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.brf`;
 }
 
+/** Formatted ASCII BRF ready for download or email-attach workflow. */
+export type BrfDownloadPayload = {
+  filename: string;
+  blob: Blob;
+  formatted: string;
+};
+
+/**
+ * Builds the same embosser-friendly BRF blob used by Download BRF and Email BRF.
+ */
+export function buildBrfDownloadPayload(
+  rawBrf: string,
+  cellsPerRow: number,
+  linesPerPage: number,
+  includePageNumbers: boolean = false,
+  paragraphStarts?: ParagraphLineStarts,
+): BrfDownloadPayload {
+  const formatted = formatBrfForOutput(
+    rawBrf,
+    cellsPerRow,
+    linesPerPage,
+    includePageNumbers,
+    paragraphStarts,
+  );
+  const blob = new Blob([formatted], { type: 'text/plain;charset=us-ascii' });
+  return { filename: defaultBrfDownloadFilename(), blob, formatted };
+}
+
+/** Triggers a browser file download from a Blob. */
+export function triggerBrowserDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Gmail web compose URL with subject/body prefilled.
+ * Attachments cannot be injected by the browser without OAuth.
+ */
+export function buildGmailComposeUrl(subject: string, body: string): string {
+  const params = new URLSearchParams({
+    view: 'cm',
+    fs: '1',
+    su: subject,
+    body,
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
 /** Default name for the left-pane print-layout text export. */
 export function defaultPrintLayoutTextFilename(): string {
   const d = new Date();

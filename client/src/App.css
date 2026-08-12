@@ -315,6 +315,30 @@ body {
   opacity: 0.95;
 }
 
+.export-panel-email-fallback {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.export-panel-email-fallback a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.export-panel-email-fallback-dismiss {
+  margin-left: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .toolbar-btn--primary .export-action-hint {
   color: var(--accent-text);
   opacity: 0.85;
