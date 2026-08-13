@@ -199,11 +199,7 @@ export interface ParseTableCsvResult {
  */
 export function parseTableCsv(csv: string): ParseTableCsvResult {
   const rawLines = csv.split(/\r?\n/);
-  const lines = rawLines.filter((l, idx) => {
-    if (l.trim().length > 0) return true;
-    // Keep interior blank lines only if surrounded by content (rare); drop leading/trailing empties.
-    return false;
-  });
+  const lines = rawLines.filter((l) => l.trim().length > 0);
 
   if (lines.length === 0) {
     return { cells: [], rowCount: 0, columnCount: 0, error: 'No data found in CSV.' };
