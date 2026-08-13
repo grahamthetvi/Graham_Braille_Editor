@@ -32,8 +32,8 @@
       },
       "downloadPrintLayout": {
         "label": "Télécharger la mise en page d'impression",
-        "ariaLabel": "Télécharger le fichier texte de mise en page d'impression",
-        "title": "Télécharger le texte brut (.txt) avec les mêmes sauts de ligne que l'éditeur de texte — chaque ligne correspond à une rangée braille afin de pouvoir imprimer ou ouvrir dans Word et aligner avec la mise en page embossée."
+        "ariaLabel": "Télécharger le fichier RTF de mise en page d'impression",
+        "title": "Télécharger la mise en page d'impression (.rtf). Les lignes et les pages suivent les paramètres de mise en page. Les mots contractés peuvent apparaître un peu plus petits afin de rester sur la cellule braille. Ce n'est pas une superposition physique de l'encre sur le braille."
       },
       "tts": {
         "selectAriaLabel": "Moteur de synthèse vocale pour l'export MP3"
@@ -135,7 +135,7 @@
       },
       "grading": {
         "label": "Télécharger la mise en page d'impression pour la notation",
-        "title": "Télécharger la mise en page d'impression (.rtf) avec les indicateurs de notation ; choisissez si l'en-tête de notation apparaît sur toutes les pages.",
+        "title": "Télécharger la mise en page d'impression (.rtf) avec les indicateurs de notation. Les lignes et les pages suivent les paramètres de mise en page ; choisissez si l'en-tête de notation apparaît sur toutes les pages. Les mots contractés peuvent apparaître un peu plus petits afin de rester sur la cellule braille.",
         "ariaLabel": "Télécharger le fichier texte de mise en page d'impression pour la notation"
       },
       "uebMathHint": "UEB Math est la norme et $$math$$ correspond à Nemeth.",
@@ -658,7 +658,7 @@
     "closeAriaLabel": "Fermer les options de mise en page d'impression pour la notation",
     "title": "Mise en page d'impression pour la notation",
     "close": "Fermer",
-    "description": "Télécharger la mise en page d'impression (.rtf) correspondant à l'enroulement braille avec les indicateurs de notation ajoutés en tête.",
+    "description": "Télécharger la mise en page d'impression (.rtf). Les lignes et les pages suivent les paramètres de mise en page, avec les indicateurs de notation en tête. Les mots contractés peuvent apparaître un peu plus petits afin de rester sur la cellule braille.",
     "onAllPages": {
       "label": "Sur toutes les pages",
       "hint": "Lorsque cette option est activée, l'en-tête de notation est répété en haut de chaque page. Sinon, il n'apparaît que sur la première page."
@@ -1102,7 +1102,7 @@
       "emailBrf": "E-mail BRF",
       "emailBrfHint": "Télécharger, puis ouvrir Gmail pour joindre",
       "printLayout": "Mise en page d'impression",
-      "printLayoutHint": "Texte brut aligné sur les lignes braille",
+      "printLayoutHint": "Lignes et pages selon la mise en page ; les contractions peuvent être un peu plus petites",
       "audio": "Audio (MP3)",
       "audioHint": "Choisir une voix, puis télécharger"
     },

@@ -32,8 +32,8 @@
       },
       "downloadPrintLayout": {
         "label": "Drucklayout herunterladen",
-        "ariaLabel": "Textdatei mit Drucklayout herunterladen",
-        "title": "Klartext (.txt) mit denselben Zeilenumbrüchen wie der Text-Editor herunterladen — jede Zeile entspricht einer Braille-Zeile, sodass Sie drucken oder in Word öffnen und mit dem geprägten Layout abgleichen können."
+        "ariaLabel": "RTF-Datei mit Drucklayout herunterladen",
+        "title": "Drucklayout (.rtf) herunterladen. Zeilen und Seiten folgen den Layout-Einstellungen. Zusammengezogene Wörter können etwas kleiner erscheinen, damit sie in der Braille-Zelle bleiben. Das ist keine physische Überlagerung von Druck auf Braille."
       },
       "tts": {
         "selectAriaLabel": "Text-zu-Sprache-Engine für den MP3-Export"
@@ -135,7 +135,7 @@
       },
       "grading": {
         "label": "Drucklayout für Bewertung herunterladen",
-        "title": "Drucklayout (.rtf) mit Bewertungskennzahlen herunterladen; wählen Sie, ob die Bewertungskopfzeile auf allen Seiten erscheint.",
+        "title": "Drucklayout (.rtf) mit Bewertungskennzahlen herunterladen. Zeilen und Seiten folgen den Layout-Einstellungen; wählen Sie, ob die Bewertungskopfzeile auf allen Seiten erscheint. Zusammengezogene Wörter können etwas kleiner erscheinen, damit sie in der Braille-Zelle bleiben.",
         "ariaLabel": "Textdatei mit Drucklayout für Bewertung herunterladen"
       },
       "uebMathHint": "UEB Math ist Standard und $$math$$ steht für Nemeth.",
@@ -658,7 +658,7 @@
     "closeAriaLabel": "Optionen für Bewertungs-Drucklayout schließen",
     "title": "Bewertungs-Drucklayout",
     "close": "Schließen",
-    "description": "Drucklayout (.rtf) passend zum Braille-Zeilenumbruch mit vorangestellten Bewertungskennzahlen herunterladen.",
+    "description": "Drucklayout (.rtf) herunterladen. Zeilen und Seiten folgen den Layout-Einstellungen, mit vorangestellten Bewertungskennzahlen. Zusammengezogene Wörter können etwas kleiner erscheinen, damit sie in der Braille-Zelle bleiben.",
     "onAllPages": {
       "label": "Auf allen Seiten",
       "hint": "Wenn aktiviert, wird die Bewertungskopfzeile oben auf jeder Seite wiederholt. Andernfalls erscheint sie nur auf der ersten Seite."
@@ -1102,7 +1102,7 @@
       "emailBrf": "E-Mail-BRF",
       "emailBrfHint": "Herunterladen, dann Gmail zum Anhängen öffnen",
       "printLayout": "Drucklayout",
-      "printLayoutHint": "Klartext passend zu den Braille-Zeilen",
+      "printLayoutHint": "Zeilen und Seiten folgen dem Layout; Kontraktionen können etwas kleiner sein",
       "audio": "Audio (MP3)",
       "audioHint": "Stimme wählen, dann herunterladen"
     },
