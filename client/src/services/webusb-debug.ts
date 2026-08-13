@@ -11,9 +11,11 @@
 import {
   getLastUsbAttempt,
   getUsbEnvironment,
+  getUsbSessionSnapshot,
   type UsbAttemptLog,
   type UsbDeviceSummary,
   type UsbEnvironmentSnapshot,
+  type UsbSessionSnapshot,
 } from './webusb-client';
 
 export const USB_DEBUG_STORAGE_KEY = 'graham.usbDebug';
@@ -76,6 +78,7 @@ export interface UsbDebugExport {
   v: 1;
   at: string;
   env: UsbEnvironmentSnapshot;
+  session: UsbSessionSnapshot;
   lastAttempt: UsbAttemptLog | null;
   authorized: UsbDeviceSummary[];
 }
@@ -85,6 +88,7 @@ export function buildUsbDebugExport(authorized: UsbDeviceSummary[] = []): UsbDeb
     v: 1,
     at: new Date().toISOString(),
     env: getUsbEnvironment(),
+    session: getUsbSessionSnapshot(),
     lastAttempt: getLastUsbAttempt(),
     authorized,
   };

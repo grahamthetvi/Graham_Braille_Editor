@@ -3,10 +3,12 @@ import {
   classifyWebUsbError,
   findBulkOutEndpoint,
   isUsbAccessDenied,
+  selectPreferredUsbDevice,
   summarizeUsbDevice,
   toUsbHexId,
   usbClassLabel,
   wrapWebUsbError,
+  VIEWPLUS_VENDOR_ID,
   type UsbDeviceLike,
 } from './webusb-client';
 import { buildUsbDebugExport, USB_DEBUG_STORAGE_KEY } from './webusb-debug';
@@ -66,7 +68,7 @@ describe('WebUSB helpers', () => {
     expect(classifyWebUsbError(err)).toBe('access-denied');
     const wrapped = wrapWebUsbError(err);
     expect(wrapped.kind).toBe('access-denied');
-    expect(wrapped.message).toMatch(/ChromeOS is holding this embosser/);
+    expect(wrapped.message).toMatch(/ChromeOS claimed this USB printer/);
     expect(wrapped.rawMessage).toMatch(/Access Denied/);
   });
 
@@ -102,5 +104,54 @@ describe('WebUSB helpers', () => {
       }),
     );
     expect(USB_DEBUG_STORAGE_KEY).toBe('graham.usbDebug');
+    expect(json.session).toEqual(
+      expect.objectContaining({
+        held: false,
+        opened: false,
+        grabOnConnect: false,
+      }),
+    );
+  });
+
+  it('prefers a ViewPlus Max and finds bulk OUT on endpoint 1', () => {
+    const other: UsbDeviceLike = { vendorId: 0x1234, productId: 1, productName: 'Hub' };
+    const max: UsbDeviceLike = {
+      opened: false,
+      vendorId: VIEWPLUS_VENDOR_ID,
+      productId: 0x0008,
+      productName: 'Max',
+      manufacturerName: 'ViewPlus',
+      deviceClass: 0,
+      configurations: [
+        {
+          configurationValue: 1,
+          interfaces: [
+            {
+              interfaceNumber: 0,
+              claimed: false,
+              alternates: [
+                {
+                  alternateSetting: 0,
+                  interfaceClass: 7,
+                  interfaceSubclass: 1,
+                  interfaceProtocol: 2,
+                  endpoints: [
+                    { endpointNumber: 1, direction: 'in', type: 'bulk', packetSize: 16 },
+                    { endpointNumber: 1, direction: 'out', type: 'bulk', packetSize: 16 },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(selectPreferredUsbDevice([other, max])).toBe(max);
+    expect(findBulkOutEndpoint(max)).toEqual({
+      configurationValue: 1,
+      interfaceNumber: 0,
+      endpointNumber: 1,
+    });
+    expect(summarizeUsbDevice(max).printerClass).toBe(true);
   });
 });
