@@ -1,7 +1,8 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { printBrf, getPrinters, BRIDGE_DEBUG_URL, BRIDGE_SETTINGS_URL, type PrintTarget } from '../services/bridge-client';
-import { printBrfWebUSB } from '../services/webusb-client';
+import { printBrfWebUSB, WebUsbPrintError } from '../services/webusb-client';
+import { webUsbDebug } from '../services/webusb-debug';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isMac, isWindows } from '../utils/os';
 
@@ -53,6 +54,14 @@ export function PrintPanel({
   linesPerPage = 25,
 }: PrintPanelProps) {
   const { t } = useTranslation();
+
+  function printErrorMessage(err: unknown): string {
+    if (err instanceof WebUsbPrintError && err.kind === 'access-denied') {
+      webUsbDebug.setEnabled(true);
+      return t('print.errors.usbAccessDenied');
+    }
+    return err instanceof Error ? err.message : t('print.errors.unknown');
+  }
   const embosserDisplayName = (id: string, fallbackName: string): string => {
     const key = EMBOSSER_ID_TO_TRANSLATION_KEY[id];
     return key ? t(key) : fallbackName;
@@ -190,7 +199,7 @@ export function PrintPanel({
       onExport?.();
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : t('print.errors.unknown'));
+      setErrorMsg(printErrorMessage(err));
     }
   }
 
@@ -229,7 +238,7 @@ export function PrintPanel({
       onExport?.();
     } catch (err) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : t('print.errors.unknown'));
+      setErrorMsg(printErrorMessage(err));
     }
   }
 
@@ -325,6 +334,16 @@ export function PrintPanel({
         >
           {t('print.compact.boundaryTest.label')}
         </button>
+        {useWebUSB && (
+          <button
+            className="toolbar-btn"
+            onClick={() => webUsbDebug.setEnabled(true)}
+            title={t('print.compact.debug.usbTitle')}
+            style={{ marginLeft: '0.4rem', border: '1px solid #cbd5e1' }}
+          >
+            {t('print.compact.debug.label')}
+          </button>
+        )}
         {bridgeConnected && !useWebUSB && (
           <>
             <button
@@ -460,6 +479,15 @@ export function PrintPanel({
           {t('print.full.printBoundaryTest')}
         </button>
         
+        {useWebUSB && (
+          <button
+            onClick={() => webUsbDebug.setEnabled(true)}
+            title={t('print.compact.debug.usbTitle')}
+            style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+          >
+            {t('print.full.usbDebugDashboard')}
+          </button>
+        )}
         {bridgeConnected && !useWebUSB && (
           <>
             <button

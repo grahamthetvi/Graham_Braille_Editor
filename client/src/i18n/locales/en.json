@@ -923,7 +923,8 @@
       "enterPrinterName": "Please enter a printer name.",
       "noContent": "No Braille content to print. Type something first.",
       "invalidRange": "Invalid custom page range or no pages match.",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "usbAccessDenied": "USB Access Denied: ChromeOS is holding this embosser. Remove it under Settings → Print → Printers, unplug and replug USB, dismiss any printer setup prompt, then try again. Open USB Debug for a device probe."
     },
     "viewPlusNotice": {
       "body": "Single-sheet feeding and driver margins vary by model. If you tune the layout for your paper and want to share what works, email grahamthetvi@icloud.com.",
@@ -949,6 +950,7 @@
       },
       "debug": {
         "title": "Open Bridge Debug Dashboard",
+        "usbTitle": "Open website WebUSB debug (ChromeOS, no Bridge)",
         "label": "Debug"
       },
       "settings": {
@@ -977,6 +979,7 @@
       "bridgeSettings": "Bridge Settings",
       "bridgeSettingsTitle": "Open Bridge Settings (Share / Connect to a shared Bridge)",
       "debugDashboard": "Debug Dashboard",
+      "usbDebugDashboard": "USB Debug",
       "sentSuccess": "Sent to embosser successfully.",
       "errorPrefix": "Error: {{error}}"
     }

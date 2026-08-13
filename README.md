@@ -4,7 +4,7 @@ Graham Braille Editor is a client-side web application that converts text into a
 It features **Native TypeScript Embosser Drivers** directly inside the browser, allowing it to generate precise physical hardware commands for various Braille Embossers (including Generic Text, Enabling Technologies Romeo/Juliet, Index Braille, and Braillo).
 
 #### 🔌 Connecting to your Embosser
-- **ChromeOS / WebUSB:** Because the editor has native driver support, you can print *directly* from your browser to your embosser using WebUSB. Just connect your embosser, select your model, and hit Print. No bridge required!
+- **ChromeOS / WebUSB:** Because the editor has native driver support, you can print *directly* from your browser to your embosser using WebUSB. Just connect your embosser, select your model, and hit Print. No bridge required! If Chrome reports **Access Denied** on `USBDevice.open`, ChromeOS has usually claimed the embosser as a system printer: remove it under **Settings → Print → Printers**, unplug/replug USB, dismiss any printer setup prompt, then print again. The Print bar **Debug** button (or `?usbDebug=1` / Ctrl+Shift+Alt+U) opens a website-only WebUSB probe — no Bridge.
 - **Windows / macOS / Linux:** Desktop web browsers do not always have full hardware USB access. To solve this, the **Graham Braille Editor Bridge** is a small, lightweight companion app that runs in your system tray and securely routes the pre-formatted braille commands from the web app straight to your local print spooler.
 
 This guide is primarily for **School IT Administrators** who are setting up the Graham Braille Editor Bridge on student or staff devices.
