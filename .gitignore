@@ -21,6 +21,9 @@ bridge/rpmbuild/RPMS/
 bridge/rpmbuild/SOURCES/
 bridge/rpmbuild/SRPMS/
 
+# Generated Windows resources (go-winres)
+bridge/*.syso
+
 # Go binaries
 bridge/bridge
 bridge/bridge-linux
