@@ -31,6 +31,7 @@ import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { MusicBrailleAuditModal } from './components/MusicBrailleAuditModal';
 import { MusicPlayerControls } from './components/MusicPlayer/MusicPlayerControls';
 import { MusicDebugPanel } from './components/MusicPlayer/MusicDebugPanel';
+import { WebUsbDebugPanel } from './components/WebUsbDebugPanel';
 import {
   BraillePreviewPages,
   type BraillePreviewPagesHandle,
@@ -2083,6 +2084,7 @@ Accuracy: _____________ %
         progress={progress}
         announcement={musicIntakeAnnouncement}
       />
+      <WebUsbDebugPanel />
 
       {/* ── Graphic Generator Modal ──────────────────────────────────────────── */}
       {showGraphicsEditor && (
