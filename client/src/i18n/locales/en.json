@@ -924,7 +924,7 @@
       "noContent": "No Braille content to print. Type something first.",
       "invalidRange": "Invalid custom page range or no pages match.",
       "unknown": "Unknown error",
-      "usbAccessDenied": "USB Access Denied: ChromeOS claimed the ViewPlus Max as a system printer. Probe and Forget cannot steal the USB port back. Keep this tab open, unplug the Max, remove it under Settings → Print → Printers while it is unplugged, then plug it back in so Graham can grab and hold the port. After it works, do not unplug and do not close this tab."
+      "usbAccessDenied": "USB Access Denied: ChromeOS claimed the ViewPlus Max as a USB printer (class 7). This can happen even when Settings → Print → Printers shows nothing saved — ChromeOS still probes the device and keeps the port. Probe and Forget cannot steal it back. Keep this tab focused, unplug the Max for 10+ seconds, check chrome://os-settings/cupsPrinters for hidden automatic printers and remove them while unplugged, then plug it back in with Graham already open and wait until Debug shows Held/Opened before Print. After it works, do not unplug and do not close this tab."
     },
     "viewPlusNotice": {
       "body": "Single-sheet feeding and driver margins vary by model. If you tune the layout for your paper and want to share what works, email grahamthetvi@icloud.com.",
