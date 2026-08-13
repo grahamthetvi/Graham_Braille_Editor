@@ -28,6 +28,11 @@ export const SOFT_LINE_BREAK_CHAR = '\r';
 /** Previous soft-wrap character — still stripped when normalizing for translate/sync. */
 const LEGACY_SOFT_LINE_BREAK_CHAR = '\u2028';
 
+/** Courier half-points: \fs24 = 12pt = one braille cell at the print-layout base grid. */
+export const RTF_FS_BASE = 24;
+/** Readability floor: \fs16 = 8pt. Words that still overflow at this size may drift. */
+export const RTF_FS_MIN = 16;
+
 /** Index into the non-empty braille word list for one logical (pre-wrap) line; char range for hard breaks. */
 export type BrailleWordSpan = {
   wordIndex: number;
@@ -817,18 +822,74 @@ export function defaultMp3DownloadFilename(): string {
   return `speech-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.mp3`;
 }
 
+export type ConvertToRtfOptions = {
+  /**
+   * Inner text already contains RTF control words (`\\fs`, `\\uN?`) and escaped
+   * specials. Skip character escaping so mid-line size runs stay intact.
+   */
+  bodyIsRtf?: boolean;
+};
+
+/** True when `text` already has RTF runs we must not re-escape. */
+function rtfBodyHasControlWords(text: string): boolean {
+  return /\\fs\d+|\\u-?\d+\?/.test(text);
+}
+
 /**
- * Converts a plain text string to Rich Text Format (RTF) using Courier New.
- * Escapes special characters like backslashes and curly braces, and converts
- * newlines to the RTF paragraph break control word (\par).
+ * Escapes RTF specials and emits `\\uN?` for non-ASCII. Leaves `\n` `\r` `\f`
+ * for {@link convertToRtf} to turn into `\par` / `\page`.
  */
-export function convertToRtf(text: string): string {
-  const escaped = text
-    .replace(/\\/g, '\\\\')
-    .replace(/{/g, '\\{')
-    .replace(/}/g, '\\}');
-  
-  const formFeedsReplaced = escaped.replace(/\f/g, '\\page\r\n');
+export function escapeRtfPlainText(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const code = text.charCodeAt(i);
+    if (ch === '\\') {
+      out += '\\\\';
+      continue;
+    }
+    if (ch === '{') {
+      out += '\\{';
+      continue;
+    }
+    if (ch === '}') {
+      out += '\\}';
+      continue;
+    }
+    if (code === 10 || code === 13 || code === 12) {
+      out += ch;
+      continue;
+    }
+    if (code <= 0x7f) {
+      out += ch;
+      continue;
+    }
+    if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
+      const low = text.charCodeAt(i + 1);
+      if (low >= 0xdc00 && low <= 0xdfff) {
+        const hiSigned = code > 32767 ? code - 65536 : code;
+        const loSigned = low > 32767 ? low - 65536 : low;
+        out += `\\u${hiSigned}?\\u${loSigned}?`;
+        i++;
+        continue;
+      }
+    }
+    const signed = code > 32767 ? code - 65536 : code;
+    out += `\\u${signed}?`;
+  }
+  return out;
+}
+
+/**
+ * Converts a plain text string (or a pre-built RTF body with `\\fs` runs) to RTF
+ * using Courier New. Escapes `\\ { }` and non-ASCII unless `bodyIsRtf` is set.
+ * Newlines become `\par`; form feeds become `\page`.
+ */
+export function convertToRtf(text: string, options?: ConvertToRtfOptions): string {
+  const bodyIsRtf = options?.bodyIsRtf === true || rtfBodyHasControlWords(text);
+  const prepared = bodyIsRtf ? text : escapeRtfPlainText(text);
+
+  const formFeedsReplaced = prepared.replace(/\f/g, '\\page\r\n');
   const lines = formFeedsReplaced.replace(/\r\n/g, '\n').split(/[\n\r]/);
   const rtfContent = lines.join('\\par\r\n');
 
@@ -846,6 +907,229 @@ export function formatPlainTextForPrintDownload(editorContent: string): string {
     .replaceAll('\r\n', '\n')
     .replaceAll(LEGACY_SOFT_LINE_BREAK_CHAR, '\n')
     .replaceAll(SOFT_LINE_BREAK_CHAR, '\n');
+}
+
+type PrintWordSlot = {
+  text: string;
+  brailleStartCell: number;
+  slotCells: number;
+  printChars: number;
+};
+
+function fontSizeForSlot(slotCells: number, printChars: number): number {
+  if (printChars <= 0 || printChars <= slotCells) return RTF_FS_BASE;
+  const fs = Math.round(RTF_FS_BASE * (slotCells / printChars));
+  return Math.min(RTF_FS_BASE, Math.max(RTF_FS_MIN, fs));
+}
+
+function wordWidthCells(printChars: number, fs: number): number {
+  return (printChars * fs) / RTF_FS_BASE;
+}
+
+function slotsForPhysicalLine(
+  pl: PhysicalBrailleLineMeta,
+  brfWords: string[],
+  srcWords: string[],
+  m: number,
+  n: number,
+  margin: number,
+  cellsPerRow: number,
+): PrintWordSlot[] {
+  const slots: PrintWordSlot[] = [];
+  let spanStartCell = margin;
+  for (let idx = 0; idx < pl.spans.length; idx++) {
+    const sp = pl.spans[idx];
+    const printWord = sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n);
+    const wordCells = sp.charEnd - sp.charStart;
+    const isLast = idx === pl.spans.length - 1;
+    const slotCells = isLast
+      ? Math.max(wordCells, cellsPerRow - spanStartCell)
+      : wordCells + 1;
+    slots.push({
+      text: printWord,
+      brailleStartCell: spanStartCell,
+      slotCells,
+      printChars: printWord.length,
+    });
+    spanStartCell += wordCells + 1;
+  }
+  return slots;
+}
+
+function emitScaledRtfLine(slots: PrintWordSlot[]): string {
+  let out = '';
+  let cursor = 0;
+  for (let idx = 0; idx < slots.length; idx++) {
+    const slot = slots[idx];
+    const fs = fontSizeForSlot(slot.slotCells, slot.printChars);
+    const width = wordWidthCells(slot.printChars, fs);
+    const overflowed = idx > 0 && cursor > slot.brailleStartCell;
+    const target = overflowed
+      ? Math.max(slot.brailleStartCell, cursor + 1)
+      : Math.max(slot.brailleStartCell, cursor);
+    const pad = Math.max(0, Math.round(target - cursor));
+    if (pad > 0) {
+      out += ' '.repeat(pad);
+      cursor += pad;
+    }
+    if (slot.text.length > 0) {
+      const escaped = escapeRtfPlainText(slot.text);
+      if (fs !== RTF_FS_BASE) {
+        out += `{\\fs${fs} ${escaped}}`;
+      } else {
+        out += escaped;
+      }
+      cursor += width;
+    }
+  }
+  return out.replace(/\s+$/, '');
+}
+
+function syncPlainLineToScaledRtfRows(
+  sourceLine: string,
+  unicodeBrailleLine: string,
+  cellsPerRow: number,
+  paragraphStarts: ParagraphLineStarts | undefined,
+): string[] {
+  if (unicodeBrailleLine.startsWith('\u0002')) {
+    const visual = formatPlainTextForPrintDownload(sourceLine);
+    return visual.split('\n').map(line => escapeRtfPlainText(line));
+  }
+
+  const BRAILLE_SPACE = '\u2800';
+  const canonicalSrc = sourceLine
+    .replaceAll(SOFT_LINE_BREAK_CHAR, ' ')
+    .replaceAll(LEGACY_SOFT_LINE_BREAK_CHAR, ' ');
+  const srcWords = canonicalSrc.trim() === '' ? [] : canonicalSrc.trim().split(/\s+/);
+  const brfWords = unicodeBrailleLine.replace(/^\u0001/, '').split(BRAILLE_SPACE).filter(w => w.length > 0);
+  const m = brfWords.length;
+  const n = srcWords.length;
+
+  if (m !== n || n === 0 || !unicodeBrailleLine.trim()) {
+    const plain = syncPlainLineToBrailleWrap(sourceLine, unicodeBrailleLine, cellsPerRow, paragraphStarts);
+    const visual = formatPlainTextForPrintDownload(plain);
+    return visual.split('\n').map(line => escapeRtfPlainText(line));
+  }
+
+  const physical = physicalLinesMetaForUnicodeLine(
+    unicodeBrailleLine,
+    cellsPerRow,
+    paragraphStarts,
+    BRAILLE_SPACE,
+  );
+  if (physical.length === 0) {
+    return [escapeRtfPlainText(canonicalSrc)];
+  }
+
+  const leadingSpace = canonicalSrc.match(/^\s*/)?.[0] ?? '';
+  const trailingSpace = canonicalSrc.match(/\s*$/)?.[0] ?? '';
+  const rows: string[] = [];
+  for (let k = 0; k < physical.length; k++) {
+    const margin = paragraphStarts
+      ? clampParagraphCell(k === 0 ? paragraphStarts.firstLineStartCell : paragraphStarts.runoverStartCell, cellsPerRow) - 1
+      : 0;
+    const slots = slotsForPhysicalLine(physical[k], brfWords, srcWords, m, n, margin, cellsPerRow);
+    let line = emitScaledRtfLine(slots);
+    if (k === 0 && leadingSpace) line = escapeRtfPlainText(leadingSpace) + line;
+    if (k === physical.length - 1 && trailingSpace) line += escapeRtfPlainText(trailingSpace);
+    rows.push(line);
+  }
+  return rows;
+}
+
+/**
+ * Builds one RTF inner line per visual braille row (soft breaks become newlines).
+ * Source form feeds stay as `\f`. On the m = n path, overflowing print words get a
+ * smaller `\\fs` so they fit their braille cell slot; padding stays at the base grid.
+ */
+export function buildPrintLayoutRtfBody(
+  sourceText: string,
+  asciiBrf: string,
+  cellsPerRow: number,
+  paragraphStarts?: ParagraphLineStarts,
+): string {
+  const srcSegs = sourceText.split('\f');
+  const brfSegs = asciiBrf.split('\f');
+  const maxSegs = Math.max(srcSegs.length, brfSegs.length);
+  const outSegs: string[] = [];
+
+  for (let sIdx = 0; sIdx < maxSegs; sIdx++) {
+    const srcSeg = srcSegs[sIdx] ?? '';
+    const brfSeg = brfSegs[sIdx] ?? '';
+    const srcLines = srcSeg.split('\n');
+    const brfLines = brfSeg.split('\n');
+    const maxLines = Math.max(srcLines.length, brfLines.length);
+    const outLines: string[] = [];
+
+    for (let i = 0; i < maxLines; i++) {
+      const s = srcLines[i] ?? '';
+      const b = brfLines[i] ?? '';
+      const unicode = asciiToUnicodeBraille(b);
+      outLines.push(...syncPlainLineToScaledRtfRows(s, unicode, cellsPerRow, paragraphStarts));
+    }
+    outSegs.push(outLines.join('\n'));
+  }
+
+  return outSegs.join('\f');
+}
+
+function paginatePrintSegment(
+  segment: string,
+  linesPerPage: number,
+  includePageNumbers: boolean,
+  cellsPerRow: number,
+  firstPageNumber: number,
+): string[] {
+  const cells = Math.max(1, cellsPerRow);
+  const lines = Math.max(1, linesPerPage);
+  const wrapped = segment.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+  while (wrapped.length > 0 && wrapped[wrapped.length - 1] === '') {
+    wrapped.pop();
+  }
+
+  const pageChunks: string[] = [];
+  const contentLines = includePageNumbers ? Math.max(1, lines - 1) : lines;
+
+  for (let i = 0; i < wrapped.length; i += contentLines) {
+    const chunk = wrapped.slice(i, i + contentLines);
+    if (includePageNumbers) {
+      while (chunk.length < contentLines) {
+        chunk.push('');
+      }
+      const pageNumStr = String(firstPageNumber + Math.floor(i / contentLines));
+      chunk.push(pageNumStr.padStart(cells, ' '));
+    }
+    pageChunks.push(chunk.join('\n'));
+  }
+
+  return pageChunks;
+}
+
+/**
+ * Paginates wrapped print lines the same way BRF does: `linesPerPage` content
+ * lines (or `linesPerPage - 1` when page numbers are on), joined with `\f`.
+ * Source `\f` starts a new pagination block. Page numbers are Arabic, right-aligned
+ * to `cellsPerRow`.
+ */
+export function paginatePrintLines(
+  text: string,
+  linesPerPage: number,
+  includePageNumbers: boolean,
+  cellsPerRow: number,
+): string {
+  if (!text.includes('\f')) {
+    return paginatePrintSegment(text, linesPerPage, includePageNumbers, cellsPerRow, 1).join('\f');
+  }
+
+  const segments = text.split('\f');
+  const allChunks: string[] = [];
+  let nextPageNum = 1;
+  for (const seg of segments) {
+    const pageChunks = paginatePrintSegment(seg, linesPerPage, includePageNumbers, cellsPerRow, nextPageNum);
+    nextPageNum += pageChunks.length;
+    allChunks.push(...pageChunks);
+  }
+  return allChunks.join('\f');
 }
 
 /**

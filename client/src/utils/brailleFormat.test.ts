@@ -1,5 +1,61 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf, buildBrfDownloadPayload, buildGmailComposeUrl } from './brailleFormat';
+import {
+  buildPlainTextToMatchBrailleWrap,
+  SOFT_LINE_BREAK_CHAR,
+  formatBrfForOutput,
+  defaultPrintLayoutTextFilename,
+  defaultGradingPrintLayoutFilename,
+  convertToRtf,
+  buildBrfDownloadPayload,
+  buildGmailComposeUrl,
+  buildPrintLayoutRtfBody,
+  paginatePrintLines,
+  formatPlainTextForPrintDownload,
+  RTF_FS_BASE,
+  RTF_FS_MIN,
+} from './brailleFormat';
+
+/** Reconstruct word start cells from a print-layout RTF inner line (base grid = \fs24). */
+function rtfLineWordStarts(line: string): { word: string; fs: number; startCell: number }[] {
+  const words: { word: string; fs: number; startCell: number }[] = [];
+  let cell = 0;
+  let i = 0;
+  while (i < line.length) {
+    if (line.startsWith('{\\fs', i)) {
+      const m = line.slice(i).match(/^\{\\fs(\d+) /);
+      if (!m) {
+        i++;
+        continue;
+      }
+      const fs = Number(m[1]);
+      const contentStart = i + m[0].length;
+      const end = line.indexOf('}', contentStart);
+      const text = end >= 0 ? line.slice(contentStart, end) : '';
+      if (text.length > 0) {
+        words.push({ word: text, fs, startCell: cell });
+        cell += (text.length * fs) / RTF_FS_BASE;
+      }
+      i = end >= 0 ? end + 1 : i + 1;
+      continue;
+    }
+    if (line[i] === ' ') {
+      cell += 1;
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < line.length && line[j] !== ' ' && line[j] !== '{') j++;
+    const text = line.slice(i, j);
+    words.push({ word: text, fs: RTF_FS_BASE, startCell: cell });
+    cell += text.length;
+    i = j;
+  }
+  return words;
+}
+
+function formFeedCount(s: string): number {
+  return (s.match(/\f/g) ?? []).length;
+}
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
@@ -127,6 +183,121 @@ describe('buildGmailComposeUrl', () => {
     expect(parsed.searchParams.get('fs')).toBe('1');
     expect(parsed.searchParams.get('su')).toBe('Braille file (.brf)');
     expect(parsed.searchParams.get('body')).toContain('Send to yourself first.');
+  });
+});
+
+describe('paginatePrintLines', () => {
+  it('matches BRF form-feed count for the same wrapped line count', () => {
+    const lines = Array.from({ length: 12 }, (_, i) => `line${String(i).padStart(2, '0')} text`);
+    const source = lines.join('\n');
+    const asciiBrf = source;
+    const cells = 40;
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, cells);
+    for (const includePageNumbers of [false, true]) {
+      const printOut = paginatePrintLines(inner, 5, includePageNumbers, cells);
+      const brfOut = formatBrfForOutput(asciiBrf, cells, 5, includePageNumbers);
+      expect(formFeedCount(printOut)).toBe(formFeedCount(brfOut));
+    }
+  });
+
+  it('starts a new pagination block at a source form feed', () => {
+    const source = 'aaaa\nbbbb\ncccc\nffff\neeee\fzzzz';
+    const asciiBrf = source;
+    const cells = 40;
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, cells);
+    const printOut = paginatePrintLines(inner, 25, false, cells);
+    const brfOut = formatBrfForOutput(asciiBrf, cells, 25, false);
+    expect(formFeedCount(printOut)).toBe(formFeedCount(brfOut));
+    expect(formFeedCount(printOut)).toBe(1);
+  });
+
+  it('right-aligns Arabic page numbers to cellsPerRow', () => {
+    const inner = 'only line';
+    const out = paginatePrintLines(inner, 3, true, 10);
+    const pages = out.split('\f');
+    expect(pages.length).toBe(1);
+    const last = pages[0].split('\n').at(-1) ?? '';
+    expect(last).toBe('         1');
+    expect(last.length).toBe(10);
+  });
+});
+
+describe('buildPrintLayoutRtfBody slot scaling', () => {
+  it('shrinks Grade 2 "the" (1 cell) so "cat" starts on the same cell as BRF', () => {
+    const source = 'the cat';
+    const asciiBrf = '! cat';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
+    expect(inner).toMatch(/\\fs(\d+)/);
+    const fsMatch = inner.match(/\\fs(\d+)/);
+    const fs = Number(fsMatch?.[1]);
+    expect(fs).toBeGreaterThanOrEqual(RTF_FS_MIN);
+    expect(fs).toBeLessThan(RTF_FS_BASE);
+    expect(inner).toContain('the');
+    const starts = rtfLineWordStarts(inner.split('\n')[0]);
+    const theWord = starts.find(w => w.word === 'the');
+    const catWord = starts.find(w => w.word === 'cat');
+    expect(theWord).toBeDefined();
+    expect(catWord).toBeDefined();
+    expect(theWord?.fs).toBeLessThan(RTF_FS_BASE);
+    expect(catWord?.startCell).toBe(2);
+    expect(catWord?.fs).toBe(RTF_FS_BASE);
+  });
+
+  it('does not emit \\fs below the 8pt floor; the next word may drift', () => {
+    const source = 'abcde f';
+    const asciiBrf = 'x f';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
+    const fsValues = [...inner.matchAll(/\\fs(\d+)/g)].map(m => Number(m[1]));
+    expect(fsValues.length).toBeGreaterThan(0);
+    expect(Math.min(...fsValues)).toBeGreaterThanOrEqual(RTF_FS_MIN);
+    const starts = rtfLineWordStarts(inner.split('\n')[0]);
+    const second = starts.find(w => w.word === 'f');
+    expect(second).toBeDefined();
+    expect(second!.startCell).toBeGreaterThan(2);
+  });
+
+  it('keeps uncontracted equal-length words at base size with column padding', () => {
+    const source = 'hello brave world';
+    const asciiBrf = ',hello brave world';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
+    expect(inner).not.toMatch(/\\fs\d+/);
+    expect(inner).toBe('hello  brave world');
+    const wrap = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40);
+    expect(inner).toBe(wrap);
+  });
+
+  it('preserves paragraph 3-1 wrap after pagination', () => {
+    const source = 'The quick brown fox jumps over the lazy dog again today';
+    const asciiBrf = source;
+    const cells = 20;
+    const paragraphStarts = { firstLineStartCell: 3, runoverStartCell: 1 };
+    const wrap = formatPlainTextForPrintDownload(
+      buildPlainTextToMatchBrailleWrap(source, asciiBrf, cells, paragraphStarts),
+    );
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, cells, paragraphStarts);
+    expect(inner).toBe(wrap);
+    const visualLines = inner.split('\n');
+    expect(visualLines.length).toBeGreaterThan(1);
+    expect(visualLines[0].startsWith('  ')).toBe(true);
+    expect(visualLines[1].startsWith(' ')).toBe(false);
+    const paginated = paginatePrintLines(inner, 2, false, cells);
+    const firstPageLines = paginated.split('\f')[0].split('\n');
+    expect(firstPageLines[0].startsWith('  ')).toBe(true);
+    expect(firstPageLines[0]).toBe(visualLines[0]);
+  });
+});
+
+describe('convertToRtf unicode and mid-line size runs', () => {
+  it('emits \\uN? for non-ASCII characters', () => {
+    const rtf = convertToRtf('café');
+    expect(rtf).toContain('\\u233?');
+    expect(rtf).toContain('caf');
+  });
+
+  it('keeps mid-line \\fsN runs when the body is already RTF', () => {
+    const rtf = convertToRtf('{\\fs16 the}cat', { bodyIsRtf: true });
+    expect(rtf).toContain('{\\fs16 the}cat');
+    expect(rtf).not.toContain('\\{\\fs16');
   });
 });
 
