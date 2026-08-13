@@ -78,6 +78,7 @@ import {
 } from './utils/brfIntake';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
+import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
 import type { BuildBrailleStlOptions } from './utils/brailleStl';
@@ -456,6 +457,11 @@ export default function App() {
       setBridgeUpdateAvailable(status.updateAvailable);
     });
     return stopPolling;
+  }, [useWebUSB]);
+
+  useEffect(() => {
+    if (!useWebUSB) return;
+    void startUsbHolder();
   }, [useWebUSB]);
 
   useEffect(() => {
