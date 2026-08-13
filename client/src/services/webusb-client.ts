@@ -148,7 +148,7 @@ export interface UsbHardwareDevice extends UsbDeviceLike {
     selectConfiguration(value: number): Promise<void>;
     claimInterface(interfaceNumber: number): Promise<void>;
     releaseInterface(interfaceNumber: number): Promise<void>;
-    transferOut(endpointNumber: number, data: BufferSource): Promise<{ status: string }>;
+    transferOut(endpointNumber: number, data: Uint8Array): Promise<{ status: string }>;
     forget?(): Promise<void>;
 }
 
