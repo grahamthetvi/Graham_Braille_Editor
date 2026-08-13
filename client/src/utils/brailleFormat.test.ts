@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf } from './brailleFormat';
+import { buildPlainTextToMatchBrailleWrap, SOFT_LINE_BREAK_CHAR, formatBrfForOutput, defaultPrintLayoutTextFilename, defaultGradingPrintLayoutFilename, convertToRtf, buildBrfDownloadPayload, buildGmailComposeUrl } from './brailleFormat';
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
@@ -104,6 +104,29 @@ describe('horizontal word alignment', () => {
     const asciiBrf = 'hello world';
     const result = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40, { firstLineStartCell: 3, runoverStartCell: 5 });
     expect(result).toBe('  hello world');
+  });
+});
+
+describe('buildBrfDownloadPayload', () => {
+  it('returns the same formatted BRF as formatBrfForOutput', async () => {
+    const raw = 'hello world';
+    const payload = buildBrfDownloadPayload(raw, 40, 25, false);
+    expect(payload.formatted).toBe(formatBrfForOutput(raw, 40, 25, false));
+    expect(payload.filename).toMatch(/^braille-\d{4}-\d{2}-\d{2}-\d{4}\.brf$/);
+    expect(payload.blob.type).toContain('text/plain');
+    expect(await payload.blob.text()).toBe(payload.formatted);
+  });
+});
+
+describe('buildGmailComposeUrl', () => {
+  it('builds a Gmail compose URL with encoded subject and body', () => {
+    const url = buildGmailComposeUrl('Braille file (.brf)', 'Attach {{filename}}\n\nSend to yourself first.');
+    expect(url.startsWith('https://mail.google.com/mail/?')).toBe(true);
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get('view')).toBe('cm');
+    expect(parsed.searchParams.get('fs')).toBe('1');
+    expect(parsed.searchParams.get('su')).toBe('Braille file (.brf)');
+    expect(parsed.searchParams.get('body')).toContain('Send to yourself first.');
   });
 });
 

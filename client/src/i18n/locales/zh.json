@@ -69,7 +69,7 @@
       "export": {
         "label": "导出",
         "ariaLabel": "切换导出选项",
-        "title": "导出 BRF、打印布局或 MP3 音频"
+        "title": "导出 BRF、通过 Gmail 发送 BRF、打印布局或 MP3 音频"
       }
     },
     "view": {
@@ -418,6 +418,7 @@
       "localStorageOnly": "仅本地存储：您的草稿、应用设置和表格偏好都安全地保存在浏览器的本地存储中。",
       "offlineCapable": "支持离线使用：网页加载完成后，核心翻译功能可完全离线运行。",
       "embosserBridge": "点显机 Bridge：如果您使用本地打印 Bridge 应用，文件会通过您自己的计算机/网络直接传至点显机，而不会经过互联网。可选的共享模式会接受局域网中知道共享码的其他 Graham Bridge 发来的任务——仍然没有云端中继。",
+      "emailBrf": "邮件发送 BRF：若使用“邮件发送 BRF”，Graham 会将 .brf 下载到您的电脑并在浏览器中打开 Gmail 撰写窗口。Graham 不会代发邮件、不会添加附件、也不会上传文档。您需用自己的 Gmail 账号自行附加并发送。",
       "noTracking": "无追踪：我们不使用分析工具、追踪器或广告 Cookie。您在编辑器中所做的一切完全属于您个人的事情。"
     },
     "readFullPolicy": "阅读完整隐私政策",
@@ -429,7 +430,8 @@
         "lead": "我们不收集、传输或存储任何个人信息、文档或使用数据。",
         "noAnalytics": "无分析工具：我们不使用 Google Analytics、追踪像素或任何其他遥测手段来监控您的行为。",
         "noAccounts": "无需账户：您无需创建账户、提供电子邮件地址或登录即可使用本编辑器。",
-        "noCloudStorage": "无云存储：我们不会将您的文本、翻译后的盲文、导入的文件或导出的 STL 上传到任何服务器。"
+        "noCloudStorage": "无云存储：我们不会将您的文本、翻译后的盲文、导入的文件或导出的 STL 上传到任何服务器。",
+        "emailBrf": "邮件发送 BRF：此选项仅在本地下载文件并打开 Gmail。Graham 不会发送邮件，也不会传输盲文文件；请您从“下载”文件夹自行附加。"
       },
       "section2": {
         "heading": "2. 您的数据如何被处理（仅限客户端）",
@@ -1093,14 +1095,25 @@
   "exportPanel": {
     "regionAriaLabel": "导出选项",
     "heading": "导出",
-    "subheading": "为当前文档选择一种格式。",
+    "subheading": "为当前文档选择一种格式。邮件发送 BRF 留在您的 Gmail 中；Graham 不会发送或存储邮件。",
     "actions": {
       "brf": "BRF",
       "brfHint": "可用于压印的盲文",
+      "emailBrf": "邮件发送 BRF",
+      "emailBrfHint": "先下载，再打开 Gmail 附加",
       "printLayout": "打印布局",
       "printLayoutHint": "与盲文行对齐的纯文本",
       "audio": "音频（MP3）",
       "audioHint": "选择语音后下载"
+    },
+    "email": {
+      "buttonTitle": "下载 BRF 并打开 Gmail。请自行附加刚下载的文件——Graham 无法添加附件。",
+      "buttonAriaLabel": "通过 Gmail 发送 BRF",
+      "subject": "来自 Graham Braille Editor 的盲文文件（.brf）",
+      "body": "请附加刚刚下载的 .brf（下载文件夹中的 {{filename}}）。\n\n1. 发送前请附加该文件。\n2. 可选：先发给自己，确认附件已在邮件中。\n3. 收件人可在 Graham Braille Editor 中打开 .brf，或在自己的设备上压印。\n\nGraham 不会代您发送此邮件。",
+      "popupBlocked": "Gmail 未能打开（弹出窗口被拦截）。请下载 .brf，然后打开撰写窗口：",
+      "openGmailLink": "打开 Gmail 撰写",
+      "dismissFallback": "关闭"
     },
     "audio": {
       "title": "导出音频（MP3）",

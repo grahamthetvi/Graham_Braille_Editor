@@ -69,7 +69,7 @@
       "export": {
         "label": "Exporter",
         "ariaLabel": "Afficher ou masquer les options d'export",
-        "title": "Exporter le BRF, la mise en page d'impression ou l'audio MP3"
+        "title": "Exporter le BRF, envoyer le BRF par Gmail, la mise en page d'impression ou l'audio MP3"
       }
     },
     "view": {
@@ -418,6 +418,7 @@
       "localStorageOnly": "Stockage local uniquement : vos brouillons, paramètres d'application et préférences de table sont enregistrés en toute sécurité dans le stockage local de votre navigateur.",
       "offlineCapable": "Fonctionne hors ligne : une fois la page web chargée, les fonctionnalités de traduction principales fonctionnent entièrement hors ligne.",
       "embosserBridge": "Passerelle d'embosseuse : si vous utilisez notre application Bridge locale, vos fichiers sont transmis directement à votre embosseuse sur votre ordinateur/réseau, pas via Internet. Le mode Partage optionnel accepte des tâches d'autres Graham Bridges sur votre LAN qui connaissent votre code de partage — toujours sans relais cloud.",
+      "emailBrf": "E-mail BRF : si vous utilisez E-mail BRF, Graham télécharge le fichier .brf sur votre ordinateur et ouvre Gmail dans le navigateur. Graham n'envoie pas le message, n'ajoute pas la pièce jointe et n'envoie pas le document. Vous joignez et envoyez depuis votre propre compte Gmail.",
       "noTracking": "Aucun suivi : nous n'utilisons ni analytique, ni traceurs, ni cookies publicitaires. Ce que vous faites dans l'éditeur ne regarde que vous."
     },
     "readFullPolicy": "Lire la politique de confidentialité complète",
@@ -429,7 +430,8 @@
         "lead": "Nous ne collectons, ne transmettons ni ne stockons aucune information personnelle, document ou donnée d'utilisation.",
         "noAnalytics": "Aucune analytique : nous n'utilisons pas Google Analytics, de pixels de suivi ni aucune autre télémétrie pour surveiller votre comportement.",
         "noAccounts": "Aucun compte : vous n'êtes pas tenu de créer un compte, de fournir une adresse e-mail ou de vous connecter pour utiliser l'éditeur.",
-        "noCloudStorage": "Aucun stockage cloud : nous ne téléchargeons votre texte, votre braille traduit, vos fichiers importés ni vos fichiers STL exportés sur aucun serveur."
+        "noCloudStorage": "Aucun stockage cloud : nous ne téléchargeons votre texte, votre braille traduit, vos fichiers importés ni vos fichiers STL exportés sur aucun serveur.",
+        "emailBrf": "E-mail BRF : cette option télécharge seulement le fichier en local et ouvre Gmail. Graham n'envoie pas de courrier et ne transmet pas le fichier braille ; vous le joignez vous-même depuis Téléchargements."
       },
       "section2": {
         "heading": "2. Comment vos données sont traitées (côté client uniquement)",
@@ -1093,14 +1095,25 @@
   "exportPanel": {
     "regionAriaLabel": "Options d'export",
     "heading": "Exporter",
-    "subheading": "Choisissez un format pour le document actuel.",
+    "subheading": "Choisissez un format pour le document actuel. L'e-mail BRF reste dans votre Gmail ; Graham n'envoie ni ne stocke de courrier.",
     "actions": {
       "brf": "BRF",
       "brfHint": "Braille prêt à embosser",
+      "emailBrf": "E-mail BRF",
+      "emailBrfHint": "Télécharger, puis ouvrir Gmail pour joindre",
       "printLayout": "Mise en page d'impression",
       "printLayoutHint": "Texte brut aligné sur les lignes braille",
       "audio": "Audio (MP3)",
       "audioHint": "Choisir une voix, puis télécharger"
+    },
+    "email": {
+      "buttonTitle": "Télécharge le BRF et ouvre Gmail. Joignez vous-même le fichier téléchargé — Graham ne peut pas ajouter de pièces jointes.",
+      "buttonAriaLabel": "Envoyer le BRF par Gmail",
+      "subject": "Fichier braille (.brf) depuis Graham Braille Editor",
+      "body": "Veuillez joindre le fichier .brf qui vient d'être téléchargé ({{filename}} dans le dossier Téléchargements).\n\n1. Joignez ce fichier avant d'envoyer.\n2. Optionnel : envoyez-le d'abord à vous-même et vérifiez que la pièce jointe est bien là.\n3. Le destinataire peut ouvrir le .brf dans Graham Braille Editor ou l'embosser sur sa machine.\n\nGraham n'envoie pas cet e-mail à votre place.",
+      "popupBlocked": "Gmail ne s'est pas ouvert (fenêtre bloquée). Téléchargez le .brf, puis ouvrez la rédaction :",
+      "openGmailLink": "Ouvrir Gmail",
+      "dismissFallback": "Fermer"
     },
     "audio": {
       "title": "Exporter l'audio (MP3)",

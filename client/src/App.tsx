@@ -60,7 +60,9 @@ import { asciiToUnicodeBraille, isPredominantlyUnicodeBraille, unicodeBrailleToA
 import {
   formatBrfPages,
   formatBrfForOutput,
-  defaultBrfDownloadFilename,
+  buildBrfDownloadPayload,
+  triggerBrowserDownload,
+  buildGmailComposeUrl,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   defaultMp3DownloadFilename,
@@ -71,10 +73,8 @@ import {
 import {
   classifyBrfContent,
   normalizeBrfBuffer,
-  shouldAutoRouteMusicOnTextChange,
   type ContentKind,
 } from './utils/brfIntake';
-import { isLikelyMusicBrailleBrf } from './utils/musicBraille';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
@@ -96,7 +96,7 @@ import './App.css';
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
  *     directly with 6-key input (imported braille remains source of truth).
- *   • Export expands a bar (like Print) for BRF, print layout, and MP3 audio.
+ *   • Export expands a bar (like Print) for BRF, Email BRF (Gmail compose helper), print layout, and MP3 audio.
  *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
@@ -250,6 +250,7 @@ export default function App() {
   const [mp3Exporting, setMp3Exporting] = useState(false);
   const [mp3ExportStatus, setMp3ExportStatus] = useState<string | null>(null);
   const [mp3ExportError, setMp3ExportError] = useState<string | null>(null);
+  const [emailBrfFallbackUrl, setEmailBrfFallbackUrl] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState(() => {
     try {
       const v = localStorage.getItem('graham-braille-selected-table');
@@ -509,12 +510,7 @@ export default function App() {
       if (literarySourceModeRef.current === 'brailleEditing') return false;
       if (!isPredominantlyUnicodeBraille(text)) return false;
 
-      const { kind, normalized } = classifyBrfContent(text);
-      if (kind === 'music-brf') {
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return true;
-      }
+      const { normalized } = classifyBrfContent(text);
 
       const gen = ++unicodeBackTranslateGenRef.current;
       void backTranslateBrf(normalized, selectedTable)
@@ -529,39 +525,23 @@ export default function App() {
         });
       return true;
     },
-    [announceMusicLoaded, applyBackTranslatedPlain, applyMusicBrfToEditor, backTranslateBrf, selectedTable],
+    [applyBackTranslatedPlain, backTranslateBrf, selectedTable],
   );
 
   const handleTextChange = useCallback(
     (text: string) => {
-      const prev = inputTextRef.current;
       setInputText(text);
       if (isMusicBrailleModeRef.current) return;
       if (literarySourceModeRef.current === 'importedLocked') return;
       if (literarySourceModeRef.current === 'brailleEditing') return;
-
-      if (shouldAutoRouteMusicOnTextChange(prev, text)) {
-        const { normalized } = classifyBrfContent(text);
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return;
-      }
 
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
         translate(text, selectedTable, mathCode);
       }
     },
-    [
-      announceMusicLoaded,
-      applyMusicBrfToEditor,
-      tryAutoBackTranslateUnicode,
-      translate,
-      selectedTable,
-      mathCode,
-    ],
+    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
   );
-
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
     if (isMusicBrailleMode) return;
@@ -621,6 +601,7 @@ export default function App() {
       setShowBackTranslatedEditModal(false);
       importedBrailleRef.current = '';
 
+      // Only restore Music mode from an explicit session flag — never re-heuristic.
       if (contents.isMusicBrailleMode || contents.contentKind === 'music-brf') {
         applyMusicBrfToEditor(normalizeBrfBuffer(text));
         announceMusicLoaded();
@@ -628,11 +609,6 @@ export default function App() {
       }
 
       const { kind, normalized } = classifyBrfContent(text);
-      if (kind === 'music-brf') {
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return;
-      }
 
       setIsMusicBrailleMode(false);
       setLiterarySourceMode('none');
@@ -682,10 +658,10 @@ export default function App() {
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
-        const { kind, normalized } = classifyBrfContent(raw, { isBrfFile: true });
-        if (kind === 'music-brf' || isMusicBrailleModeRef.current) {
+        const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        // Music only if the user already opted into Music mode.
+        if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          if (kind === 'music-brf') announceMusicLoaded();
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -697,19 +673,14 @@ export default function App() {
           });
       } else {
         const { kind, normalized } = classifyBrfContent(raw);
-        if (kind === 'music-brf') {
+        if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          announceMusicLoaded();
           return;
         }
         setLiterarySourceMode('none');
         importedBrailleRef.current = '';
         setInputText(raw);
         setFileContent(raw);
-        if (isMusicBrailleModeRef.current) {
-          applyMusicBrfToEditor(normalized);
-          return;
-        }
         if (kind === 'literary-brf') {
           void backTranslateBrf(normalized, selectedTable)
             .then(({ plainText, brf }) => {
@@ -769,9 +740,8 @@ export default function App() {
   /** @deprecated alias — literary download historically used this name. */
   const literaryBrfSource = canonicalBrfAscii;
 
-  function handleDownloadBrf() {
-    if (!canonicalBrfAscii) return;
-    const formatted = formatBrfForOutput(
+  function buildCurrentBrfDownload() {
+    return buildBrfDownloadPayload(
       canonicalBrfAscii,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
@@ -781,17 +751,40 @@ export default function App() {
         runoverStartCell: pageSettings.paragraphRunoverStartCell,
       },
     );
-    // CRLF + form feeds (0x0C) between pages — embosser-friendly; ASCII-only payload.
-    const blob = new Blob([formatted], { type: 'text/plain;charset=us-ascii' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = defaultBrfDownloadFilename();
-    a.click();
-    URL.revokeObjectURL(url);
+  }
+
+  function handleDownloadBrf() {
+    if (!canonicalBrfAscii) return;
+    const { blob, filename } = buildCurrentBrfDownload();
+    triggerBrowserDownload(blob, filename);
     markExported(sessionId).catch(err => {
       console.error('Failed to mark session as exported', err);
     });
+  }
+
+  function handleEmailBrf() {
+    if (!canonicalBrfAscii) return;
+    const { blob, filename } = buildCurrentBrfDownload();
+    triggerBrowserDownload(blob, filename);
+    markExported(sessionId).catch(err => {
+      console.error('Failed to mark session as exported', err);
+    });
+    const url = buildGmailComposeUrl(
+      t('exportPanel.email.subject'),
+      t('exportPanel.email.body', { filename }),
+    );
+    // Do not pass noopener in windowFeatures — that makes open() return null even on success.
+    const win = window.open(url, '_blank');
+    if (!win) {
+      setEmailBrfFallbackUrl(url);
+      return;
+    }
+    try {
+      win.opener = null;
+    } catch {
+      /* ignore */
+    }
+    setEmailBrfFallbackUrl(null);
   }
 
   async function handleDownloadMp3() {
@@ -1450,11 +1443,18 @@ Accuracy: _____________ %
                     setIsMusicBrailleMode((s) => {
                       const next = !s;
                       if (next) {
-                        const candidate = normalizeBrfBuffer(inputTextRef.current);
-                        if (isLikelyMusicBrailleBrf(candidate)) {
-                          setInputText(candidate);
-                          setFileContent(candidate);
-                        }
+                        // Prefer locked imported BRF when leaving literary lock;
+                        // otherwise normalize whatever is in the left pane.
+                        const locked =
+                          literarySourceModeRef.current === 'importedLocked' ||
+                          literarySourceModeRef.current === 'brailleEditing';
+                        const source =
+                          locked && importedBrailleRef.current
+                            ? importedBrailleRef.current
+                            : inputTextRef.current;
+                        const candidate = normalizeBrfBuffer(source);
+                        setInputText(candidate);
+                        setFileContent(candidate);
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';
@@ -1596,13 +1596,17 @@ Accuracy: _____________ %
           <div className="header-print-bar" id="export-panel">
             <ExportPanel
               onDownloadBrf={handleDownloadBrf}
+              onEmailBrf={handleEmailBrf}
               onDownloadPrintLayout={handleDownloadPrintLayoutText}
               onOpenAudio={() => setShowAudioExport(true)}
               canDownloadBrf={Boolean(literaryBrfSource)}
+              canEmailBrf={Boolean(literaryBrfSource)}
               canDownloadPrintLayout={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               canExportAudio={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               mp3Exporting={mp3Exporting}
               mp3ExportStatus={mp3ExportStatus}
+              emailBrfFallbackUrl={emailBrfFallbackUrl}
+              onDismissEmailBrfFallback={() => setEmailBrfFallbackUrl(null)}
               disabled={isPerkinsMode}
             />
           </div>

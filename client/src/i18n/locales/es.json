@@ -69,7 +69,7 @@
       "export": {
         "label": "Exportar",
         "ariaLabel": "Mostrar u ocultar opciones de exportación",
-        "title": "Exportar BRF, diseño de impresión o audio MP3"
+        "title": "Exportar BRF, enviar BRF por Gmail, diseño de impresión o audio MP3"
       }
     },
     "view": {
@@ -418,6 +418,7 @@
       "localStorageOnly": "Solo almacenamiento local: sus borradores, la configuración de la aplicación y las preferencias de tabla se guardan de forma segura en el almacenamiento local de su navegador.",
       "offlineCapable": "Funciona sin conexión: una vez cargada la página web, las funciones principales de traducción funcionan completamente sin conexión.",
       "embosserBridge": "Bridge de embosadora: si usa nuestra aplicación Bridge local, sus archivos se transmiten directamente a su embosadora por su propio equipo/red, no por Internet. El modo Compartir opcional acepta trabajos de otros Graham Bridges en su LAN que conozcan su código — sin retransmisión en la nube.",
+      "emailBrf": "Enviar BRF: si usa Enviar BRF, Graham descarga el .brf en su equipo y abre Gmail en el navegador. Graham no envía el correo, no adjunta el archivo ni sube el documento. Usted adjunta y envía desde su propia cuenta de Gmail.",
       "noTracking": "Sin seguimiento: no usamos analítica, rastreadores ni cookies publicitarias. Lo que hace en el editor es asunto exclusivamente suyo."
     },
     "readFullPolicy": "Leer la política de privacidad completa",
@@ -429,7 +430,8 @@
         "lead": "No recopilamos, transmitimos ni almacenamos ninguna información personal, documento o dato de uso.",
         "noAnalytics": "Sin analítica: no usamos Google Analytics, píxeles de seguimiento ni ninguna otra telemetría para monitorear su comportamiento.",
         "noAccounts": "Sin cuentas: no es necesario crear una cuenta, proporcionar una dirección de correo electrónico ni iniciar sesión para usar el editor.",
-        "noCloudStorage": "Sin almacenamiento en la nube: no subimos su texto, el braille traducido, los archivos importados ni los STL exportados a ningún servidor."
+        "noCloudStorage": "Sin almacenamiento en la nube: no subimos su texto, el braille traducido, los archivos importados ni los STL exportados a ningún servidor.",
+        "emailBrf": "Enviar BRF: esta opción solo descarga el archivo en local y abre Gmail. Graham no envía correo ni transmite el archivo braille; usted lo adjunta desde Descargas."
       },
       "section2": {
         "heading": "2. Cómo se procesan sus datos (solo del lado del cliente)",
@@ -1093,14 +1095,25 @@
   "exportPanel": {
     "regionAriaLabel": "Opciones de exportación",
     "heading": "Exportar",
-    "subheading": "Elija un formato para el documento actual.",
+    "subheading": "Elija un formato para el documento actual. Enviar BRF permanece en su Gmail; Graham no envía ni almacena correo.",
     "actions": {
       "brf": "BRF",
       "brfHint": "Braille listo para gofrar",
+      "emailBrf": "Enviar BRF",
+      "emailBrfHint": "Descargar y abrir Gmail para adjuntar",
       "printLayout": "Diseño de impresión",
       "printLayoutHint": "Texto plano alineado con las líneas braille",
       "audio": "Audio (MP3)",
       "audioHint": "Elija una voz y descargue"
+    },
+    "email": {
+      "buttonTitle": "Descarga el BRF y abre Gmail. Adjunte usted el archivo descargado: Graham no puede añadir adjuntos.",
+      "buttonAriaLabel": "Enviar BRF por Gmail",
+      "subject": "Archivo braille (.brf) de Graham Braille Editor",
+      "body": "Adjunte el .brf que acaba de descargarse ({{filename}} en la carpeta Descargas).\n\n1. Adjunte ese archivo antes de enviar.\n2. Opcional: envíeselo primero a usted mismo y compruebe que el adjunto está.\n3. Quien lo reciba puede abrir el .brf en Graham Braille Editor o gofrarlo en su máquina.\n\nGraham no envía este correo por usted.",
+      "popupBlocked": "Gmail no se abrió (ventana emergente bloqueada). Descargue el .brf y abra redactar:",
+      "openGmailLink": "Abrir Gmail",
+      "dismissFallback": "Cerrar"
     },
     "audio": {
       "title": "Exportar audio (MP3)",

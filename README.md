@@ -193,7 +193,7 @@ Access the full-featured canvas editor by clicking **Graphics** under the **Tool
   - **Real-Time Braille Preview**: The graphics editor modal uses actual `<BrailleCell>` components for rendering, giving you an exact real-time look of the physical embossed output.
 
 ### 3. MP3 Audio Export
-Under the **File** tab, click **Export** to open the export bar (same pattern as Print). Choose **BRF**, **Print layout**, or **Audio (MP3)**. For audio, a dialog explains each browser TTS engine—the practical differences are export speed and first-download model size:
+Under the **File** tab, click **Export** to open the export bar (same pattern as Print). Choose **BRF**, **Email BRF**, **Print layout**, or **Audio (MP3)**. **Email BRF** downloads the same `.brf` as **BRF**, then opens Gmail compose with attach-and-send instructions; Graham does not send mail or attach the file for you. For audio, a dialog explains each browser TTS engine—the practical differences are export speed and first-download model size:
 
 | Engine | Notes |
 |--------|--------|
