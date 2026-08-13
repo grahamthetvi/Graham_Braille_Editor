@@ -69,7 +69,7 @@
       "export": {
         "label": "Export",
         "ariaLabel": "Exportoptionen ein-/ausblenden",
-        "title": "BRF, Drucklayout oder MP3-Audio exportieren"
+        "title": "BRF, Drucklayout oder MP3-Audio exportieren; BRF per Gmail senden"
       }
     },
     "view": {
@@ -418,6 +418,7 @@
       "localStorageOnly": "Nur lokaler Speicher: Ihre Entwürfe, Anwendungseinstellungen und Tabellenpräferenzen werden sicher im lokalen Speicher Ihres Browsers gespeichert.",
       "offlineCapable": "Offline-fähig: Sobald die Webseite geladen ist, funktionieren die Kernübersetzungsfunktionen vollständig offline.",
       "embosserBridge": "Brailledrucker-Bridge: Wenn Sie unsere lokale Bridge-Anwendung nutzen, werden Ihre Dateien direkt an Ihren Brailledrucker über Ihren eigenen Computer/Ihr Netzwerk übertragen, nicht über das Internet. Der optionale Freigabemodus akzeptiert Druckaufträge von anderen Graham Bridges im LAN, die Ihren Freigabecode kennen — weiterhin ohne Cloud-Relay.",
+      "emailBrf": "E-Mail-BRF: Wenn Sie E-Mail-BRF nutzen, lädt Graham die .brf auf Ihren Computer und öffnet Gmail im Browser. Graham sendet die E-Mail nicht, hängt die Datei nicht an und lädt das Dokument nicht hoch. Sie hängen an und senden über Ihr eigenes Gmail-Konto.",
       "noTracking": "Kein Tracking: Wir verwenden keine Analytics, Tracker oder Werbe-Cookies. Was Sie im Editor tun, geht ausschließlich Sie etwas an."
     },
     "readFullPolicy": "Vollständige Datenschutzrichtlinie lesen",
@@ -429,7 +430,8 @@
         "lead": "Wir erfassen, übertragen oder speichern keine persönlichen Informationen, Dokumente oder Nutzungsdaten.",
         "noAnalytics": "Keine Analytics: Wir verwenden weder Google Analytics noch Tracking-Pixel oder andere Telemetrie, um Ihr Verhalten zu überwachen.",
         "noAccounts": "Keine Konten: Sie müssen kein Konto erstellen, keine E-Mail-Adresse angeben und sich nicht anmelden, um den Editor zu nutzen.",
-        "noCloudStorage": "Kein Cloud-Speicher: Wir laden Ihren Text, übersetztes Braille, importierte Dateien oder exportierte STL-Dateien nicht auf einen Server hoch."
+        "noCloudStorage": "Kein Cloud-Speicher: Wir laden Ihren Text, übersetztes Braille, importierte Dateien oder exportierte STL-Dateien nicht auf einen Server hoch.",
+        "emailBrf": "E-Mail-BRF: Diese Option lädt die Datei nur lokal herunter und öffnet Gmail. Graham sendet keine E-Mail und überträgt die Braille-Datei nicht; Sie hängen sie selbst aus dem Download-Ordner an."
       },
       "section2": {
         "heading": "2. Wie Ihre Daten verarbeitet werden (nur clientseitig)",
@@ -1093,14 +1095,25 @@
   "exportPanel": {
     "regionAriaLabel": "Exportoptionen",
     "heading": "Export",
-    "subheading": "Wählen Sie ein Format für das aktuelle Dokument.",
+    "subheading": "Wählen Sie ein Format für das aktuelle Dokument. E-Mail-BRF bleibt in Ihrem Gmail; Graham sendet oder speichert keine E-Mails.",
     "actions": {
       "brf": "BRF",
       "brfHint": "Braille bereit zum Prägen",
+      "emailBrf": "E-Mail-BRF",
+      "emailBrfHint": "Herunterladen, dann Gmail zum Anhängen öffnen",
       "printLayout": "Drucklayout",
       "printLayoutHint": "Klartext passend zu den Braille-Zeilen",
       "audio": "Audio (MP3)",
       "audioHint": "Stimme wählen, dann herunterladen"
+    },
+    "email": {
+      "buttonTitle": "Lädt die BRF herunter und öffnet Gmail. Hängen Sie die heruntergeladene Datei selbst an — Graham kann keine Anhänge hinzufügen.",
+      "buttonAriaLabel": "BRF per Gmail senden",
+      "subject": "Braille-Datei (.brf) von Graham Braille Editor",
+      "body": "Bitte hängen Sie die soeben heruntergeladene .brf an ({{filename}} im Ordner Downloads).\n\n1. Hängen Sie diese Datei an, bevor Sie senden.\n2. Optional: Senden Sie zuerst an sich selbst und prüfen Sie, ob der Anhang da ist.\n3. Die Empfängerin oder der Empfänger kann die .brf in Graham Braille Editor öffnen oder auf dem eigenen Gerät prägen.\n\nGraham sendet diese E-Mail nicht für Sie.",
+      "popupBlocked": "Gmail wurde nicht geöffnet (Popup blockiert). Laden Sie die .brf herunter und öffnen Sie dann die Nachricht:",
+      "openGmailLink": "Gmail öffnen",
+      "dismissFallback": "Schließen"
     },
     "audio": {
       "title": "Audio exportieren (MP3)",

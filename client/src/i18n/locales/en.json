@@ -38,7 +38,7 @@
       "export": {
         "label": "Export",
         "ariaLabel": "Toggle export options",
-        "title": "Export BRF, print layout, or MP3 audio"
+        "title": "Export BRF, email BRF via Gmail, print layout, or MP3 audio"
       },
       "tts": {
         "selectAriaLabel": "Text-to-speech engine for MP3 export"
@@ -423,14 +423,25 @@
   "exportPanel": {
     "regionAriaLabel": "Export options",
     "heading": "Export",
-    "subheading": "Choose a format for the current document.",
+    "subheading": "Choose a format for the current document. Email BRF stays in your Gmail; Graham does not send or store mail.",
     "actions": {
       "brf": "BRF",
       "brfHint": "Braille ready for embossing",
+      "emailBrf": "Email BRF",
+      "emailBrfHint": "Download, then open Gmail to attach",
       "printLayout": "Print layout",
       "printLayoutHint": "Plain text matched to braille lines",
       "audio": "Audio (MP3)",
       "audioHint": "Choose a voice, then download"
+    },
+    "email": {
+      "buttonTitle": "Download the BRF and open Gmail compose. Attach the downloaded file yourself — Graham cannot add attachments.",
+      "buttonAriaLabel": "Email BRF via Gmail",
+      "subject": "Braille file (.brf) from Graham Braille Editor",
+      "body": "Please attach the .brf that just downloaded ({{filename}} in your Downloads folder).\n\n1. Attach that file before sending.\n2. Optional: send to yourself first and confirm the attachment is there.\n3. The recipient can open the .brf in Graham Braille Editor or emboss it on their machine.\n\nGraham does not send this email for you.",
+      "popupBlocked": "Gmail did not open (popup blocked). Download the .brf, then open compose:",
+      "openGmailLink": "Open Gmail compose",
+      "dismissFallback": "Dismiss"
     },
     "audio": {
       "title": "Export audio (MP3)",
@@ -574,6 +585,7 @@
       "localStorageOnly": "Local Storage Only: Your drafts, application settings, and table preferences are saved securely within your browser's local storage.",
       "offlineCapable": "Offline Capable: Once the web page is loaded, the core translation features work completely offline.",
       "embosserBridge": "Embosser Bridge: If you use our local printing bridge application, your files are transmitted directly to your local embosser over your own computer/network, not over the internet. Optional Share mode accepts print jobs from other Graham Bridges on your LAN that know your share code—still with no cloud relay.",
+      "emailBrf": "Email BRF: If you use Email BRF, Graham downloads the .brf to your computer and opens Gmail compose in your browser. Graham does not send the email, attach the file, or upload the document. You attach and send from your own Gmail account.",
       "noTracking": "No Tracking: We do not use analytics, trackers, or advertising cookies. What you do in the editor is entirely your business."
     },
     "readFullPolicy": "Read Comprehensive Privacy Policy",
@@ -585,7 +597,8 @@
         "lead": "We do not collect, transmit, or store any personal information, documents, or usage data.",
         "noAnalytics": "No Analytics: We do not use Google Analytics, tracking pixels, or any other telemetry to monitor your behavior.",
         "noAccounts": "No Accounts: You are not required to create an account, provide an email address, or log in to use the editor.",
-        "noCloudStorage": "No Cloud Storage: We do not upload your text, translated braille, imported files, or exported STLs to any server."
+        "noCloudStorage": "No Cloud Storage: We do not upload your text, translated braille, imported files, or exported STLs to any server.",
+        "emailBrf": "Email BRF: Choosing Email BRF only downloads the file locally and opens Gmail compose in your browser. Graham does not send mail or transmit the braille file; you attach it yourself from Downloads."
       },
       "section2": {
         "heading": "2. How Your Data is Processed (Client-Side Only)",

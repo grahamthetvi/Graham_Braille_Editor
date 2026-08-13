@@ -60,7 +60,9 @@ import { asciiToUnicodeBraille, isPredominantlyUnicodeBraille, unicodeBrailleToA
 import {
   formatBrfPages,
   formatBrfForOutput,
-  defaultBrfDownloadFilename,
+  buildBrfDownloadPayload,
+  triggerBrowserDownload,
+  buildGmailComposeUrl,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   defaultMp3DownloadFilename,
@@ -94,7 +96,7 @@ import './App.css';
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
  *     directly with 6-key input (imported braille remains source of truth).
- *   • Export expands a bar (like Print) for BRF, print layout, and MP3 audio.
+ *   • Export expands a bar (like Print) for BRF, Email BRF (Gmail compose helper), print layout, and MP3 audio.
  *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
@@ -248,6 +250,7 @@ export default function App() {
   const [mp3Exporting, setMp3Exporting] = useState(false);
   const [mp3ExportStatus, setMp3ExportStatus] = useState<string | null>(null);
   const [mp3ExportError, setMp3ExportError] = useState<string | null>(null);
+  const [emailBrfFallbackUrl, setEmailBrfFallbackUrl] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState(() => {
     try {
       const v = localStorage.getItem('graham-braille-selected-table');
@@ -737,9 +740,8 @@ export default function App() {
   /** @deprecated alias — literary download historically used this name. */
   const literaryBrfSource = canonicalBrfAscii;
 
-  function handleDownloadBrf() {
-    if (!canonicalBrfAscii) return;
-    const formatted = formatBrfForOutput(
+  function buildCurrentBrfDownload() {
+    return buildBrfDownloadPayload(
       canonicalBrfAscii,
       pageSettings.cellsPerRow,
       pageSettings.linesPerPage,
@@ -749,17 +751,40 @@ export default function App() {
         runoverStartCell: pageSettings.paragraphRunoverStartCell,
       },
     );
-    // CRLF + form feeds (0x0C) between pages — embosser-friendly; ASCII-only payload.
-    const blob = new Blob([formatted], { type: 'text/plain;charset=us-ascii' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = defaultBrfDownloadFilename();
-    a.click();
-    URL.revokeObjectURL(url);
+  }
+
+  function handleDownloadBrf() {
+    if (!canonicalBrfAscii) return;
+    const { blob, filename } = buildCurrentBrfDownload();
+    triggerBrowserDownload(blob, filename);
     markExported(sessionId).catch(err => {
       console.error('Failed to mark session as exported', err);
     });
+  }
+
+  function handleEmailBrf() {
+    if (!canonicalBrfAscii) return;
+    const { blob, filename } = buildCurrentBrfDownload();
+    triggerBrowserDownload(blob, filename);
+    markExported(sessionId).catch(err => {
+      console.error('Failed to mark session as exported', err);
+    });
+    const url = buildGmailComposeUrl(
+      t('exportPanel.email.subject'),
+      t('exportPanel.email.body', { filename }),
+    );
+    // Do not pass noopener in windowFeatures — that makes open() return null even on success.
+    const win = window.open(url, '_blank');
+    if (!win) {
+      setEmailBrfFallbackUrl(url);
+      return;
+    }
+    try {
+      win.opener = null;
+    } catch {
+      /* ignore */
+    }
+    setEmailBrfFallbackUrl(null);
   }
 
   async function handleDownloadMp3() {
@@ -1571,13 +1596,17 @@ Accuracy: _____________ %
           <div className="header-print-bar" id="export-panel">
             <ExportPanel
               onDownloadBrf={handleDownloadBrf}
+              onEmailBrf={handleEmailBrf}
               onDownloadPrintLayout={handleDownloadPrintLayoutText}
               onOpenAudio={() => setShowAudioExport(true)}
               canDownloadBrf={Boolean(literaryBrfSource)}
+              canEmailBrf={Boolean(literaryBrfSource)}
               canDownloadPrintLayout={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               canExportAudio={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               mp3Exporting={mp3Exporting}
               mp3ExportStatus={mp3ExportStatus}
+              emailBrfFallbackUrl={emailBrfFallbackUrl}
+              onDismissEmailBrfFallback={() => setEmailBrfFallbackUrl(null)}
               disabled={isPerkinsMode}
             />
           </div>
