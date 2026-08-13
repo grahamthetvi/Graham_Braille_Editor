@@ -32,8 +32,8 @@
       },
       "downloadPrintLayout": {
         "label": "Baixar layout de impressão",
-        "ariaLabel": "Baixar arquivo de texto do layout de impressão",
-        "title": "Baixar texto simples (.txt) com as mesmas quebras de linha do editor de texto — cada linha corresponde a uma linha em braille, para que você possa imprimir ou abrir no Word e alinhar com o layout em relevo."
+        "ariaLabel": "Baixar arquivo RTF do layout de impressão",
+        "title": "Baixar layout de impressão (.rtf). Linhas e páginas seguem as configurações de Layout. Palavras contraídas podem aparecer um pouco menores para caber na célula braille. Isto não é uma sobreposição física de tinta sobre o braille."
       },
       "tts": {
         "selectAriaLabel": "Motor de conversão de texto em fala para exportação em MP3"
@@ -135,7 +135,7 @@
       },
       "grading": {
         "label": "Baixar Layout de Impressão para Avaliação",
-        "title": "Baixar layout de impressão (.rtf) com métricas de avaliação; escolha se o cabeçalho de avaliação aparece em todas as páginas.",
+        "title": "Baixar layout de impressão (.rtf) com métricas de avaliação. Linhas e páginas seguem as configurações de Layout; escolha se o cabeçalho de avaliação aparece em todas as páginas. Palavras contraídas podem aparecer um pouco menores para caber na célula braille.",
         "ariaLabel": "Baixar arquivo de texto do layout de impressão para avaliação"
       },
       "uebMathHint": "UEB Math é o padrão e $$math$$ é Nemeth.",
@@ -658,7 +658,7 @@
     "closeAriaLabel": "Fechar opções de layout de impressão para avaliação",
     "title": "Layout de Impressão para Avaliação",
     "close": "Fechar",
-    "description": "Baixar layout de impressão (.rtf) correspondente à quebra de linha do braille com métricas de avaliação adicionadas no início.",
+    "description": "Baixar layout de impressão (.rtf). Linhas e páginas seguem as configurações de Layout, com métricas de avaliação no início. Palavras contraídas podem aparecer um pouco menores para caber na célula braille.",
     "onAllPages": {
       "label": "Em todas as páginas",
       "hint": "Quando ativado, o cabeçalho de avaliação é repetido no topo de cada página. Caso contrário, aparece apenas na primeira página."
@@ -1102,7 +1102,7 @@
       "emailBrf": "E-mail BRF",
       "emailBrfHint": "Descarregar e abrir o Gmail para anexar",
       "printLayout": "Layout de impressão",
-      "printLayoutHint": "Texto simples alinhado às linhas em braille",
+      "printLayoutHint": "Linhas e páginas seguem o Layout; palavras contraídas podem ficar um pouco menores",
       "audio": "Áudio (MP3)",
       "audioHint": "Escolha uma voz e baixe"
     },

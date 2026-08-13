@@ -32,8 +32,8 @@
       },
       "downloadPrintLayout": {
         "label": "Descargar diseño de impresión",
-        "ariaLabel": "Descargar archivo de texto con el diseño de impresión",
-        "title": "Descargar texto plano (.txt) con los mismos saltos de línea que el editor de texto; cada línea coincide con una fila braille para que pueda imprimir o abrir en Word y alinear con el diseño grabado."
+        "ariaLabel": "Descargar archivo RTF con el diseño de impresión",
+        "title": "Descargar diseño de impresión (.rtf). Las líneas y las páginas siguen la configuración de Diseño. Las palabras contraídas pueden verse un poco más pequeñas para que quepan en la celda braille. No es una superposición física de tinta sobre braille."
       },
       "tts": {
         "selectAriaLabel": "Motor de texto a voz para la exportación a MP3"
@@ -135,7 +135,7 @@
       },
       "grading": {
         "label": "Descargar diseño de impresión para calificación",
-        "title": "Descargar el diseño de impresión (.rtf) con métricas de calificación; elija si el encabezado de calificación aparece en todas las páginas.",
+        "title": "Descargar el diseño de impresión (.rtf) con métricas de calificación. Las líneas y las páginas siguen la configuración de Diseño; elija si el encabezado de calificación aparece en todas las páginas. Las palabras contraídas pueden verse un poco más pequeñas para que quepan en la celda braille.",
         "ariaLabel": "Descargar archivo de texto con el diseño de impresión para calificación"
       },
       "uebMathHint": "UEB Math es el estándar y $$math$$ corresponde a Nemeth.",
@@ -658,7 +658,7 @@
     "closeAriaLabel": "Cerrar las opciones de diseño de impresión para calificación",
     "title": "Diseño de impresión para calificación",
     "close": "Cerrar",
-    "description": "Descargar el diseño de impresión (.rtf) que coincide con el ajuste de línea braille, con métricas de calificación al principio.",
+    "description": "Descargar el diseño de impresión (.rtf). Las líneas y las páginas siguen la configuración de Diseño, con métricas de calificación al principio. Las palabras contraídas pueden verse un poco más pequeñas para que quepan en la celda braille.",
     "onAllPages": {
       "label": "En todas las páginas",
       "hint": "Cuando está activado, el encabezado de calificación se repite en la parte superior de cada página. De lo contrario, solo aparece en la primera página."
@@ -1102,7 +1102,7 @@
       "emailBrf": "Enviar BRF",
       "emailBrfHint": "Descargar y abrir Gmail para adjuntar",
       "printLayout": "Diseño de impresión",
-      "printLayoutHint": "Texto plano alineado con las líneas braille",
+      "printLayoutHint": "Las líneas y páginas coinciden con Diseño; las palabras contraídas pueden ser un poco más pequeñas",
       "audio": "Audio (MP3)",
       "audioHint": "Elija una voz y descargue"
     },
