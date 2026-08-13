@@ -364,6 +364,16 @@
             "En el editor, imprima como de costumbre y elija la embosadora compartida en la lista"
           ],
           "itNote": "TI: los dispositivos deben poder comunicarse en la LAN (desactive el aislamiento de clientes o use una VLAN de impresión). Reserve una IP/DNS estática para el anfitrión de compartir. Permita el puerto TCP 8081 hacia el anfitrión. En anfitriones Windows: permita TCP 8081 entrante en el Firewall de Windows Defender (o consulte a TI) si falla el emparejamiento."
+        },
+        "remoteInbox": {
+          "heading": "Bandeja remota (rclone + Enviar BRF)",
+          "steps": [
+            "Quien envía sigue usando Enviar BRF (Exportar → Enviar BRF, adjuntar el .brf) o coloca ese .brf en una carpeta de Google Drive compartida como Graham Embosser Inbox",
+            "En el equipo de la embosadora, cree una carpeta local (p. ej. GrahamInbox) e instale rclone desde rclone.org",
+            "rclone config, remoto de Google Drive llamado gdrive (cuenta del centro), luego rclone move de esa carpeta de Drive a GrahamInbox con un temporizador — no use rclone sync",
+            "Bridge → Configuración → Carpeta de bandeja → ruta local, embosadora, Guardar. Los .brf nuevos se imprimen y pasan a printed/"
+          ],
+          "itNote": "Graham nunca inicia sesión en Drive. rclone usa la cuenta de Google del centro. En Windows, Google Drive for desktop puede sustituir a rclone vigilando la misma carpeta. Los comandos completos están en Ajustes de Bridge."
         }
       },
       "math": {
@@ -419,6 +429,7 @@
       "offlineCapable": "Funciona sin conexión: una vez cargada la página web, las funciones principales de traducción funcionan completamente sin conexión.",
       "embosserBridge": "Bridge de embosadora: si usa nuestra aplicación Bridge local, sus archivos se transmiten directamente a su embosadora por su propio equipo/red, no por Internet. El modo Compartir opcional acepta trabajos de otros Graham Bridges en su LAN que conozcan su código — sin retransmisión en la nube.",
       "emailBrf": "Enviar BRF: si usa Enviar BRF, Graham descarga el .brf en su equipo y abre Gmail en el navegador. Graham no envía el correo, no adjunta el archivo ni sube el documento. Usted adjunta y envía desde su propia cuenta de Gmail.",
+      "inboxFolder": "Carpeta de bandeja: la impresión opcional de Bridge lee archivos .brf de una carpeta en el equipo de la embosadora (a menudo llena por rclone o Drive for desktop). Graham no accede a Google Drive; lo hacen la cuenta y las herramientas del centro.",
       "noTracking": "Sin seguimiento: no usamos analítica, rastreadores ni cookies publicitarias. Lo que hace en el editor es asunto exclusivamente suyo."
     },
     "readFullPolicy": "Leer la política de privacidad completa",
@@ -449,7 +460,8 @@
         "localServer": "De forma predeterminada el Bridge ejecuta un servidor local en su equipo (vinculado solo a 127.0.0.1) para el editor web. Si activa el modo Compartir, también escucha en su LAN (puerto 8081) trabajos autenticados de otros Graham Bridges emparejados con su código. No hay retransmisión en la nube.",
         "facilitates": "Facilita la comunicación exclusivamente entre su navegador (a través del Bridge local) y su embosadora local o compartida emparejada.",
         "noInternet": "La aplicación Bridge no sube sus documentos a servidores en la nube de Graham. El modo Compartir opcional permanece en su LAN y requiere el código para emparejar.",
-        "shareMode": "Cualquiera en su red local que conozca el código de compartir actual puede emparejarse y enviar trabajos hasta que regenere el código o desactive Compartir."
+        "shareMode": "Cualquiera en su red local que conozca el código de compartir actual puede emparejarse y enviar trabajos hasta que regenere el código o desactive Compartir.",
+        "inboxFolder": "Carpeta de bandeja opcional: si está activada, Bridge imprime los .brf que aparecen en una carpeta local. rclone o Google Drive for desktop pueden copiar archivos de Drive del centro ahí; Graham no recibe esos archivos en nuestros servidores."
       },
       "section5": {
         "heading": "5. Alojamiento de terceros",

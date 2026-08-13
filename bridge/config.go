@@ -26,12 +26,18 @@ type PairedPeer struct {
 
 // BridgeConfig is persisted under the OS user config directory.
 type BridgeConfig struct {
-	ShareEnabled  bool         `json:"shareEnabled"`
-	ShareName     string       `json:"shareName"`
-	ShareCodeHash string       `json:"shareCodeHash"`
-	ShareCode     string       `json:"shareCode"` // plaintext so Settings can show it
-	ShareToken    string       `json:"shareToken"`
-	PairedPeers   []PairedPeer `json:"pairedPeers"`
+	ShareEnabled      bool         `json:"shareEnabled"`
+	ShareName         string       `json:"shareName"`
+	ShareCodeHash     string       `json:"shareCodeHash"`
+	ShareCode         string       `json:"shareCode"` // plaintext so Settings can show it
+	ShareToken        string       `json:"shareToken"`
+	PairedPeers       []PairedPeer `json:"pairedPeers"`
+	InboxEnabled      bool         `json:"inboxEnabled"`
+	InboxPath         string       `json:"inboxPath"`
+	InboxPrinter      string       `json:"inboxPrinter"`
+	InboxCellsPerRow  int          `json:"inboxCellsPerRow"`
+	InboxLinesPerPage int          `json:"inboxLinesPerPage"`
+	InboxLeftPadCells int          `json:"inboxLeftPadCells"`
 }
 
 var (
@@ -64,6 +70,9 @@ func loadConfig() {
 		if !os.IsNotExist(err) {
 			log.Printf("config: read: %v", err)
 		}
+		cfgMu.Lock()
+		normalizeInboxLayout(&cfg)
+		cfgMu.Unlock()
 		return
 	}
 	var loaded BridgeConfig
@@ -76,6 +85,7 @@ func loadConfig() {
 	if cfg.PairedPeers == nil {
 		cfg.PairedPeers = []PairedPeer{}
 	}
+	normalizeInboxLayout(&cfg)
 	cfgMu.Unlock()
 }
 
@@ -108,6 +118,7 @@ func getConfig() BridgeConfig {
 	peers := make([]PairedPeer, len(cfg.PairedPeers))
 	copy(peers, cfg.PairedPeers)
 	cp.PairedPeers = peers
+	normalizeInboxLayout(&cp)
 	return cp
 }
 

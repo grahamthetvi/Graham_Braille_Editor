@@ -142,6 +142,19 @@ export function WelcomeModal({ onClose, isFirstVisit = true }: WelcomeModalProps
                       {t('welcome.sections.embossing.sharedPi.itNote')}
                     </p>
                   </div>
+                  <div className="install-card">
+                    <h4>{t('welcome.sections.embossing.remoteInbox.heading')}</h4>
+                    <ol>
+                      {(t('welcome.sections.embossing.remoteInbox.steps', { returnObjects: true }) as string[]).map(
+                        (step, idx) => (
+                          <li key={idx}>{step}</li>
+                        ),
+                      )}
+                    </ol>
+                    <p style={{ marginTop: '0.75rem', fontSize: '0.9rem' }}>
+                      {t('welcome.sections.embossing.remoteInbox.itNote')}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="welcome-footer-links">

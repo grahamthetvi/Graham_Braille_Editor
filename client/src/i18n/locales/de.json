@@ -364,6 +364,16 @@
             "Im Editor wie gewohnt drucken und den geteilten Brailledrucker in der Liste wählen"
           ],
           "itNote": "IT: Geräte müssen sich im LAN erreichen können (Client-Isolation aus oder Druck-VLAN). Statische IP/DNS für den Share-Host reservieren. TCP-Port 8081 zum Host erlauben. Auf Windows-Share-Hosts: eingehenden TCP 8081 in der Windows Defender Firewall erlauben (oder IT fragen), wenn die Kopplung fehlschlägt."
+        },
+        "remoteInbox": {
+          "heading": "Remote-Posteingang (rclone + E-Mail-BRF)",
+          "steps": [
+            "Absender nutzen weiter E-Mail-BRF (Export → E-Mail-BRF, .brf anhängen) oder legen die .brf in einen geteilten Google-Drive-Ordner wie Graham Embosser Inbox",
+            "Am Emboss-Rechner einen lokalen Ordner anlegen (z. B. GrahamInbox) und rclone von rclone.org installieren",
+            "rclone config, Google-Drive-Remote gdrive (Schulkonto), dann rclone move dieses Drive-Ordners nach GrahamInbox per Timer — nicht rclone sync",
+            "Bridge → Einstellungen → Inbox-Ordner → lokalen Pfad und Brailledrucker setzen, Speichern. Neue .brf werden gedruckt und nach printed/ verschoben"
+          ],
+          "itNote": "Graham meldet sich nie bei Drive an. rclone nutzt das Google-Konto der Schule. Unter Windows kann Google Drive for desktop rclone ersetzen und denselben Ordner überwachen. Vollständige Befehle stehen in den Bridge-Einstellungen."
         }
       },
       "math": {
@@ -419,6 +429,7 @@
       "offlineCapable": "Offline-fähig: Sobald die Webseite geladen ist, funktionieren die Kernübersetzungsfunktionen vollständig offline.",
       "embosserBridge": "Brailledrucker-Bridge: Wenn Sie unsere lokale Bridge-Anwendung nutzen, werden Ihre Dateien direkt an Ihren Brailledrucker über Ihren eigenen Computer/Ihr Netzwerk übertragen, nicht über das Internet. Der optionale Freigabemodus akzeptiert Druckaufträge von anderen Graham Bridges im LAN, die Ihren Freigabecode kennen — weiterhin ohne Cloud-Relay.",
       "emailBrf": "E-Mail-BRF: Wenn Sie E-Mail-BRF nutzen, lädt Graham die .brf auf Ihren Computer und öffnet Gmail im Browser. Graham sendet die E-Mail nicht, hängt die Datei nicht an und lädt das Dokument nicht hoch. Sie hängen an und senden über Ihr eigenes Gmail-Konto.",
+      "inboxFolder": "Inbox-Ordner: Die optionale Bridge-Inbox liest .brf-Dateien aus einem Ordner auf dem Emboss-Rechner (oft von rclone oder Drive for desktop gefüllt). Graham greift nicht auf Google Drive zu; das Konto und die Tools der Schule tun das.",
       "noTracking": "Kein Tracking: Wir verwenden keine Analytics, Tracker oder Werbe-Cookies. Was Sie im Editor tun, geht ausschließlich Sie etwas an."
     },
     "readFullPolicy": "Vollständige Datenschutzrichtlinie lesen",
@@ -449,7 +460,8 @@
         "localServer": "Standardmäßig betreibt die Bridge einen lokalen Server auf Ihrem Rechner (nur an 127.0.0.1 gebunden) für den Web-Editor. Wenn Sie den Freigabemodus aktivieren, lauscht sie auch im LAN (Port 8081) auf authentifizierte Aufträge von anderen Graham Bridges, die mit Ihrem Freigabecode gekoppelt sind. Es gibt kein Cloud-Relay.",
         "facilitates": "Sie ermöglicht die Kommunikation ausschließlich zwischen Ihrem Browser (über die lokale Bridge) und Ihrem lokalen oder gekoppelten geteilten Brailledrucker.",
         "noInternet": "Die Bridge-Anwendung lädt Ihre Dokumente nicht auf Graham-Cloud-Server hoch. Der optionale Freigabemodus bleibt im LAN und erfordert den Freigabecode zum Koppeln.",
-        "shareMode": "Jeder im lokalen Netzwerk, der den aktuellen Freigabecode kennt, kann koppeln und Braille-Aufträge senden, bis Sie den Code neu erzeugen oder die Freigabe ausschalten."
+        "shareMode": "Jeder im lokalen Netzwerk, der den aktuellen Freigabecode kennt, kann koppeln und Braille-Aufträge senden, bis Sie den Code neu erzeugen oder die Freigabe ausschalten.",
+        "inboxFolder": "Optionaler Inbox-Ordner: Ist er aktiv, druckt Bridge .brf-Dateien, die in einem von Ihnen gewählten lokalen Ordner erscheinen. rclone oder Google Drive for desktop können Schul-Drive-Dateien dorthin kopieren; Graham empfängt diese Dateien nicht auf unseren Servern."
       },
       "section5": {
         "heading": "5. Hosting durch Dritte",
