@@ -32,8 +32,8 @@
       },
       "downloadPrintLayout": {
         "label": "Download print layout",
-        "ariaLabel": "Download print layout text file",
-        "title": "Download plain text (.txt) with the same line breaks as the text editor—each line matches a braille row so you can print or open in Word and align with the embossed layout."
+        "ariaLabel": "Download print layout RTF file",
+        "title": "Download print layout (.rtf). Lines and pages follow Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell. This is not a physical overlay of print on braille."
       },
       "export": {
         "label": "Export",
@@ -165,7 +165,7 @@
       },
       "grading": {
         "label": "Download Grading Print Layout",
-        "title": "Download print layout (.rtf) with grading metrics; choose whether the grading header appears on all pages.",
+        "title": "Download print layout (.rtf) with grading metrics. Lines and pages follow Layout settings; choose whether the grading header appears on all pages. Contracted words may appear slightly smaller so they stay on the braille cell.",
         "ariaLabel": "Download grading print layout text file"
       },
       "uebMathHint": "UEB Math is standard and $$math$$ is Nemeth.",
@@ -430,7 +430,7 @@
       "emailBrf": "Email BRF",
       "emailBrfHint": "Download, then open Gmail to attach",
       "printLayout": "Print layout",
-      "printLayoutHint": "Plain text matched to braille lines",
+      "printLayoutHint": "Lines and pages match Layout; contracted words may be slightly smaller",
       "audio": "Audio (MP3)",
       "audioHint": "Choose a voice, then download"
     },
@@ -532,7 +532,7 @@
       },
       "downloading": {
         "heading": "Downloading & Autosave",
-        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. If you need a perfectly matched plain text layout to share visually, click Download print layout. This guarantees your print document wraps identically to the braille version.",
+        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For a visual twin of that layout, click Download print layout to get an .rtf whose lines and pages follow the same Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell; this is not a physical overlay of print on braille."
         "autosave": "Your work is automatically saved as you type. Click Drafts under the File tab to view and restore unsaved work from the last 30 days."
       },
       "perkins": {
@@ -887,7 +887,7 @@
     "closeAriaLabel": "Close grading print layout options",
     "title": "Grading Print Layout",
     "close": "Close",
-    "description": "Download print layout (.rtf) matching the braille wrapping with grading metrics prepended.",
+    "description": "Download print layout (.rtf). Lines and pages follow Layout settings, with grading metrics prepended. Contracted words may appear slightly smaller so they stay on the braille cell.",
     "onAllPages": {
       "label": "On all pages",
       "hint": "When enabled, the grading header is repeated at the top of every page. Otherwise it appears only on the first page."

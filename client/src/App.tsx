@@ -66,8 +66,8 @@ import {
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   defaultMp3DownloadFilename,
-  formatPlainTextForPrintDownload,
-  buildPlainTextToMatchBrailleWrap,
+  buildPrintLayoutRtfBody,
+  paginatePrintLines,
   convertToRtf,
 } from './utils/brailleFormat';
 import {
@@ -833,21 +833,21 @@ export default function App() {
   }
 
   function handleDownloadPrintLayoutText() {
-    if (!inputText.trim()) return;
-    
-    let alignedText = inputText;
-    // Align with Braille wrapping formatting if translation is available
-    if (workerReady && translatedText) {
-      alignedText = buildPlainTextToMatchBrailleWrap(
-        inputText,
-        translatedText,
-        pageSettings.cellsPerRow,
-        paragraphStarts,
-      );
-    }
-    
-    const body = formatPlainTextForPrintDownload(alignedText);
-    const rtfContent = convertToRtf(body);
+    if (!inputText.trim() || !workerReady || !translatedText) return;
+
+    const inner = buildPrintLayoutRtfBody(
+      inputText,
+      translatedText,
+      pageSettings.cellsPerRow,
+      paragraphStarts,
+    );
+    const paginated = paginatePrintLines(
+      inner,
+      pageSettings.linesPerPage,
+      pageSettings.showPageNumbers ?? false,
+      pageSettings.cellsPerRow,
+    );
+    const rtfContent = convertToRtf(paginated, { bodyIsRtf: true });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -861,20 +861,20 @@ export default function App() {
   }
 
   function handleDownloadGradingPrintLayoutText() {
-    if (!inputText.trim()) return;
-    
-    let alignedText = inputText;
-    // Align with Braille wrapping formatting if translation is available
-    if (workerReady && translatedText) {
-      alignedText = buildPlainTextToMatchBrailleWrap(
-        inputText,
-        translatedText,
-        pageSettings.cellsPerRow,
-        paragraphStarts,
-      );
-    }
-    
-    const body = formatPlainTextForPrintDownload(alignedText);
+    if (!inputText.trim() || !workerReady || !translatedText) return;
+
+    const inner = buildPrintLayoutRtfBody(
+      inputText,
+      translatedText,
+      pageSettings.cellsPerRow,
+      paragraphStarts,
+    );
+    const paginated = paginatePrintLines(
+      inner,
+      pageSettings.linesPerPage,
+      pageSettings.showPageNumbers ?? false,
+      pageSettings.cellsPerRow,
+    );
     const gradingHeader = `================================================================
 GRADING SHEET
 ================================================================
@@ -891,13 +891,13 @@ Accuracy: _____________ %
     
     let fullContent = '';
     if (gradingSheetOnAllPages) {
-      const pages = body.split('\f');
+      const pages = paginated.split('\f');
       fullContent = pages.map(page => gradingHeader + page).join('\f');
     } else {
-      fullContent = gradingHeader + body;
+      fullContent = gradingHeader + paginated;
     }
 
-    const rtfContent = convertToRtf(fullContent);
+    const rtfContent = convertToRtf(fullContent, { bodyIsRtf: true });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -956,8 +956,7 @@ Accuracy: _____________ %
   );
 
   // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
-  // The destructive 'buildPlainTextToMatchBrailleWrap' algorithm is reserved 
-  // exclusively for 'Download print layout' above.
+  // Wrap-matching and per-word RTF slot scaling stay download-only (print layout).
 
   // Music mode: build lines that preserve source char indices for playback highlight.
   const musicPreviewLines = useMemo(() => {
@@ -1496,7 +1495,7 @@ Accuracy: _____________ %
                 <button
                   className={`toolbar-btn${showGradingPrintLayoutDialog ? ' toolbar-btn--active' : ''}`}
                   onClick={() => setShowGradingPrintLayoutDialog(true)}
-                  disabled={!inputText.trim() || isPerkinsMode}
+                  disabled={!inputText.trim() || isPerkinsMode || !workerReady || !translatedText}
                   title={t('app.tools.grading.title')}
                   aria-label={t('app.tools.grading.ariaLabel')}
                   aria-expanded={showGradingPrintLayoutDialog}
@@ -1601,7 +1600,7 @@ Accuracy: _____________ %
               onOpenAudio={() => setShowAudioExport(true)}
               canDownloadBrf={Boolean(literaryBrfSource)}
               canEmailBrf={Boolean(literaryBrfSource)}
-              canDownloadPrintLayout={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
+              canDownloadPrintLayout={Boolean(inputText.trim()) && workerReady && Boolean(translatedText) && literarySourceMode !== 'brailleEditing'}
               canExportAudio={Boolean(inputText.trim()) && literarySourceMode !== 'brailleEditing'}
               mp3Exporting={mp3Exporting}
               mp3ExportStatus={mp3ExportStatus}
@@ -2205,7 +2204,7 @@ Accuracy: _____________ %
           onDownload={handleDownloadGradingPrintLayoutText}
           gradingSheetOnAllPages={gradingSheetOnAllPages}
           onGradingSheetOnAllPagesChange={setGradingSheetOnAllPages}
-          disabled={!inputText.trim() || isPerkinsMode}
+          disabled={!inputText.trim() || isPerkinsMode || !workerReady || !translatedText}
         />
       )}
 
