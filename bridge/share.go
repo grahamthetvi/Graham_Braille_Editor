@@ -169,12 +169,23 @@ func handleSettingsGet(w http.ResponseWriter, r *http.Request) {
 	if c.ShareEnabled {
 		code = c.ShareCode
 	}
+	inboxPath := c.InboxPath
+	if inboxPath == "" {
+		inboxPath = defaultInboxPath()
+	}
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"shareEnabled": c.ShareEnabled,
-		"shareName":    c.ShareName,
-		"shareCode":    code,
-		"peerPort":     peerPort,
-		"pairedPeers":  peers,
+		"shareEnabled":      c.ShareEnabled,
+		"shareName":         c.ShareName,
+		"shareCode":         code,
+		"peerPort":          peerPort,
+		"pairedPeers":       peers,
+		"inboxEnabled":      c.InboxEnabled,
+		"inboxPath":         inboxPath,
+		"inboxPrinter":      c.InboxPrinter,
+		"inboxCellsPerRow":  c.InboxCellsPerRow,
+		"inboxLinesPerPage": c.InboxLinesPerPage,
+		"inboxLeftPadCells": c.InboxLeftPadCells,
+		"localPrinters":     listPrinters(),
 	})
 }
 

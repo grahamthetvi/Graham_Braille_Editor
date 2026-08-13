@@ -230,6 +230,7 @@ func printHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	loadConfig()
 	startPeerServerIfNeeded()
+	restartInboxWatcher()
 
 	go func() {
 		mux := http.NewServeMux()
@@ -245,6 +246,7 @@ func main() {
 		mux.HandleFunc("/settings/regenerate-code", withCORS(handleSettingsRegenerateCode))
 		mux.HandleFunc("/settings/pair", withCORS(handleSettingsPair))
 		mux.HandleFunc("/settings/unpair", withCORS(handleSettingsUnpair))
+		mux.HandleFunc("/settings/inbox", withCORS(handleSettingsInbox))
 
 		log.Printf("Graham Bridge listening on http://%s", listenAddr)
 		if err := http.ListenAndServe(listenAddr, mux); err != nil {
@@ -268,7 +270,7 @@ func onReady() {
 	mStatus.Disable()
 
 	systray.AddSeparator()
-	mSettings := systray.AddMenuItem("Open Settings", "Share mode and connect to a shared Bridge")
+	mSettings := systray.AddMenuItem("Open Settings", "Share, inbox folder, and connect to a shared Bridge")
 	mDebug := systray.AddMenuItem("Open Debug Page", "View print logs and test the embosser")
 	mOpen := systray.AddMenuItem("Open Graham Bridge Editor", "Launch the web app")
 	systray.AddSeparator()
@@ -367,6 +369,7 @@ func onReady() {
 }
 
 func onExit() {
+	stopInboxWatcher()
 	stopPeerServer()
 	log.Println("Shutting down Graham Bridge...")
 }

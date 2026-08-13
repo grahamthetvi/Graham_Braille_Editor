@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 // iconData is a 32x32 PNG: white printer with black outline, for the system tray.
 var iconData = []byte{

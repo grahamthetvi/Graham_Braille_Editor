@@ -115,12 +115,47 @@ Use any desktop that already has the embosser connected and recognized by the OS
 - Wrong code: regenerate the code on the share host (teachers must pair again).
 - Printer missing: ensure the OS/CUPS lists the embosser on the share host; refresh printers in the editor after pairing.
 
+### Inbox folder (rclone) — print jobs from anywhere
+
+Keep **Email BRF** in the editor (Export → Email BRF). On the **embosser computer**, Graham Bridge can watch a local folder and print every new `.brf`.
+
+**Typical flow:** sender emails or uploads a `.brf` into a school Google Drive folder → **rclone** (Linux/Pi, also Windows/macOS) or **Google Drive for desktop** (Windows/macOS) copies it onto disk → Bridge prints it and moves it to `printed/`.
+
+1. Create a Drive folder such as `Graham Embosser Inbox` (school account).
+2. On the embosser PC, create `GrahamInbox` in the home directory.
+3. Install [rclone](https://rclone.org/downloads/), run `rclone config`, add a Google Drive remote named `gdrive`.
+4. Pull files with **`rclone move`** on a timer (**do not use `rclone sync`**):
+
+```bash
+# Linux / macOS
+mkdir -p ~/GrahamInbox
+while true; do
+  rclone move "gdrive:Graham Embosser Inbox" "$HOME/GrahamInbox" --include "*.brf"
+  sleep 30
+done
+```
+
+```bat
+REM Windows
+mkdir %USERPROFILE%\GrahamInbox
+:loop
+rclone move "gdrive:Graham Embosser Inbox" "%USERPROFILE%\GrahamInbox" --include "*.brf"
+timeout /t 30
+goto loop
+```
+
+5. Bridge tray → **Open Settings** → **Inbox folder** → set the local path, choose the OS printer, set **cells per row**, **lines per page**, and **left padding**, then **Save inbox settings**.
+
+This computer (the receiver) re-wraps and re-paginates inbox `.brf` files with those values before sending them to the OS printer. That overrides wrapping already in the file (for example from the sender’s Download BRF). **Email BRF** and **Download BRF** in the editor are unchanged.
+
+Graham never logs into Drive. Failed jobs (including empty `.brf` files and files larger than 5 MB) go to `failed/` in that folder. Changing cells per row, lines per page, or left padding can reprint a file already printed with the old layout.
+
 ---
 
 ## ⚙️ How It Works
 
 Once running, the bridge operates silently in the background and places an icon in your system tray. 
-- Right-clicking the tray icon allows you to check its status, open **Settings** (Share / Connect), **Check for updates**, open the Graham Braille Editor, open the debug page, or quit.
+- Right-clicking the tray icon allows you to check its status, open **Settings** (Share / Inbox folder / Connect), **Check for updates**, open the Graham Braille Editor, open the debug page, or quit.
 - **Updates (Windows & Linux):** tray → **Check for updates** / **Update available — install now** downloads the matching GitHub Release asset, replaces the install, and restarts Bridge. Prefer the Windows setup.exe or Linux `./install.sh` (user) so updates do not need admin.
 - The editor-facing HTTP server listens only on **`127.0.0.1:8080`**. Web pages cannot reach LAN addresses directly from the hosted HTTPS site; local Bridge relays to a shared Bridge when configured.
 - **Optional Share mode:** when enabled, a second listener on **`0.0.0.0:8081`** accepts Bridge-to-Bridge pairing and print jobs authenticated with the share token (obtained via the share code). This is not the browser CORS API.

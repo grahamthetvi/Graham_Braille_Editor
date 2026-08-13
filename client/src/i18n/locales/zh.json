@@ -364,6 +364,16 @@
             "在编辑器中照常打印，并在打印机列表中选择共享的点显机"
           ],
           "itNote": "IT：设备必须能在局域网互通（关闭客户端隔离或使用打印 VLAN）。为共享主机预留静态 IP/DNS。允许到该主机的 TCP 8081 端口。Windows 共享主机：若配对失败，请在 Windows Defender 防火墙中允许入站 TCP 8081（或咨询 IT）。"
+        },
+        "remoteInbox": {
+          "heading": "远程收件箱（rclone + 邮件发送 BRF）",
+          "steps": [
+            "发送方仍可使用“邮件发送 BRF”（导出 → 邮件发送 BRF，附加 .brf），或把该 .brf 放到共享 Google Drive 文件夹（如 Graham Embosser Inbox）",
+            "在点显机电脑上创建本地文件夹（例如主目录下的 GrahamInbox），并从 rclone.org 安装 rclone",
+            "运行 rclone config，添加名为 gdrive 的 Google Drive 远程（学校账号），然后定时 rclone move 该 Drive 文件夹到 GrahamInbox — 不要使用 rclone sync",
+            "Bridge → 设置 → 收件箱文件夹 → 设置本地路径、选择点显机并保存。新的 .brf 会自动打印并移到 printed/"
+          ],
+          "itNote": "Graham 不会登录 Drive。rclone 使用学校的 Google 账号。Windows 也可用 Google Drive for desktop 代替 rclone，监视同一本地文件夹。完整命令见 Bridge 设置。"
         }
       },
       "math": {
@@ -419,6 +429,7 @@
       "offlineCapable": "支持离线使用：网页加载完成后，核心翻译功能可完全离线运行。",
       "embosserBridge": "点显机 Bridge：如果您使用本地打印 Bridge 应用，文件会通过您自己的计算机/网络直接传至点显机，而不会经过互联网。可选的共享模式会接受局域网中知道共享码的其他 Graham Bridge 发来的任务——仍然没有云端中继。",
       "emailBrf": "邮件发送 BRF：若使用“邮件发送 BRF”，Graham 会将 .brf 下载到您的电脑并在浏览器中打开 Gmail 撰写窗口。Graham 不会代发邮件、不会添加附件、也不会上传文档。您需用自己的 Gmail 账号自行附加并发送。",
+      "inboxFolder": "收件箱文件夹：可选的 Bridge 收件箱会从点显机电脑上的文件夹读取 .brf（通常由 rclone 或 Drive for desktop 放入）。Graham 不会访问 Google Drive；由学校账号和工具完成。",
       "noTracking": "无追踪：我们不使用分析工具、追踪器或广告 Cookie。您在编辑器中所做的一切完全属于您个人的事情。"
     },
     "readFullPolicy": "阅读完整隐私政策",
@@ -449,7 +460,8 @@
         "localServer": "默认情况下，Bridge 在您的计算机上运行仅绑定 127.0.0.1 的本地服务器，供网页编辑器使用。若启用共享模式，它还会在局域网（端口 8081）上接受已通过共享码配对的其他 Graham Bridge 发来的已认证任务。没有云端中继。",
         "facilitates": "它仅在您的浏览器（通过本地 Bridge）与本地或已配对的共享点显机之间传递通信。",
         "noInternet": "Bridge 应用不会将您的文档上传到 Graham 云服务器。可选共享模式仅限局域网，并需要共享码才能配对。",
-        "shareMode": "局域网中知道当前共享码的任何人都可以配对并发送点显任务，直到您重新生成代码或关闭共享。"
+        "shareMode": "局域网中知道当前共享码的任何人都可以配对并发送点显任务，直到您重新生成代码或关闭共享。",
+        "inboxFolder": "可选收件箱文件夹：启用后，Bridge 会打印出现在您所选本地文件夹中的 .brf。rclone 或 Google Drive for desktop 可能把学校 Drive 文件复制到该处；Graham 不会在我们的服务器上接收这些文件。"
       },
       "section5": {
         "heading": "5. 第三方托管",

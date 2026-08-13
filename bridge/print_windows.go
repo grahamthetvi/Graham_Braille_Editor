@@ -24,14 +24,14 @@ import (
 //   ClosePrinter     — release the handle
 
 var (
-	winspool        = syscall.NewLazyDLL("winspool.drv")
-	procOpenPrinter = winspool.NewProc("OpenPrinterW")
-	procStartDoc    = winspool.NewProc("StartDocPrinterW")
-	procStartPage   = winspool.NewProc("StartPagePrinter")
-	procWrite       = winspool.NewProc("WritePrinter")
-	procEndPage     = winspool.NewProc("EndPagePrinter")
-	procEndDoc      = winspool.NewProc("EndDocPrinter")
-	procClose       = winspool.NewProc("ClosePrinter")
+	winspool         = syscall.NewLazyDLL("winspool.drv")
+	procOpenPrinter  = winspool.NewProc("OpenPrinterW")
+	procStartDoc     = winspool.NewProc("StartDocPrinterW")
+	procStartPage    = winspool.NewProc("StartPagePrinter")
+	procWrite        = winspool.NewProc("WritePrinter")
+	procEndPage      = winspool.NewProc("EndPagePrinter")
+	procEndDoc       = winspool.NewProc("EndDocPrinter")
+	procClose        = winspool.NewProc("ClosePrinter")
 	procEnumPrinters = winspool.NewProc("EnumPrintersW")
 )
 

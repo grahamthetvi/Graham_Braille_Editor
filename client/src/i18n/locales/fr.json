@@ -364,6 +364,16 @@
             "Dans l’éditeur, imprimez comme d’habitude et choisissez l’embosseuse partagée dans la liste"
           ],
           "itNote": "IT : les appareils doivent pouvoir communiquer sur le LAN (désactiver l’isolation client ou utiliser un VLAN d’impression). Réservez une IP/DNS statique pour l’hôte de partage. Autorisez le port TCP 8081 vers l’hôte. Sur un hôte Windows : autorisez le TCP 8081 entrant dans le pare-feu Windows Defender (ou demandez à l’IT) si l’appairage échoue."
+        },
+        "remoteInbox": {
+          "heading": "Boîte de réception distante (rclone + e-mail BRF)",
+          "steps": [
+            "Les envois restent via E-mail BRF (Exporter → E-mail BRF, joindre le .brf) ou en déposant ce .brf dans un dossier Google Drive partagé tel que Graham Embosser Inbox",
+            "Sur l’ordinateur de l’embosseuse, créez un dossier local (par ex. GrahamInbox) et installez rclone depuis rclone.org",
+            "rclone config, remote Google Drive nommé gdrive (compte établissement), puis rclone move de ce dossier Drive vers GrahamInbox sur une minuterie — n’utilisez pas rclone sync",
+            "Bridge → Paramètres → Dossier inbox → chemin local, embosseuse, Enregistrer. Les nouveaux .brf s’impriment et passent dans printed/"
+          ],
+          "itNote": "Graham ne se connecte jamais à Drive. rclone utilise le compte Google de l’établissement. Sous Windows, Google Drive for desktop peut remplacer rclone en surveillant le même dossier. Les commandes complètes sont dans les paramètres Bridge."
         }
       },
       "math": {
@@ -419,6 +429,7 @@
       "offlineCapable": "Fonctionne hors ligne : une fois la page web chargée, les fonctionnalités de traduction principales fonctionnent entièrement hors ligne.",
       "embosserBridge": "Passerelle d'embosseuse : si vous utilisez notre application Bridge locale, vos fichiers sont transmis directement à votre embosseuse sur votre ordinateur/réseau, pas via Internet. Le mode Partage optionnel accepte des tâches d'autres Graham Bridges sur votre LAN qui connaissent votre code de partage — toujours sans relais cloud.",
       "emailBrf": "E-mail BRF : si vous utilisez E-mail BRF, Graham télécharge le fichier .brf sur votre ordinateur et ouvre Gmail dans le navigateur. Graham n'envoie pas le message, n'ajoute pas la pièce jointe et n'envoie pas le document. Vous joignez et envoyez depuis votre propre compte Gmail.",
+      "inboxFolder": "Dossier inbox : l’impression inbox optionnelle de Bridge lit les .brf dans un dossier sur l’ordinateur de l’embosseuse (souvent alimenté par rclone ou Drive for desktop). Graham n’accède pas à Google Drive ; le compte et les outils de l’établissement le font.",
       "noTracking": "Aucun suivi : nous n'utilisons ni analytique, ni traceurs, ni cookies publicitaires. Ce que vous faites dans l'éditeur ne regarde que vous."
     },
     "readFullPolicy": "Lire la politique de confidentialité complète",
@@ -449,7 +460,8 @@
         "localServer": "Par défaut la passerelle exécute un serveur local sur votre machine (lié uniquement à 127.0.0.1) pour l'éditeur web. Si vous activez le mode Partage, elle écoute aussi sur votre LAN (port 8081) pour des tâches authentifiées d'autres Graham Bridges appairés avec votre code. Il n'y a pas de relais cloud.",
         "facilitates": "Elle facilite la communication exclusivement entre votre navigateur (via la passerelle locale) et votre embosseuse locale ou partagée appairée.",
         "noInternet": "L'application Bridge n'envoie pas vos documents vers des serveurs cloud Graham. Le mode Partage optionnel reste sur votre LAN et nécessite le code de partage pour l'appairage.",
-        "shareMode": "Toute personne sur votre réseau local qui connaît le code de partage actuel peut s'appairer et envoyer des tâches d'embossage jusqu'à ce que vous régénériez le code ou désactiviez le Partage."
+        "shareMode": "Toute personne sur votre réseau local qui connaît le code de partage actuel peut s'appairer et envoyer des tâches d'embossage jusqu'à ce que vous régénériez le code ou désactiviez le Partage.",
+        "inboxFolder": "Dossier inbox optionnel : si activé, Bridge imprime les .brf qui apparaissent dans un dossier local. rclone ou Google Drive for desktop peuvent y copier des fichiers Drive de l’établissement ; Graham ne reçoit pas ces fichiers sur nos serveurs."
       },
       "section5": {
         "heading": "5. Hébergement tiers",

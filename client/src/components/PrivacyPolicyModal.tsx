@@ -66,6 +66,7 @@ export function PrivacyPolicyModal({ onClose }: PrivacyPolicyModalProps) {
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.offlineCapable')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.embosserBridge')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.emailBrf')}</li>
+                <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.inboxFolder')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.noTracking')}</li>
               </ul>
 
@@ -103,6 +104,7 @@ export function PrivacyPolicyModal({ onClose }: PrivacyPolicyModalProps) {
                     <li>{t('privacy.fullPolicy.section4.facilitates')}</li>
                     <li>{t('privacy.fullPolicy.section4.noInternet')}</li>
                     <li>{t('privacy.fullPolicy.section4.shareMode')}</li>
+                    <li>{t('privacy.fullPolicy.section4.inboxFolder')}</li>
                   </ul>
 
                   <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>{t('privacy.fullPolicy.section5.heading')}</h4>

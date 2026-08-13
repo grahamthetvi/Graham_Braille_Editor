@@ -522,6 +522,16 @@
           ],
           "itNote": "IT: devices must be allowed to talk on the LAN (disable client isolation or use a print VLAN). Reserve a static IP or DNS name for the share host. Allow TCP port 8081 to the host. On Windows share hosts, allow inbound TCP 8081 in Windows Defender Firewall (or ask IT) if pairing fails."
         },
+        "remoteInbox": {
+          "heading": "Remote inbox (rclone + Email BRF)",
+          "steps": [
+            "Senders still use Email BRF (Export → Email BRF, attach the downloaded .brf) or place that .brf in a shared Google Drive folder such as Graham Embosser Inbox",
+            "On the embosser computer, create a local folder (for example GrahamInbox in your home directory) and install rclone from rclone.org",
+            "Run rclone config, add a Google Drive remote named gdrive (school account), then rclone move that Drive folder into GrahamInbox on a timer — do not use rclone sync",
+            "Bridge → Settings → Inbox folder → set the local path, choose the embosser, Save. New .brf files print automatically and move to printed/"
+          ],
+          "itNote": "Graham never logs into Drive. rclone uses the school Google account. Windows may use Google Drive for desktop instead of rclone, watching the same local folder. Full commands are in Bridge Settings."
+        },
         "downloadButton": "Download Desktop Bridge"
       },
       "math": {
@@ -532,7 +542,7 @@
       },
       "downloading": {
         "heading": "Downloading & Autosave",
-        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For a visual twin of that layout, click Download print layout to get an .rtf whose lines and pages follow the same Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell; this is not a physical overlay of print on braille."
+        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For a visual twin of that layout, click Download print layout to get an .rtf whose lines and pages follow the same Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell; this is not a physical overlay of print on braille.",
         "autosave": "Your work is automatically saved as you type. Click Drafts under the File tab to view and restore unsaved work from the last 30 days."
       },
       "perkins": {
@@ -586,6 +596,7 @@
       "offlineCapable": "Offline Capable: Once the web page is loaded, the core translation features work completely offline.",
       "embosserBridge": "Embosser Bridge: If you use our local printing bridge application, your files are transmitted directly to your local embosser over your own computer/network, not over the internet. Optional Share mode accepts print jobs from other Graham Bridges on your LAN that know your share code—still with no cloud relay.",
       "emailBrf": "Email BRF: If you use Email BRF, Graham downloads the .brf to your computer and opens Gmail compose in your browser. Graham does not send the email, attach the file, or upload the document. You attach and send from your own Gmail account.",
+      "inboxFolder": "Inbox folder: Optional Bridge inbox printing reads .brf files from a folder on the embosser computer (often filled by rclone or Drive for desktop). Graham does not access Google Drive; your school’s account and tools do.",
       "noTracking": "No Tracking: We do not use analytics, trackers, or advertising cookies. What you do in the editor is entirely your business."
     },
     "readFullPolicy": "Read Comprehensive Privacy Policy",
@@ -616,7 +627,8 @@
         "localServer": "By default the bridge runs a local server on your machine (binding only to 127.0.0.1) for the web editor. If you enable Share mode, it also listens on your LAN (port 8081) for authenticated jobs from other Graham Bridges that pair with your share code. There is no cloud relay.",
         "facilitates": "It facilitates communication exclusively between your web browser (via the local Bridge) and your local or paired shared embosser.",
         "noInternet": "The bridge application does not upload your documents to Graham cloud servers. Optional Share mode stays on your LAN and requires the shared code to pair.",
-        "shareMode": "Anyone on your local network who knows the current share code can pair and send embosser jobs until you regenerate the code or turn Share off."
+        "shareMode": "Anyone on your local network who knows the current share code can pair and send embosser jobs until you regenerate the code or turn Share off.",
+        "inboxFolder": "Optional inbox folder: if enabled, Bridge prints .brf files that appear in a local folder you choose. rclone or Google Drive for desktop may copy school Drive files into that folder; Graham does not receive those files on our servers."
       },
       "section5": {
         "heading": "5. Third-Party Hosting",
