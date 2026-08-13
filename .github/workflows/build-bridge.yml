@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -83,8 +86,60 @@ jobs:
         VERSION: ${{ steps.ver.outputs.semver }}
       run: |
         cd bridge
+        & .\packaging\embed-winres.ps1 -Version $env:VERSION -BuildNumber "${{ github.run_number }}"
         go build -ldflags="-H windowsgui -X main.Version=$env:VERSION -X main.BuildNumber=${{ github.run_number }}" -o graham-bridge-windows.exe .
-        Compress-Archive -Path graham-bridge-windows.exe -DestinationPath graham-bridge-windows.zip
+
+    - name: Resolve Windows code-signing mode
+      id: codesign
+      if: runner.os == 'Windows'
+      shell: bash
+      env:
+        AZURE_ACCOUNT: ${{ vars.AZURE_CODESIGN_ACCOUNT }}
+        PFX: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+      run: |
+        if [ -n "$AZURE_ACCOUNT" ]; then
+          echo "mode=azure" >> "$GITHUB_OUTPUT"
+          echo "Windows Authenticode: Azure Artifact Signing ($AZURE_ACCOUNT)"
+        elif [ -n "$PFX" ]; then
+          echo "mode=pfx" >> "$GITHUB_OUTPUT"
+          echo "Windows Authenticode: PFX certificate"
+        else
+          echo "mode=none" >> "$GITHUB_OUTPUT"
+          echo "Windows Authenticode: skipped (set AZURE_CODESIGN_ACCOUNT or WINDOWS_CERT_PFX_BASE64)."
+          echo "Unsigned builds show SmartScreen 'Unknown publisher'. See README."
+        fi
+
+    - name: Sign graham-bridge-windows.exe (Azure Artifact Signing)
+      if: runner.os == 'Windows' && steps.codesign.outputs.mode == 'azure'
+      uses: azure/artifact-signing-action@v2
+      with:
+        azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        endpoint: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
+        signing-account-name: ${{ vars.AZURE_CODESIGN_ACCOUNT }}
+        certificate-profile-name: ${{ vars.AZURE_CODESIGN_PROFILE }}
+        files: ${{ github.workspace }}\bridge\graham-bridge-windows.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+        description: Graham Bridge
+        description-url: https://grahambrailleeditor.com/
+
+    - name: Sign graham-bridge-windows.exe (PFX)
+      if: runner.os == 'Windows' && steps.codesign.outputs.mode == 'pfx'
+      shell: pwsh
+      env:
+        WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+        WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      run: |
+        & .\bridge\packaging\sign-windows.ps1 -Files .\bridge\graham-bridge-windows.exe
+
+    - name: Zip Windows exe
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        Compress-Archive -Path .\bridge\graham-bridge-windows.exe -DestinationPath .\bridge\graham-bridge-windows.zip
 
     - name: Install Inno Setup
       if: runner.os == 'Windows'
@@ -100,6 +155,32 @@ jobs:
         & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:VERSION" packaging\graham-bridge.iss
         Move-Item -Force packaging\Output\graham-bridge-windows-setup.exe .\graham-bridge-windows-setup.exe
         Get-ChildItem graham-bridge-windows*.exe, graham-bridge-windows.zip
+
+    - name: Sign graham-bridge-windows-setup.exe (Azure Artifact Signing)
+      if: runner.os == 'Windows' && steps.codesign.outputs.mode == 'azure'
+      uses: azure/artifact-signing-action@v2
+      with:
+        azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        endpoint: ${{ vars.AZURE_CODESIGN_ENDPOINT }}
+        signing-account-name: ${{ vars.AZURE_CODESIGN_ACCOUNT }}
+        certificate-profile-name: ${{ vars.AZURE_CODESIGN_PROFILE }}
+        files: ${{ github.workspace }}\bridge\graham-bridge-windows-setup.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+        description: Graham Bridge Setup
+        description-url: https://grahambrailleeditor.com/
+
+    - name: Sign graham-bridge-windows-setup.exe (PFX)
+      if: runner.os == 'Windows' && steps.codesign.outputs.mode == 'pfx'
+      shell: pwsh
+      env:
+        WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+        WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      run: |
+        & .\bridge\packaging\sign-windows.ps1 -Files .\bridge\graham-bridge-windows-setup.exe
 
     - name: Build Bridge (macOS)
       if: runner.os == 'macOS'

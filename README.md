@@ -32,6 +32,8 @@ ChromeOS users should **not** install Bridge — print with WebUSB from the edit
 2. Run the installer (no administrator password required). It installs under `%LOCALAPPDATA%\Programs\GrahamBridge\` and can start Graham Bridge when you log in.
 3. A Graham Bridge icon appears in the system tray (near the clock).
 
+**SmartScreen / “Unknown publisher”:** Windows shows this when the installer is not Authenticode-signed (or the signed file has not built SmartScreen reputation yet). Click **More info** → **Run anyway**. School IT can allowlist the publisher once releases are signed (see [Windows Authenticode signing](#windows-authenticode-signing-releases)).
+
 **Updates:** tray → **Check for updates** / **Update available — install now** downloads the new build, replaces the install, and restarts Bridge.
 
 **ZIP alternative:** extract `graham-bridge-windows.zip` and run `graham-bridge-windows.exe`. Prefer the setup installer so auto-update can replace the file without admin rights (avoid `C:\Program Files` unless IT manages upgrades).
@@ -208,6 +210,34 @@ To bump the engine:
 
 Requires **podman** or **docker** (pulls `emscripten/emsdk`). CI workflow
 `.github/workflows/liblouis-wasm.yml` rebuilds and fails if committed WASM drifts.
+
+### Windows Authenticode signing (releases)
+
+Windows will not show **Verified publisher** for a homemade or self-signed certificate. The signature has to come from an identity in the Microsoft Trusted Root Program (Azure Artifact Signing, or an OV/EV code-signing certificate from a public CA). Self-signed files still trigger SmartScreen.
+
+Release CI (`.github/workflows/build-bridge.yml`) signs `graham-bridge-windows.exe` and `graham-bridge-windows-setup.exe` when credentials are present. Until then, builds stay unsigned and SmartScreen’s “Unknown publisher” warning is expected.
+
+**Recommended: Azure Artifact Signing** (formerly Trusted Signing)
+
+1. Create an [Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/quickstart) account and complete **identity validation** so the certificate subject is the publisher name you want Windows to show (for example **Graham The TVI**).
+2. Create a **Public Trust** certificate profile and an Entra app registration. Grant the app the **Artifact Signing Certificate Profile Signer** role.
+3. Add GitHub **Actions variables**:
+   - `AZURE_CODESIGN_ENDPOINT` — regional endpoint, e.g. `https://eus.codesigning.azure.net/`
+   - `AZURE_CODESIGN_ACCOUNT` — Artifact Signing account name
+   - `AZURE_CODESIGN_PROFILE` — certificate profile name
+4. Add GitHub **Actions secrets**:
+   - `AZURE_TENANT_ID`
+   - `AZURE_CLIENT_ID`
+   - `AZURE_CLIENT_SECRET`
+5. Tag a release (`v*`) or run **Build Bridge**. Right-click the downloaded `setup.exe` → **Properties** → **Digital Signatures** should list the validated publisher.
+
+**Alternative: existing PFX** (only if your CA still issued an exportable cert; most new certs require a hardware token or cloud HSM instead)
+
+1. Secrets: `WINDOWS_CERT_PFX_BASE64` (base64 of the `.pfx`) and `WINDOWS_CERT_PASSWORD`.
+2. Used only when `AZURE_CODESIGN_ACCOUNT` is not set.
+3. Locally (Windows SDK `signtool`): `.\bridge\packaging\sign-windows.ps1 -Files path\to\file.exe`
+
+Even after a valid signature, SmartScreen may warn until the file builds reputation. Signed releases still let IT allowlist the publisher in AppLocker / SmartScreen.
 
 ### 1. Large-Print (Jumbo) Braille
 For combined print/braille production or low-vision readers, you can insert large-print sections in your document. 
