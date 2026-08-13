@@ -8,15 +8,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   USB_ATTEMPT_EVENT,
+  USB_SESSION_EVENT,
   forgetAuthorizedUsbDevices,
   getLastUsbAttempt,
   getUsbEnvironment,
+  getUsbSessionSnapshot,
   listAuthorizedUsbDevices,
   probeUsbDevice,
+  releaseUsbSession,
   requestUsbDeviceForDebug,
+  startUsbHolder,
   type UsbAttemptLog,
   type UsbDeviceSummary,
   type UsbEnvironmentSnapshot,
+  type UsbSessionSnapshot,
 } from '../services/webusb-client';
 import {
   formatUsbDebugExportJson,
@@ -68,10 +73,12 @@ export function WebUsbDebugPanel() {
   const [env, setEnv] = useState<UsbEnvironmentSnapshot>(() => getUsbEnvironment());
   const [authorized, setAuthorized] = useState<UsbDeviceSummary[]>([]);
   const [lastAttempt, setLastAttempt] = useState<UsbAttemptLog | null>(() => getLastUsbAttempt());
+  const [session, setSession] = useState<UsbSessionSnapshot>(() => getUsbSessionSnapshot());
 
   const refresh = useCallback(async () => {
     setEnv(getUsbEnvironment());
     setLastAttempt(getLastUsbAttempt());
+    setSession(getUsbSessionSnapshot());
     try {
       setAuthorized(await listAuthorizedUsbDevices());
     } catch {
@@ -99,9 +106,14 @@ export function WebUsbDebugPanel() {
   useEffect(() => {
     function onAttempt() {
       setLastAttempt(getLastUsbAttempt());
+      setSession(getUsbSessionSnapshot());
     }
     window.addEventListener(USB_ATTEMPT_EVENT, onAttempt);
-    return () => window.removeEventListener(USB_ATTEMPT_EVENT, onAttempt);
+    window.addEventListener(USB_SESSION_EVENT, onAttempt);
+    return () => {
+      window.removeEventListener(USB_ATTEMPT_EVENT, onAttempt);
+      window.removeEventListener(USB_SESSION_EVENT, onAttempt);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +144,7 @@ export function WebUsbDebugPanel() {
       window.setTimeout(() => setCopyMsg(null), 4000);
     } finally {
       setLastAttempt(getLastUsbAttempt());
+      setSession(getUsbSessionSnapshot());
       try {
         setAuthorized(await listAuthorizedUsbDevices());
       } catch {
@@ -191,14 +204,36 @@ export function WebUsbDebugPanel() {
             <section className="usb-debug__section">
               <h3>Access Denied on ChromeOS</h3>
               <p className="usb-debug__help">
-                ChromeOS often claims the embosser as a system printer, so
-                {' '}<code>device.open()</code> fails with Access Denied even after you pick it.
-                Remove the embosser under <strong>Settings → Print → Printers</strong>,
-                unplug and replug USB, dismiss any printer setup prompt, then Probe again.
-                If Linux (Crostini) is sharing the USB device, turn that off too.
+                The ViewPlus Max is a USB printer. ChromeOS grabs it after the first
+                {' '}<code>close()</code>, so later <code>open()</code> calls fail even though Request still works.
+                Graham now keeps the USB port open after a successful grab.
+              </p>
+              <p className="usb-debug__help">
+                Recover: leave this tab open → unplug the Max → remove it under
+                {' '}<strong>Settings → Print → Printers</strong> while unplugged → plug it back in.
+                Grab-on-connect will retry <code>open()</code> for about two seconds to beat ChromeOS.
+                After it works, do not unplug and do not close this tab.
               </p>
             </section>
           )}
+
+          <section className="usb-debug__section">
+            <h3>Held connection</h3>
+            <ul className="usb-debug__kv">
+              <li><span>Held</span><span>{session.held ? 'yes' : 'no'}</span></li>
+              <li><span>Opened</span><span>{session.opened ? 'yes' : 'no'}</span></li>
+              <li><span>Claimed</span><span>{session.claimed ? 'yes' : 'no'}</span></li>
+              <li><span>Grab plug</span><span>{session.grabOnConnect ? 'armed' : 'off'}</span></li>
+              {session.device && (
+                <li><span>Device</span><span>{deviceLabel(session.device)}</span></li>
+              )}
+            </ul>
+            {!session.opened && (
+              <p className="usb-debug__muted">
+                Not holding the Max. Plug it in with this tab already open, or click Grab.
+              </p>
+            )}
+          </section>
 
           <section className="usb-debug__section">
             <h3>Authorized devices</h3>
@@ -270,14 +305,25 @@ export function WebUsbDebugPanel() {
           </section>
 
           <div className="usb-debug__actions">
-            <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void run(requestUsbDeviceForDebug, 'Device authorized')}>
+            <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void run(startUsbHolder, 'Grab armed / tried authorized devices')}>
+              Grab
+            </button>
+            <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void run(requestUsbDeviceForDebug, 'Device authorized and held')}>
               Request
             </button>
-            <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void run(probeUsbDevice, 'Probe finished')}>
+            <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void run(probeUsbDevice, 'Probe finished — port kept open')}>
               Probe
             </button>
             <button type="button" className="toolbar-btn" disabled={busy} onClick={() => void refresh()}>
               Refresh
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn"
+              disabled={busy || !session.held}
+              onClick={() => void run(releaseUsbSession, 'Released USB port')}
+            >
+              Release
             </button>
             <button
               type="button"
@@ -299,7 +345,7 @@ export function WebUsbDebugPanel() {
           </div>
           {copyMsg ? <p className="usb-debug__toast">{copyMsg}</p> : null}
           <p className="usb-debug__footer">
-            Website-only USB diagnostics. Probe opens, claims a bulk-out interface, then releases — it does not print.
+            Website-only USB diagnostics. Probe/Request now keep the printer port open on ChromeOS. Release/Forget give the Max back to ChromeOS.
           </p>
         </div>
       )}

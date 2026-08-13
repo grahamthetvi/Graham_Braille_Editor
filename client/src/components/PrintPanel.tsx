@@ -1,7 +1,7 @@
 import { useState, useEffect, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { printBrf, getPrinters, BRIDGE_DEBUG_URL, BRIDGE_SETTINGS_URL, type PrintTarget } from '../services/bridge-client';
-import { printBrfWebUSB, WebUsbPrintError } from '../services/webusb-client';
+import { printBrfWebUSB, WebUsbPrintError, USB_SESSION_EVENT, USB_ATTEMPT_EVENT, getUsbSessionSnapshot } from '../services/webusb-client';
 import { webUsbDebug } from '../services/webusb-debug';
 import { EmbosserFactory, EMBOSSER_LIST } from '../services/embossers/EmbosserFactory';
 import { isMac, isWindows } from '../utils/os';
@@ -74,6 +74,19 @@ export function PrintPanel({
   const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
   const [printRange, setPrintRange] = useState<'all' | 'custom'>('all');
   const [customRange, setCustomRange] = useState('');
+  const [usbHeld, setUsbHeld] = useState(() => getUsbSessionSnapshot().opened);
+
+  useEffect(() => {
+    if (!useWebUSB) return;
+    const sync = () => setUsbHeld(getUsbSessionSnapshot().opened);
+    sync();
+    window.addEventListener(USB_SESSION_EVENT, sync);
+    window.addEventListener(USB_ATTEMPT_EVENT, sync);
+    return () => {
+      window.removeEventListener(USB_SESSION_EVENT, sync);
+      window.removeEventListener(USB_ATTEMPT_EVENT, sync);
+    };
+  }, [useWebUSB]);
 
   function parseCustomRange(rangeStr: string, maxPages: number): number[] {
     const pages = new Set<number>();
@@ -323,7 +336,7 @@ export function PrintPanel({
           onClick={handlePrint}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
-          {status === 'printing' ? t('print.compact.sending') : useWebUSB ? t('print.compact.selectAndPrint') : t('print.compact.print')}
+          {status === 'printing' ? t('print.compact.sending') : useWebUSB ? (usbHeld ? t('print.compact.print') : t('print.compact.selectAndPrint')) : t('print.compact.print')}
         </button>
         <button
           className="toolbar-btn"
@@ -469,7 +482,7 @@ export function PrintPanel({
           onClick={handlePrint}
           disabled={(!useWebUSB && !bridgeConnected) || status === 'printing'}
         >
-          {status === 'printing' ? t('print.full.printing') : useWebUSB ? t('print.full.selectEmbosserAndPrint') : t('print.full.print')}
+          {status === 'printing' ? t('print.full.printing') : useWebUSB ? (usbHeld ? t('print.full.print') : t('print.full.selectEmbosserAndPrint')) : t('print.full.print')}
         </button>
         <button
           onClick={handlePrintBoundaryTest}
