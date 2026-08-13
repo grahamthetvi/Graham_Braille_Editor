@@ -135,7 +135,7 @@
       },
       "musicMode": {
         "label": "Music Player Mode",
-        "title": "Treat the editor as Music Braille (ASCII BRF or Unicode braille cells). Import .brf without literary back-translation, preview cells, and play notes with Web Audio.",
+        "title": "Treat the current editor buffer as Music Braille BRF (ASCII or Unicode). Imports while this mode is on skip literary back-translation; preview cells and play notes with Web Audio.",
         "ariaLabel": "Toggle Music Braille player mode"
       },
       "auditBrf": {

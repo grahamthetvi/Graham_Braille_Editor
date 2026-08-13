@@ -1,11 +1,13 @@
 /**
  * Unified BRF intake: normalize → classify → route decisions for import,
- * paste, and session restore. Music BRF never goes through liblouis.
+ * paste, and session restore.
+ *
+ * Music mode is not inferred here — the user must toggle Music Player Mode.
+ * Saved sessions may still restore as music-brf via explicit session flags.
  */
 
 import { isPredominantlyUnicodeBraille } from './braille';
 import { normalizeImportedBrf } from './brailleFormat';
-import { isLikelyMusicBrailleBrf } from './musicBraille';
 
 /** Canonical buffer form used by playback, export, and literary round-trip. */
 export type ContentKind = 'music-brf' | 'literary-brf' | 'plain';
@@ -26,7 +28,8 @@ export const normalizeBrfBuffer = normalizeImportedBrf;
 
 /**
  * Classify raw editor/file content before liblouis.
- * Music always wins over literary back-translate.
+ * Never returns `music-brf` — music is entered only via the Music mode toggle
+ * (or restoring a session already saved as music).
  */
 export function classifyBrfContent(
   raw: string,
@@ -36,9 +39,6 @@ export function classifyBrfContent(
   if (!normalized.trim()) {
     return { kind: 'plain', normalized };
   }
-  if (isLikelyMusicBrailleBrf(normalized)) {
-    return { kind: 'music-brf', normalized };
-  }
   if (opts.isBrfFile || isPredominantlyUnicodeBraille(raw ?? '')) {
     return { kind: 'literary-brf', normalized };
   }
@@ -46,16 +46,9 @@ export function classifyBrfContent(
 }
 
 /**
- * True when a text-change should auto-switch to Music mode.
- * Requires music classification and a paste/load-sized jump so typing
- * note-by-note does not flip modes mid-edit.
+ * @deprecated Music mode is no longer auto-routed on paste/import.
+ * Always returns false; kept so call sites can be removed cleanly.
  */
-export function shouldAutoRouteMusicOnTextChange(prev: string, next: string): boolean {
-  if (!isLikelyMusicBrailleBrf(next)) return false;
-  const prevLen = (prev ?? '').length;
-  const nextLen = (next ?? '').length;
-  if (prevLen === 0) return true;
-  if (nextLen - prevLen >= 40) return true;
-  if (nextLen >= 2 * prevLen && nextLen - prevLen >= 20) return true;
+export function shouldAutoRouteMusicOnTextChange(_prev: string, _next: string): boolean {
   return false;
 }

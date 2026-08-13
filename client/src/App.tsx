@@ -71,10 +71,8 @@ import {
 import {
   classifyBrfContent,
   normalizeBrfBuffer,
-  shouldAutoRouteMusicOnTextChange,
   type ContentKind,
 } from './utils/brfIntake';
-import { isLikelyMusicBrailleBrf } from './utils/musicBraille';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
@@ -509,12 +507,7 @@ export default function App() {
       if (literarySourceModeRef.current === 'brailleEditing') return false;
       if (!isPredominantlyUnicodeBraille(text)) return false;
 
-      const { kind, normalized } = classifyBrfContent(text);
-      if (kind === 'music-brf') {
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return true;
-      }
+      const { normalized } = classifyBrfContent(text);
 
       const gen = ++unicodeBackTranslateGenRef.current;
       void backTranslateBrf(normalized, selectedTable)
@@ -529,39 +522,23 @@ export default function App() {
         });
       return true;
     },
-    [announceMusicLoaded, applyBackTranslatedPlain, applyMusicBrfToEditor, backTranslateBrf, selectedTable],
+    [applyBackTranslatedPlain, backTranslateBrf, selectedTable],
   );
 
   const handleTextChange = useCallback(
     (text: string) => {
-      const prev = inputTextRef.current;
       setInputText(text);
       if (isMusicBrailleModeRef.current) return;
       if (literarySourceModeRef.current === 'importedLocked') return;
       if (literarySourceModeRef.current === 'brailleEditing') return;
-
-      if (shouldAutoRouteMusicOnTextChange(prev, text)) {
-        const { normalized } = classifyBrfContent(text);
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return;
-      }
 
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
         translate(text, selectedTable, mathCode);
       }
     },
-    [
-      announceMusicLoaded,
-      applyMusicBrfToEditor,
-      tryAutoBackTranslateUnicode,
-      translate,
-      selectedTable,
-      mathCode,
-    ],
+    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
   );
-
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
     if (isMusicBrailleMode) return;
@@ -621,6 +598,7 @@ export default function App() {
       setShowBackTranslatedEditModal(false);
       importedBrailleRef.current = '';
 
+      // Only restore Music mode from an explicit session flag — never re-heuristic.
       if (contents.isMusicBrailleMode || contents.contentKind === 'music-brf') {
         applyMusicBrfToEditor(normalizeBrfBuffer(text));
         announceMusicLoaded();
@@ -628,11 +606,6 @@ export default function App() {
       }
 
       const { kind, normalized } = classifyBrfContent(text);
-      if (kind === 'music-brf') {
-        applyMusicBrfToEditor(normalized);
-        announceMusicLoaded();
-        return;
-      }
 
       setIsMusicBrailleMode(false);
       setLiterarySourceMode('none');
@@ -682,10 +655,10 @@ export default function App() {
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
-        const { kind, normalized } = classifyBrfContent(raw, { isBrfFile: true });
-        if (kind === 'music-brf' || isMusicBrailleModeRef.current) {
+        const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        // Music only if the user already opted into Music mode.
+        if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          if (kind === 'music-brf') announceMusicLoaded();
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -697,19 +670,14 @@ export default function App() {
           });
       } else {
         const { kind, normalized } = classifyBrfContent(raw);
-        if (kind === 'music-brf') {
+        if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          announceMusicLoaded();
           return;
         }
         setLiterarySourceMode('none');
         importedBrailleRef.current = '';
         setInputText(raw);
         setFileContent(raw);
-        if (isMusicBrailleModeRef.current) {
-          applyMusicBrfToEditor(normalized);
-          return;
-        }
         if (kind === 'literary-brf') {
           void backTranslateBrf(normalized, selectedTable)
             .then(({ plainText, brf }) => {
@@ -1450,11 +1418,18 @@ Accuracy: _____________ %
                     setIsMusicBrailleMode((s) => {
                       const next = !s;
                       if (next) {
-                        const candidate = normalizeBrfBuffer(inputTextRef.current);
-                        if (isLikelyMusicBrailleBrf(candidate)) {
-                          setInputText(candidate);
-                          setFileContent(candidate);
-                        }
+                        // Prefer locked imported BRF when leaving literary lock;
+                        // otherwise normalize whatever is in the left pane.
+                        const locked =
+                          literarySourceModeRef.current === 'importedLocked' ||
+                          literarySourceModeRef.current === 'brailleEditing';
+                        const source =
+                          locked && importedBrailleRef.current
+                            ? importedBrailleRef.current
+                            : inputTextRef.current;
+                        const candidate = normalizeBrfBuffer(source);
+                        setInputText(candidate);
+                        setFileContent(candidate);
                         setLiterarySourceMode('none');
                         setShowBackTranslatedEditModal(false);
                         importedBrailleRef.current = '';
