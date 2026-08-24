@@ -1,0 +1,126 @@
+# Staff, Clefs, and the Grand Staff
+# Adapted print master for a braille music student.
+# Directives: .title .center .h1 .h2 .p .tn .l .blank .newpage
+# Generated BRF:
+#   staff-clefs-lesson-ueb-g2.brf  (UEB Grade 2, 40 cells, 25 lines)
+#   staff-clefs-lesson-ueb-g1.brf  (UEB Grade 1, 40 cells, 25 lines)
+# Rebuild: node samples/generate-staff-clefs-brf.mjs
+
+.title Staff, Clefs, and the Grand Staff
+.center A class follow-along
+.center for a braille student
+.blank
+.grade Unified English Braille, Grade {n}
+.center 40 cells by 25 lines
+.blank
+.center Adapted from today's print lesson
+.blank
+
+.h1 Contents
+.l Transcriber's notes
+.l 1. The print staff
+.l 2. Treble clef, the G clef
+.l 3. Ledger lines
+.l 4. Bass clef, the F clef
+.l 5. The grand staff
+.l 6. How this maps to braille music
+.blank
+
+.h1 Transcriber's notes
+.tn This file follows the print class lesson on the staff and clefs so you can keep pace with your classmates.
+.tn Print diagrams are replaced with words. When classmates see a line or note highlighted in color, this file names that line or note instead of using color.
+.tn Staff lines are numbered from the bottom up. Line 1 is the lowest line. Space 1 is the space just above line 1.
+.tn Headings match the class topics. Skip to the heading your teacher is discussing.
+
+.h1 1. The print staff
+.p The modern staff comprises five lines and four spaces.
+.p Every line or space on the staff represents a white key on the keyboard.
+.p In print music, a note is a round head placed on a line or in a space. The higher the note sits on the staff, the higher it sounds.
+.p Clefs assign individual notes to certain lines or spaces.
+.p Two clefs are normally used: the Treble and Bass clefs.
+.p For the braille reader: Braille music does not use a five-line staff. Each pitch is a braille cell. An octave mark before the note tells you how high or low that pitch is. You still need the print staff names so you can follow class and talk about the same notes as your classmates.
+
+.h1 2. Treble clef, the G clef
+.p First, we will discuss the Treble Clef, also called the G Clef.
+.p In print, the treble clef is a large symbol at the left of the staff. Its curl wraps around line 2, the second line from the bottom. That line is G. Any note placed on this line becomes G. This G is the G above middle C.
+.p Classmates may see that G line highlighted in color. In this file, it is named instead of colored.
+.p From that G, letter names move up the staff in order. The musical alphabet uses the letters A through G, then it starts again at A. Remember, there is not an H note.
+.l The note on line 2 is G.
+.l The note on the space above G is A.
+.l The note on the line above A is B. That is line 3.
+.l The note on the space above B is C.
+.l The note on the line above C is D. That is line 4.
+.l The note on the space above D is E.
+.l The note on the line above E is F. That is line 5, the top line of the staff.
+.p This process continues.
+.h2 Treble staff lines, bottom to top
+.l Line 1: E
+.l Line 2: G, the G-clef line
+.l Line 3: B
+.l Line 4: D
+.l Line 5: F
+.h2 Treble staff spaces, bottom to top
+.l Space 1: F
+.l Space 2: A
+.l Space 3: C
+.l Space 4: E
+.p A common memory sentence for the treble lines is: Every Good Boy Does Fine.
+.p A common memory word for the treble spaces is FACE.
+
+.h1 3. Ledger lines
+.p Uh-oh. We just ran out of room to place notes. What happens now?
+.p Ledger lines will solve our dilemma.
+.p A ledger line is a small extra line drawn above or below the staff when we run out of room. It is only as wide as the note that sits on it.
+.p If we keep going up from the top of the treble staff:
+.l The top line is F.
+.l The space above the staff is G.
+.l One ledger line above the staff is A.
+.p With the ledger line drawn, we can place that A. It is the A above the treble staff.
+.p Ledger lines also appear below the staff. One ledger line below the treble staff is middle C.
+
+.h1 4. Bass clef, the F clef
+.p Next, let's discuss the Bass Clef, also called the F Clef.
+.p In print, the bass clef is a symbol at the left of the staff with two dots. The staff line that sits between those two dots is F. That is line 4, the second line from the top. Any note on that line is F. This F is the F below middle C.
+.p We can now fill the rest of the staff with notes. Letter names still run A through G, then start again.
+.h2 Bass staff lines, bottom to top
+.l Line 1: G
+.l Line 2: B
+.l Line 3: D
+.l Line 4: F, the F-clef line
+.l Line 5: A
+.h2 Bass staff spaces, bottom to top
+.l Space 1: A
+.l Space 2: C
+.l Space 3: E
+.l Space 4: G
+.p A common memory sentence for the bass lines is: Good Boys Do Fine Always.
+.p A common memory sentence for the bass spaces is: All Cows Eat Grass.
+
+.h1 5. The grand staff
+.p Finally, we will discuss the Grand Staff, a theoretical staff consisting of eleven lines.
+.p Imagine eleven lines stacked like one tall staff. The middle line of those eleven is middle C.
+.p Watch what happens when we eliminate the middle line: we end up with two regular five-line staffs, and a gap where that middle line was. Those two staffs are also called staves.
+.p By adding a Treble Clef to the top staff and a Bass Clef to the bottom staff, we can see the relationship between the two staffs.
+.p Notice how the two clefs are joined by C. Classmates may see that C marked in color. It sits on a ledger line in the gap between the two staffs.
+.l It is one ledger line below the treble staff.
+.l It is one ledger line above the bass staff.
+.l It is the same key on the piano.
+.p This C is commonly called middle C, since it corresponds to the middle staff line on the Grand Staff.
+.p From middle C, notes going up are written in the treble staff. Notes going down are written in the bass staff.
+
+.h1 6. How this maps to braille music
+.p You will learn the full Music Braille Code later. For today, remember this difference.
+.p Print music: the vertical place of a note on the staff tells you the letter name and how high or low it is.
+.p Braille music: a note cell tells you the letter name, A through G. An octave mark before the note tells you how high or low it is.
+.p There is still no H.
+.h2 Eighth-note pitch cells, by dots
+.l C: dots 1-4-5
+.l D: dots 1-5
+.l E: dots 1-2-4
+.l F: dots 1-2-4-5
+.l G: dots 1-2-5
+.l A: dots 2-4
+.l B: dots 2-4-5
+.p Middle C in braille music uses the fourth-octave mark, dot 5, plus the C note cell.
+.p When your class points to the G that the treble clef wraps around, you can think: treble line 2, the G above middle C.
+.p End of lesson.
