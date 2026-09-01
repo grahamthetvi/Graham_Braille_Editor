@@ -79,9 +79,10 @@ export function rtfFontSizeMin(fsBase: number): number {
 }
 
 /**
- * Paper size, margins, Courier `\fs`, and exact line spacing so `cellsPerRow` × `linesPerPage`
- * fills the printable area. That is what makes print-over-braille sit on the same grid as the
- * embossed cells instead of a 12pt stamp in the top-left corner.
+ * Paper size, margins, Courier `\fs`, and exact line spacing so `linesPerPage`
+ * occupies the printable height (same pitch as the embossed page). Character
+ * pitch starts at one Courier column per braille cell; callers may shrink `\fs`
+ * so a longer print line still fits on one row without wrapping.
  */
 export function printLayoutPageMetrics(spec: PrintLayoutPageSpec): PrintLayoutPageMetrics {
   const cells = Math.max(1, spec.cellsPerRow);
@@ -144,6 +145,70 @@ export function printLayoutPageMetrics(spec: PrintLayoutPageSpec): PrintLayoutPa
     cellsPerRow: cells,
     linesPerPage: lines,
   };
+}
+
+/**
+ * Visual character count of one inner print line. RTF `\\uN?` is one character;
+ * `\\\\` `\\{` `\\}` are one each. Mid-line `{\\fsN ...}` (legacy) counts the text only.
+ */
+export function rtfInnerVisualLength(line: string): number {
+  let n = 0;
+  let i = 0;
+  while (i < line.length) {
+    if (line.startsWith('{\\fs', i)) {
+      const m = line.slice(i).match(/^\{\\fs\d+ /);
+      if (m) {
+        const contentStart = i + m[0].length;
+        const end = line.indexOf('}', contentStart);
+        const text = end >= 0 ? line.slice(contentStart, end) : line.slice(contentStart);
+        n += rtfInnerVisualLength(text);
+        i = end >= 0 ? end + 1 : line.length;
+        continue;
+      }
+    }
+    if (line.startsWith('\\u', i)) {
+      const um = line.slice(i).match(/^\\u-?\d+\?/);
+      if (um) {
+        n += 1;
+        i += um[0].length;
+        continue;
+      }
+    }
+    if (line[i] === '\\' && i + 1 < line.length) {
+      n += 1;
+      i += 2;
+      continue;
+    }
+    n += 1;
+    i += 1;
+  }
+  return n;
+}
+
+export function maxPrintLineVisualLength(text: string): number {
+  let max = 0;
+  for (const page of text.split('\f')) {
+    for (const line of page.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n')) {
+      max = Math.max(max, rtfInnerVisualLength(line));
+    }
+  }
+  return max;
+}
+
+/**
+ * One uniform Courier size for the document: never larger than the cell-pitch
+ * size, shrunk so the longest print line fits the printable width. Line spacing
+ * (`slTwips`) is unchanged so print rows stay on the braille line grid.
+ */
+export function fitPrintLayoutFontToLongestLine(
+  metrics: PrintLayoutPageMetrics,
+  maxChars: number,
+): PrintLayoutPageMetrics {
+  if (maxChars <= 0) return metrics;
+  const printable = Math.max(1, metrics.paperWidthTwips - metrics.marginLeftTwips - metrics.marginRightTwips);
+  const fsFit = Math.floor(printable / (maxChars * COURIER_TWIPS_PER_FS));
+  const fsBase = Math.max(12, Math.min(metrics.fsBase, fsFit));
+  return { ...metrics, fsBase };
 }
 
 /** Index into the non-empty braille word list for one logical (pre-wrap) line; char range for hard breaks. */
@@ -1167,8 +1232,9 @@ export type BuildPrintLayoutRtfOptions = {
 };
 
 /**
- * Paginated RTF document whose paper, margins, Courier pitch, and line spacing fill the sheet
- * so each print column lines up with a braille cell on the embossed page.
+ * Paginated RTF whose line spacing matches the embossed page. Each print row is
+ * one braille row (same words). Font is one size, shrunk if needed so Word cannot
+ * wrap a long print line onto a second row.
  */
 export function buildPrintLayoutRtf(
   sourceText: string,
@@ -1192,7 +1258,8 @@ export function buildPrintLayoutRtf(
     options.includePageNumbers ?? false,
     options.cellsPerRow,
   );
-  return convertToRtf(paginated, { bodyIsRtf: true, page: metrics });
+  const page = fitPrintLayoutFontToLongestLine(metrics, maxPrintLineVisualLength(paginated));
+  return convertToRtf(paginated, { bodyIsRtf: true, page });
 }
 
 function wrapPlainLineToCells(line: string, cellsPerRow: number): string[] {
@@ -1267,7 +1334,8 @@ export function buildGradingPrintLayoutRtf(
   const fullContent = gradingSheetOnAllPages
     ? paginated.split('\f').map(page => header + page).join('\f')
     : header + paginated;
-  return convertToRtf(fullContent, { bodyIsRtf: true, page: metrics });
+  const page = fitPrintLayoutFontToLongestLine(metrics, maxPrintLineVisualLength(fullContent));
+  return convertToRtf(fullContent, { bodyIsRtf: true, page });
 }
 
 function paginatePrintSegment(

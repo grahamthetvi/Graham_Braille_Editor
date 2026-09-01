@@ -33,7 +33,7 @@
       "downloadPrintLayout": {
         "label": "Download print layout",
         "ariaLabel": "Download print layout RTF file",
-        "title": "Download print-over-braille layout (.rtf). Paper size and line count follow your Layout settings. Each print line has the same words as that braille line, in one font size. Print this sheet, then emboss the matching BRF on the same paper."
+        "title": "Download print-over-braille layout (.rtf). Paper size and line count follow your Layout settings. Each print line has the same words as that braille line. Line spacing matches the embossed page; the font is one size, shrunk if needed so a line does not wrap. Print this sheet, then emboss the matching BRF on the same paper."
       },
       "export": {
         "label": "Export",

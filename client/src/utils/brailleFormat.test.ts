@@ -13,6 +13,7 @@ import {
   buildGradingPrintLayoutRtf,
   formatGradingSheetHeader,
   printLayoutPageMetrics,
+  fitPrintLayoutFontToLongestLine,
   paginatePrintLines,
 } from './brailleFormat';
 
@@ -252,6 +253,24 @@ describe('printLayoutPageMetrics', () => {
   });
 });
 
+describe('fitPrintLayoutFontToLongestLine', () => {
+  it('keeps cell-pitch size when print is no wider than the braille row', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    const fitted = fitPrintLayoutFontToLongestLine(m, 32);
+    expect(fitted.fsBase).toBe(m.fsBase);
+    expect(fitted.slTwips).toBe(m.slTwips);
+  });
+
+  it('shrinks font so a longer print line still fits, without changing line pitch', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    const fitted = fitPrintLayoutFontToLongestLine(m, 48);
+    const printable = m.paperWidthTwips - m.marginLeftTwips - m.marginRightTwips;
+    expect(fitted.fsBase).toBeLessThan(m.fsBase);
+    expect(fitted.fsBase * 6 * 48).toBeLessThanOrEqual(printable);
+    expect(fitted.slTwips).toBe(m.slTwips);
+  });
+});
+
 describe('buildPrintLayoutRtf', () => {
   it('emits paper size and scaled Courier in the RTF header', () => {
     const rtf = buildPrintLayoutRtf('hello', 'hello', {
@@ -264,6 +283,21 @@ describe('buildPrintLayoutRtf', () => {
     expect(rtf).toContain('\\fs60');
     expect(rtf).toContain('\\sl576');
     expect(rtf.match(/\\fs\d+/g)?.every(tok => tok === '\\fs60')).toBe(true);
+  });
+
+  it('keeps line spacing when contracted print is wider than the braille row', () => {
+    const source = 'the cat sat on the mat today again';
+    const asciiBrf = '! cat sat on ! mat today again';
+    const rtf = buildPrintLayoutRtf(source, asciiBrf, {
+      cellsPerRow: 32,
+      linesPerPage: 25,
+      paperFormat: 'us-letter',
+    });
+    const letter = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    expect(rtf).toContain(`\\sl${letter.slTwips}`);
+    const fsTokens = rtf.match(/\\fs(\d+)/g) ?? [];
+    expect(fsTokens.length).toBeGreaterThan(0);
+    expect(new Set(fsTokens).size).toBe(1);
   });
 });
 
