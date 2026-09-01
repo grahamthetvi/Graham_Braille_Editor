@@ -867,6 +867,10 @@ body {
   color: var(--error);
 }
 
+.import-error {
+  margin: 0.35rem 0.75rem 0.5rem;
+}
+
 /* ── Paginated braille page view (Word-like) ─────────────────────────────── */
 
 .brf-pages-container {

@@ -77,6 +77,13 @@ import {
 } from './utils/brfIntake';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
+import {
+  DOCX_MAX_BYTES,
+  DocxImportError,
+  importDocxToEditorText,
+  isDocxFile,
+  isLegacyDocFile,
+} from './utils/docxImport';
 import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
@@ -92,7 +99,8 @@ import './App.css';
  *   • Worker translates in chunks for large documents, streaming PROGRESS events.
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
- *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
+ *   • Import file loads plain text or .docx (translate) or .brf (back-translate + BRF preview).
+ *     Word files are converted to editor text in the browser; they never leave the device.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
@@ -490,6 +498,31 @@ export default function App() {
   }, []);
 
   const [musicIntakeAnnouncement, setMusicIntakeAnnouncement] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const announceStatus = useCallback((message: string) => {
+    setMusicIntakeAnnouncement(message);
+  }, []);
+
+  const messageForDocxImportError = useCallback(
+    (err: unknown): string => {
+      const limitMb = Math.round(DOCX_MAX_BYTES / (1024 * 1024));
+      if (err instanceof DocxImportError) {
+        switch (err.code) {
+          case 'too-large':
+            return t('app.file.import.errors.tooLarge', { limitMb });
+          case 'not-docx':
+            return t('app.file.import.errors.notDocx');
+          case 'encrypted':
+            return t('app.file.import.errors.encrypted');
+          case 'empty':
+            return t('app.file.import.errors.empty');
+        }
+      }
+      return t('app.file.import.errors.generic');
+    },
+    [t],
+  );
 
   const applyMusicBrfToEditor = useCallback((asciiBrf: string) => {
     setIsMusicBrailleMode(true);
@@ -658,11 +691,48 @@ export default function App() {
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    if (isLegacyDocFile(file)) {
+      const msg = t('app.file.import.errors.legacyDoc');
+      setImportError(msg);
+      announceStatus(msg);
+      return;
+    }
+
+    if (isDocxFile(file)) {
+      void (async () => {
+        try {
+          if (file.size > DOCX_MAX_BYTES) {
+            throw new DocxImportError('too-large');
+          }
+          const buffer = await file.arrayBuffer();
+          const { text } = await importDocxToEditorText(buffer);
+          setLiterarySourceMode('none');
+          importedBrailleRef.current = '';
+          setShowBackTranslatedEditModal(false);
+          setIsMusicBrailleMode(false);
+          setInputText(text);
+          setFileContent(text);
+          setImportError(null);
+          announceStatus(t('app.file.import.success'));
+          translate(text, selectedTable, mathCode);
+        } catch (err) {
+          console.error('[docx import]', err);
+          const msg = messageForDocxImportError(err);
+          setImportError(msg);
+          announceStatus(msg);
+        }
+      })();
+      return;
+    }
+
     const isBrf = file.name.toLowerCase().endsWith('.brf');
     const reader = new FileReader();
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
+      setImportError(null);
       if (isBrf) {
         const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
         // Music only if the user already opted into Music mode.
@@ -702,7 +772,6 @@ export default function App() {
       }
     };
     reader.readAsText(file, 'utf-8');
-    e.target.value = '';
   }
 
   const handleAttemptEditWhileLocked = useCallback(() => {
@@ -1166,11 +1235,12 @@ export default function App() {
 
           <div className="tab-content" role="tabpanel">
             {activeTab === 'file' && (
+              <>
               <div className="toolbar">
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.text,.md,.rst,.adoc,.brf,text/plain"
+                  accept=".txt,.text,.md,.rst,.adoc,.brf,.docx,.doc,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
                   aria-hidden="true"
                   tabIndex={-1}
                   style={{ display: 'none' }}
@@ -1227,6 +1297,12 @@ export default function App() {
                   {t('app.file.print.label')}
                 </button>
               </div>
+              {importError ? (
+                <p className="translation-error import-error" role="alert">
+                  {importError}
+                </p>
+              ) : null}
+              </>
             )}
 
             {activeTab === 'view' && (

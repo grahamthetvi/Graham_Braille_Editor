@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Importar archivo",
-        "ariaLabel": "Importar archivo de texto o BRF",
-        "title": "Texto plano: se traduce a braille. .brf: se retrotraduce a texto (tabla seleccionada) y se muestra el BRF a la derecha. La retrotraducción de grado 2 es aproximada; vuelva a intentarlo tras cargar liblouis si es necesario."
+        "ariaLabel": "Importar archivo de texto, Word (.docx) o BRF",
+        "title": "Texto plano: se traduce a braille. .docx: convierte el texto de Word en este navegador (el archivo permanece en su dispositivo) y luego lo traduce. .brf: se retrotraduce a texto (tabla seleccionada) y se muestra el BRF a la derecha. La retrotraducción de grado 2 es aproximada; vuelva a intentarlo tras cargar liblouis si es necesario. Los archivos .doc antiguos no son compatibles: guárdelos primero como .docx en Word.",
+        "success": "Documento de Word importado como texto del editor.",
+        "errors": {
+          "tooLarge": "Este archivo de Word supera los {{limitMb}} MB, el límite de importación.",
+          "notDocx": "Este archivo no es un documento Word .docx válido.",
+          "encrypted": "Este archivo de Word está protegido con contraseña. Quite la contraseña en Word, guárdelo como .docx e impórtelo de nuevo.",
+          "empty": "Este documento de Word no tiene texto legible para importar.",
+          "legacyDoc": "Los archivos .doc antiguos no son compatibles. En Word, elija Archivo → Guardar como → .docx e importe ese archivo.",
+          "generic": "No se pudo importar este archivo de Word."
+        }
       },
       "drafts": {
         "label": "Borradores",

@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Importer un fichier",
-        "ariaLabel": "Importer un fichier texte ou BRF",
-        "title": "Texte brut : traduit en braille. .brf : rétro-traduction en texte (table sélectionnée) et affichage du BRF à droite. La rétro-traduction en grade 2 est approximative ; réessayez après le chargement de liblouis si nécessaire."
+        "ariaLabel": "Importer un fichier texte, Word (.docx) ou BRF",
+        "title": "Texte brut : traduit en braille. .docx : convertit le texte Word dans ce navigateur (le fichier reste sur votre appareil), puis traduit. .brf : rétro-traduction en texte (table sélectionnée) et affichage du BRF à droite. La rétro-traduction en grade 2 est approximative ; réessayez après le chargement de liblouis si nécessaire. Les fichiers .doc hérités ne sont pas pris en charge — enregistrez-les d’abord au format .docx dans Word.",
+        "success": "Document Word importé comme texte de l’éditeur.",
+        "errors": {
+          "tooLarge": "Ce fichier Word dépasse {{limitMb}} Mo, la limite d’importation.",
+          "notDocx": "Ce fichier n’est pas un document Word .docx valide.",
+          "encrypted": "Ce fichier Word est protégé par un mot de passe. Retirez le mot de passe dans Word, enregistrez-le en .docx, puis importez-le à nouveau.",
+          "empty": "Ce document Word ne contient pas de texte lisible à importer.",
+          "legacyDoc": "Les fichiers .doc hérités ne sont pas pris en charge. Dans Word, choisissez Fichier → Enregistrer sous → .docx, puis importez ce fichier.",
+          "generic": "Impossible d’importer ce fichier Word."
+        }
       },
       "drafts": {
         "label": "Brouillons",

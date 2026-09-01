@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "导入文件",
-        "ariaLabel": "导入文本或 BRF 文件",
-        "title": "纯文本：翻译为盲文。.brf：反向翻译为文本（所选表格）并在右侧显示 BRF。二级简写反向翻译为近似结果；如有需要，请在 liblouis 加载完成后重试。"
+        "ariaLabel": "导入文本、Word（.docx）或 BRF 文件",
+        "title": "纯文本：翻译为盲文。.docx：在此浏览器中转换 Word 文本（文件不会离开本机），然后翻译。.brf：反向翻译为文本（所选表格）并在右侧显示 BRF。二级简写反向翻译为近似结果；如有需要，请在 liblouis 加载完成后重试。不支持旧版 .doc — 请先在 Word 中另存为 .docx。",
+        "success": "已将 Word 文档导入为编辑器文本。",
+        "errors": {
+          "tooLarge": "此 Word 文件超过 {{limitMb}} MB 的导入上限。",
+          "notDocx": "此文件不是有效的 Word .docx 文档。",
+          "encrypted": "此 Word 文件已加密。请在 Word 中取消密码，另存为 .docx，然后再次导入。",
+          "empty": "此 Word 文档没有可导入的可读文本。",
+          "legacyDoc": "不支持旧版 .doc 文件。请在 Word 中选择“文件 → 另存为 → .docx”，然后导入该文件。",
+          "generic": "无法导入此 Word 文件。"
+        }
       },
       "drafts": {
         "label": "草稿",
