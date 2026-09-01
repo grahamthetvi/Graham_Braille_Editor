@@ -935,7 +935,7 @@ export default function App() {
   );
 
   // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
-  // Wrap-matching and per-word RTF slot scaling stay download-only (print layout).
+  // Wrap-matching so print lines follow braille rows stays download-only (print layout).
 
   // Music mode: build lines that preserve source char indices for playback highlight.
   const musicPreviewLines = useMemo(() => {

@@ -14,48 +14,7 @@ import {
   formatGradingSheetHeader,
   printLayoutPageMetrics,
   paginatePrintLines,
-  formatPlainTextForPrintDownload,
-  RTF_FS_BASE,
-  RTF_FS_MIN,
 } from './brailleFormat';
-
-/** Reconstruct word start cells from a print-layout RTF inner line (base grid = \fs24). */
-function rtfLineWordStarts(line: string): { word: string; fs: number; startCell: number }[] {
-  const words: { word: string; fs: number; startCell: number }[] = [];
-  let cell = 0;
-  let i = 0;
-  while (i < line.length) {
-    if (line.startsWith('{\\fs', i)) {
-      const m = line.slice(i).match(/^\{\\fs(\d+) /);
-      if (!m) {
-        i++;
-        continue;
-      }
-      const fs = Number(m[1]);
-      const contentStart = i + m[0].length;
-      const end = line.indexOf('}', contentStart);
-      const text = end >= 0 ? line.slice(contentStart, end) : '';
-      if (text.length > 0) {
-        words.push({ word: text, fs, startCell: cell });
-        cell += (text.length * fs) / RTF_FS_BASE;
-      }
-      i = end >= 0 ? end + 1 : i + 1;
-      continue;
-    }
-    if (line[i] === ' ') {
-      cell += 1;
-      i++;
-      continue;
-    }
-    let j = i;
-    while (j < line.length && line[j] !== ' ' && line[j] !== '{') j++;
-    const text = line.slice(i, j);
-    words.push({ word: text, fs: RTF_FS_BASE, startCell: cell });
-    cell += text.length;
-    i = j;
-  }
-  return words;
-}
 
 function formFeedCount(s: string): number {
   return (s.match(/\f/g) ?? []).length;
@@ -226,56 +185,38 @@ describe('paginatePrintLines', () => {
   });
 });
 
-describe('buildPrintLayoutRtfBody slot scaling', () => {
-  it('shrinks Grade 2 "the" (1 cell) so "cat" starts on the same cell as BRF', () => {
+describe('buildPrintLayoutRtfBody line matching', () => {
+  it('keeps contracted words at one size with a space between them', () => {
     const source = 'the cat';
     const asciiBrf = '! cat';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
-    expect(inner).toMatch(/\\fs(\d+)/);
-    const fsMatch = inner.match(/\\fs(\d+)/);
-    const fs = Number(fsMatch?.[1]);
-    expect(fs).toBeGreaterThanOrEqual(RTF_FS_MIN);
-    expect(fs).toBeLessThan(RTF_FS_BASE);
-    expect(inner).toContain('the');
-    const starts = rtfLineWordStarts(inner.split('\n')[0]);
-    const theWord = starts.find(w => w.word === 'the');
-    const catWord = starts.find(w => w.word === 'cat');
-    expect(theWord).toBeDefined();
-    expect(catWord).toBeDefined();
-    expect(theWord?.fs).toBeLessThan(RTF_FS_BASE);
-    expect(catWord?.startCell).toBeGreaterThanOrEqual(2);
-    expect(catWord?.fs).toBe(RTF_FS_BASE);
+    expect(inner).toBe('the cat');
+    expect(inner).not.toMatch(/\\fs\d+/);
   });
 
-  it('keeps a literal space between contracted words when scaling', () => {
-    const source = 'the cat';
-    const asciiBrf = '! cat';
-    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
-    expect(inner).toMatch(/\} cat|the cat/);
-    expect(inner).not.toMatch(/\}cat/);
+  it('puts the same print words on a line as the wrapped braille line', () => {
+    const source = 'the cat sat on the mat';
+    const asciiBrf = '! cat sat on ! mat';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 15);
+    expect(inner).toBe('the cat sat on the\nmat');
+    expect(inner).not.toMatch(/\\fs\d+/);
   });
 
-  it('does not emit \\fs below the 8pt floor; the next word may drift', () => {
+  it('does not emit mid-line \\fs for long uncontracted words', () => {
     const source = 'abcde f';
     const asciiBrf = 'x f';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
-    const fsValues = [...inner.matchAll(/\\fs(\d+)/g)].map(m => Number(m[1]));
-    expect(fsValues.length).toBeGreaterThan(0);
-    expect(Math.min(...fsValues)).toBeGreaterThanOrEqual(RTF_FS_MIN);
-    const starts = rtfLineWordStarts(inner.split('\n')[0]);
-    const second = starts.find(w => w.word === 'f');
-    expect(second).toBeDefined();
-    expect(second!.startCell).toBeGreaterThan(2);
+    expect(inner).not.toMatch(/\\fs\d+/);
+    expect(inner).toContain('abcde');
+    expect(inner).toContain(' f');
   });
 
-  it('keeps uncontracted equal-length words at base size with column padding', () => {
+  it('joins uncontracted words with ordinary spaces, not cell-column padding', () => {
     const source = 'hello brave world';
     const asciiBrf = ',hello brave world';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
     expect(inner).not.toMatch(/\\fs\d+/);
-    expect(inner).toBe('hello  brave world');
-    const wrap = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40);
-    expect(inner).toBe(wrap);
+    expect(inner).toBe('hello brave world');
   });
 
   it('preserves paragraph 3-1 wrap after pagination', () => {
@@ -283,11 +224,7 @@ describe('buildPrintLayoutRtfBody slot scaling', () => {
     const asciiBrf = source;
     const cells = 20;
     const paragraphStarts = { firstLineStartCell: 3, runoverStartCell: 1 };
-    const wrap = formatPlainTextForPrintDownload(
-      buildPlainTextToMatchBrailleWrap(source, asciiBrf, cells, paragraphStarts),
-    );
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, cells, paragraphStarts);
-    expect(inner).toBe(wrap);
     const visualLines = inner.split('\n');
     expect(visualLines.length).toBeGreaterThan(1);
     expect(visualLines[0].startsWith('  ')).toBe(true);
@@ -326,6 +263,7 @@ describe('buildPrintLayoutRtf', () => {
     expect(rtf).toContain('\\paperh15840');
     expect(rtf).toContain('\\fs60');
     expect(rtf).toContain('\\sl576');
+    expect(rtf.match(/\\fs\d+/g)?.every(tok => tok === '\\fs60')).toBe(true);
   });
 });
 

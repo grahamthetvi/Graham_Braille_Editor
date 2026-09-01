@@ -946,7 +946,7 @@ export type ConvertToRtfOptions = {
 };
 
 function rtfParagraphReset(metrics: PrintLayoutPageMetrics): string {
-  return `\\pard\\sa0\\sb0\\sl${metrics.slTwips}\\slmult0\\f0\\fs${metrics.fsBase}`;
+  return `\\pard\\sa0\\sb0\\sl${metrics.slTwips}\\slmult0\\nowidctlpar\\hyphpar0\\f0\\fs${metrics.fsBase}`;
 }
 
 function rtfDocumentOpen(metrics?: PrintLayoutPageMetrics): string {
@@ -1050,88 +1050,32 @@ export function formatPlainTextForPrintDownload(editorContent: string): string {
     .replaceAll(SOFT_LINE_BREAK_CHAR, '\n');
 }
 
-type PrintWordSlot = {
-  text: string;
-  brailleStartCell: number;
-  slotCells: number;
-  printChars: number;
-};
-
-function fontSizeForSlot(slotCells: number, printChars: number, fsBase: number, fsMin: number): number {
-  if (printChars <= 0 || printChars <= slotCells) return fsBase;
-  const fs = Math.round(fsBase * (slotCells / printChars));
-  return Math.min(fsBase, Math.max(fsMin, fs));
-}
-
-function wordWidthCells(printChars: number, fs: number, fsBase: number): number {
-  return (printChars * fs) / fsBase;
-}
-
-function slotsForPhysicalLine(
+function printLineFromPhysicalSpans(
   pl: PhysicalBrailleLineMeta,
   brfWords: string[],
   srcWords: string[],
   m: number,
   n: number,
   margin: number,
-): PrintWordSlot[] {
-  const slots: PrintWordSlot[] = [];
-  let spanStartCell = margin;
-  for (let idx = 0; idx < pl.spans.length; idx++) {
-    const sp = pl.spans[idx];
+): string {
+  const parts: string[] = [];
+  for (const sp of pl.spans) {
     const printWord = sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n);
-    const wordCells = sp.charEnd - sp.charStart;
-    slots.push({
-      text: printWord,
-      brailleStartCell: spanStartCell,
-      // Scale to the braille word only — do not fold the following space into the slot,
-      // or the print word fills the gap and Word (which often ignores mid-line \fs)
-      // renders run-on words like "carefullythespelling".
-      slotCells: Math.max(1, wordCells),
-      printChars: printWord.length,
-    });
-    spanStartCell += wordCells + 1;
+    if (printWord.length > 0) parts.push(printWord);
   }
-  return slots;
+  return (' '.repeat(margin) + parts.join(' ')).replace(/\s+$/, '');
 }
 
-function emitScaledRtfLine(slots: PrintWordSlot[], fsBase: number, fsMin: number): string {
-  let out = '';
-  let cursor = 0;
-  for (let idx = 0; idx < slots.length; idx++) {
-    const slot = slots[idx];
-    const fs = fontSizeForSlot(slot.slotCells, slot.printChars, fsBase, fsMin);
-    const width = wordWidthCells(slot.printChars, fs, fsBase);
-    // Always keep a literal space before every word after the first. Scaled width
-    // math can report pad=0 (word already filled the gap), and consumers that ignore
-    // `\fs` would then jam words together.
-    const minStart = idx === 0 ? slot.brailleStartCell : Math.max(slot.brailleStartCell, cursor + 1);
-    const target = Math.max(minStart, cursor);
-    const pad = Math.max(0, Math.round(target - cursor));
-    if (pad > 0) {
-      out += ' '.repeat(pad);
-      cursor += pad;
-    }
-    if (slot.text.length > 0) {
-      const escaped = escapeRtfPlainText(slot.text);
-      if (fs !== fsBase) {
-        out += `{\\fs${fs} ${escaped}}`;
-      } else {
-        out += escaped;
-      }
-      cursor += width;
-    }
-  }
-  return out.replace(/\s+$/, '');
-}
-
-function syncPlainLineToScaledRtfRows(
+/**
+ * One print row per visual braille row. Words on a print line are the literary
+ * words that belong to that braille line, joined with a single space at one font
+ * size (no per-word `\fs` scaling, no cell-column padding).
+ */
+function syncPlainLineToPrintRows(
   sourceLine: string,
   unicodeBrailleLine: string,
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
-  fsBase: number,
-  fsMin: number,
 ): string[] {
   if (unicodeBrailleLine.startsWith('\u0002')) {
     const visual = formatPlainTextForPrintDownload(sourceLine);
@@ -1147,7 +1091,7 @@ function syncPlainLineToScaledRtfRows(
   const m = brfWords.length;
   const n = srcWords.length;
 
-  if (m !== n || n === 0 || !unicodeBrailleLine.trim()) {
+  if (n === 0 || !unicodeBrailleLine.trim() || m !== n) {
     const plain = syncPlainLineToBrailleWrap(sourceLine, unicodeBrailleLine, cellsPerRow, paragraphStarts);
     const visual = formatPlainTextForPrintDownload(plain);
     return visual.split('\n').map(line => escapeRtfPlainText(line));
@@ -1170,28 +1114,24 @@ function syncPlainLineToScaledRtfRows(
     const margin = paragraphStarts
       ? clampParagraphCell(k === 0 ? paragraphStarts.firstLineStartCell : paragraphStarts.runoverStartCell, cellsPerRow) - 1
       : 0;
-    const slots = slotsForPhysicalLine(physical[k], brfWords, srcWords, m, n, margin);
-    let line = emitScaledRtfLine(slots, fsBase, fsMin);
-    if (k === 0 && leadingSpace) line = escapeRtfPlainText(leadingSpace) + line;
-    if (k === physical.length - 1 && trailingSpace) line += escapeRtfPlainText(trailingSpace);
-    rows.push(line);
+    let line = printLineFromPhysicalSpans(physical[k], brfWords, srcWords, m, n, margin);
+    if (k === 0 && leadingSpace) line = leadingSpace + line;
+    if (k === physical.length - 1 && trailingSpace) line += trailingSpace;
+    rows.push(escapeRtfPlainText(line));
   }
   return rows;
 }
 
 /**
  * Builds one RTF inner line per visual braille row (soft breaks become newlines).
- * Source form feeds stay as `\f`. On the m = n path, overflowing print words get a
- * smaller `\\fs` so they fit their braille cell slot; padding stays at the base grid.
- * `fsBase` / `fsMin` default to 12pt / 8pt so unit tests can assert the grid without page metrics.
+ * Source form feeds stay as `\f`. Each print line holds the same words as that
+ * braille line, at one font size, with ordinary spaces between words.
  */
 export function buildPrintLayoutRtfBody(
   sourceText: string,
   asciiBrf: string,
   cellsPerRow: number,
   paragraphStarts?: ParagraphLineStarts,
-  fsBase: number = RTF_FS_BASE,
-  fsMin: number = RTF_FS_MIN,
 ): string {
   const srcSegs = sourceText.split('\f');
   const brfSegs = asciiBrf.split('\f');
@@ -1210,7 +1150,7 @@ export function buildPrintLayoutRtfBody(
       const s = srcLines[i] ?? '';
       const b = brfLines[i] ?? '';
       const unicode = asciiToUnicodeBraille(b);
-      outLines.push(...syncPlainLineToScaledRtfRows(s, unicode, cellsPerRow, paragraphStarts, fsBase, fsMin));
+      outLines.push(...syncPlainLineToPrintRows(s, unicode, cellsPerRow, paragraphStarts));
     }
     outSegs.push(outLines.join('\n'));
   }
@@ -1245,8 +1185,6 @@ export function buildPrintLayoutRtf(
     asciiBrf,
     options.cellsPerRow,
     options.paragraphStarts,
-    metrics.fsBase,
-    metrics.fsMin,
   );
   const paginated = paginatePrintLines(
     inner,
@@ -1318,8 +1256,6 @@ export function buildGradingPrintLayoutRtf(
     asciiBrf,
     options.cellsPerRow,
     options.paragraphStarts,
-    metrics.fsBase,
-    metrics.fsMin,
   );
   const paginated = paginatePrintLines(
     inner,
