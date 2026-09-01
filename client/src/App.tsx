@@ -67,9 +67,8 @@ import {
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   defaultMp3DownloadFilename,
-  buildPrintLayoutRtfBody,
-  paginatePrintLines,
-  convertToRtf,
+  buildPrintLayoutRtf,
+  buildGradingPrintLayoutRtf,
 } from './utils/brailleFormat';
 import {
   classifyBrfContent,
@@ -842,19 +841,13 @@ export default function App() {
   function handleDownloadPrintLayoutText() {
     if (!inputText.trim() || !workerReady || !translatedText) return;
 
-    const inner = buildPrintLayoutRtfBody(
-      inputText,
-      translatedText,
-      pageSettings.cellsPerRow,
+    const rtfContent = buildPrintLayoutRtf(inputText, translatedText, {
+      cellsPerRow: pageSettings.cellsPerRow,
+      linesPerPage: pageSettings.linesPerPage,
+      paperFormat: pageSettings.paperFormat,
+      includePageNumbers: pageSettings.showPageNumbers ?? false,
       paragraphStarts,
-    );
-    const paginated = paginatePrintLines(
-      inner,
-      pageSettings.linesPerPage,
-      pageSettings.showPageNumbers ?? false,
-      pageSettings.cellsPerRow,
-    );
-    const rtfContent = convertToRtf(paginated, { bodyIsRtf: true });
+    });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -870,41 +863,20 @@ export default function App() {
   function handleDownloadGradingPrintLayoutText() {
     if (!inputText.trim() || !workerReady || !translatedText) return;
 
-    const inner = buildPrintLayoutRtfBody(
+    const rtfContent = buildGradingPrintLayoutRtf(
       inputText,
       translatedText,
-      pageSettings.cellsPerRow,
-      paragraphStarts,
+      wordCount,
+      charCount,
+      gradingSheetOnAllPages,
+      {
+        cellsPerRow: pageSettings.cellsPerRow,
+        linesPerPage: pageSettings.linesPerPage,
+        paperFormat: pageSettings.paperFormat,
+        includePageNumbers: pageSettings.showPageNumbers ?? false,
+        paragraphStarts,
+      },
     );
-    const paginated = paginatePrintLines(
-      inner,
-      pageSettings.linesPerPage,
-      pageSettings.showPageNumbers ?? false,
-      pageSettings.cellsPerRow,
-    );
-    const gradingHeader = `================================================================
-GRADING SHEET
-================================================================
-Word Count: ${wordCount}
-Character Count: ${charCount}
-
-Date: _________________
-WPM:  _________________ (number of words/total seconds*60)
-LPM:  _________________ (number of letters/total seconds*60)
-Accuracy: _____________ %
-================================================================
-
-`;
-    
-    let fullContent = '';
-    if (gradingSheetOnAllPages) {
-      const pages = paginated.split('\f');
-      fullContent = pages.map(page => gradingHeader + page).join('\f');
-    } else {
-      fullContent = gradingHeader + paginated;
-    }
-
-    const rtfContent = convertToRtf(fullContent, { bodyIsRtf: true });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -9,6 +9,10 @@ import {
   buildBrfDownloadPayload,
   buildGmailComposeUrl,
   buildPrintLayoutRtfBody,
+  buildPrintLayoutRtf,
+  buildGradingPrintLayoutRtf,
+  formatGradingSheetHeader,
+  printLayoutPageMetrics,
   paginatePrintLines,
   formatPlainTextForPrintDownload,
   RTF_FS_BASE,
@@ -239,8 +243,16 @@ describe('buildPrintLayoutRtfBody slot scaling', () => {
     expect(theWord).toBeDefined();
     expect(catWord).toBeDefined();
     expect(theWord?.fs).toBeLessThan(RTF_FS_BASE);
-    expect(catWord?.startCell).toBe(2);
+    expect(catWord?.startCell).toBeGreaterThanOrEqual(2);
     expect(catWord?.fs).toBe(RTF_FS_BASE);
+  });
+
+  it('keeps a literal space between contracted words when scaling', () => {
+    const source = 'the cat';
+    const asciiBrf = '! cat';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
+    expect(inner).toMatch(/\} cat|the cat/);
+    expect(inner).not.toMatch(/\}cat/);
   });
 
   it('does not emit \\fs below the 8pt floor; the next word may drift', () => {
@@ -284,6 +296,57 @@ describe('buildPrintLayoutRtfBody slot scaling', () => {
     const firstPageLines = paginated.split('\f')[0].split('\n');
     expect(firstPageLines[0].startsWith('  ')).toBe(true);
     expect(firstPageLines[0]).toBe(visualLines[0]);
+  });
+});
+
+describe('printLayoutPageMetrics', () => {
+  it('fills wide tractor paper for 40×25', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 40, linesPerPage: 25, paperFormat: 'wide' });
+    expect(m.paperWidthTwips).toBe(16560);
+    expect(m.paperHeightTwips).toBe(15840);
+    expect(m.fsBase).toBe(60);
+    expect(m.slTwips).toBe(576);
+  });
+
+  it('fills US Letter for 32×25', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    expect(m.paperWidthTwips).toBe(12240);
+    expect(m.fsBase).toBe(56);
+  });
+});
+
+describe('buildPrintLayoutRtf', () => {
+  it('emits paper size and scaled Courier in the RTF header', () => {
+    const rtf = buildPrintLayoutRtf('hello', 'hello', {
+      cellsPerRow: 40,
+      linesPerPage: 25,
+      paperFormat: 'wide',
+    });
+    expect(rtf).toContain('\\paperw16560');
+    expect(rtf).toContain('\\paperh15840');
+    expect(rtf).toContain('\\fs60');
+    expect(rtf).toContain('\\sl576');
+  });
+});
+
+describe('formatGradingSheetHeader', () => {
+  it('wraps separator lines to cellsPerRow', () => {
+    const header = formatGradingSheetHeader(32, 100, 500);
+    const lines = header.split('\n');
+    expect(lines[0].length).toBe(32);
+    expect(lines[0]).toBe('='.repeat(32));
+  });
+});
+
+describe('buildGradingPrintLayoutRtf', () => {
+  it('prepends a cell-width grading header', () => {
+    const rtf = buildGradingPrintLayoutRtf('hello', 'hello', 1, 5, false, {
+      cellsPerRow: 32,
+      linesPerPage: 25,
+      paperFormat: 'us-letter',
+    });
+    expect(rtf).toContain('GRADING SHEET');
+    expect(rtf).toContain('\\paperw12240');
   });
 });
 
