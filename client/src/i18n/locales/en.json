@@ -33,7 +33,7 @@
       "downloadPrintLayout": {
         "label": "Download print layout",
         "ariaLabel": "Download print layout RTF file",
-        "title": "Download print layout (.rtf). Lines and pages follow Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell. This is not a physical overlay of print on braille."
+        "title": "Download print-over-braille layout (.rtf). Paper size and the cell/line grid follow your Layout settings. Print this sheet, then emboss the matching BRF on the same paper so ink lines up with the dots. Contracted words may appear slightly smaller to stay on their braille cell."
       },
       "export": {
         "label": "Export",
@@ -430,7 +430,7 @@
       "emailBrf": "Email BRF",
       "emailBrfHint": "Download, then open Gmail to attach",
       "printLayout": "Print layout",
-      "printLayoutHint": "Lines and pages match Layout; contracted words may be slightly smaller",
+      "printLayoutHint": "Full-page grid for print-then-emboss alignment",
       "audio": "Audio (MP3)",
       "audioHint": "Choose a voice, then download"
     },
@@ -542,7 +542,7 @@
       },
       "downloading": {
         "heading": "Downloading & Autosave",
-        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For a visual twin of that layout, click Download print layout to get an .rtf whose lines and pages follow the same Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell; this is not a physical overlay of print on braille.",
+        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For print-over-braille, click Download print layout to get an .rtf sized to your paper: print it, then emboss the BRF on the same sheet so the ink sits where the dots will land. Contracted words may appear slightly smaller to stay on their braille cell.",
         "autosave": "Your work is automatically saved as you type. Click Drafts under the File tab to view and restore unsaved work from the last 30 days."
       },
       "perkins": {
@@ -899,7 +899,7 @@
     "closeAriaLabel": "Close grading print layout options",
     "title": "Grading Print Layout",
     "close": "Close",
-    "description": "Download print layout (.rtf). Lines and pages follow Layout settings, with grading metrics prepended. Contracted words may appear slightly smaller so they stay on the braille cell.",
+    "description": "Download print-over-braille layout (.rtf). Paper size and the cell/line grid follow Layout settings, with grading metrics prepended. Print this sheet, then emboss the matching BRF on the same paper.",
     "onAllPages": {
       "label": "On all pages",
       "hint": "When enabled, the grading header is repeated at the top of every page. Otherwise it appears only on the first page."
