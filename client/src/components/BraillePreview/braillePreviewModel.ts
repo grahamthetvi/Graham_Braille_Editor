@@ -32,6 +32,10 @@ export function buildBrfPageModels(pages: string[]): BrfPageModel[] {
         return { kind: 'jumbo', sizePx, chars: text.length ? Array.from(text) : [] };
       }
 
+      if (!line) {
+        return { kind: 'cells', segments: [{ type: 'space', chars: ['\u2800'] }] };
+      }
+
       const tokens = line.split(/([\s\u2800]+)/);
       const segments: BrfCellSegment[] = [];
       for (const token of tokens) {

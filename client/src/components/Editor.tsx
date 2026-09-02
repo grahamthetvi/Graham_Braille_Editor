@@ -256,13 +256,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       }
     });
 
-    editorRef.current.onDidChangeModelContent(() => {
+    editorRef.current.onDidChangeModelContent((e) => {
       if (isExternalUpdate.current) return;
       const text = editorRef.current?.getValue() ?? '';
 
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      // 6-key braille editing mirrors to the preview immediately; literary typing debounces translation.
-      const debounceMs = sixKeyInputRef.current ? 0 : 800;
+      const lineBreakChange = e.changes.some(
+        (c) =>
+          c.text.includes('\n') ||
+          c.text.includes('\r') ||
+          c.text.includes('\f') ||
+          c.range.startLineNumber !== c.range.endLineNumber,
+      );
+      // 6-key braille editing and Enter/line-break edits update the preview immediately.
+      const debounceMs = sixKeyInputRef.current || lineBreakChange ? 0 : 800;
       if (debounceMs === 0) {
         onTextChangeRef.current(text);
         return;

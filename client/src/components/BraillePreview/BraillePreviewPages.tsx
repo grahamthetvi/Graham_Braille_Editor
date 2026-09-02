@@ -130,10 +130,21 @@ const PageView = memo(function PageView({
             );
           }
 
+          const isBlankLine =
+            line.segments.length === 0 ||
+            line.segments.every((seg) => seg.type === 'space');
+
           return (
-            <div key={lineIdx} className="brf-page-line">
+            <div
+              key={lineIdx}
+              className={`brf-page-line${isBlankLine ? ' brf-page-line--blank' : ''}`}
+            >
               {line.segments.length === 0 ? (
-                '\u00a0'
+                <BrailleCell
+                  char={'\u2800'}
+                  showEmptyDots={showEmptyDots}
+                  variant={cellVariant}
+                />
               ) : (
               line.segments.map((seg, segIdx) => {
                 if (seg.type === 'space') {
