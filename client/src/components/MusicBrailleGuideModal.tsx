@@ -40,7 +40,7 @@ Online (no install; works on many platforms):
 4. Translate, then download the BRF.
 
 C. Emboss or review in Graham (optional)
-1. In Graham Braille Editor, turn on Music Player Mode under Teaching Tools, then Import file and choose the .brf.
+1. In Graham Braille Editor, turn on **Music Player Mode** under Teaching Tools, then Import file and choose the .brf.
 2. Preview on the right, then Print or emboss as usual.
 
 Tips
@@ -122,7 +122,8 @@ export function MusicBrailleGuideModal({ onClose, onInsertIntoEditor }: MusicBra
                   Music Braille (<code>.brf</code>).
                 </li>
                 <li>
-                  <strong>Optional:</strong> open the BRF here to preview or emboss.
+                  <strong>Optional:</strong> turn on <strong>Music Player Mode</strong>, then
+                  open the BRF here to preview, hear, or emboss.
                 </li>
               </ol>
               <p className="welcome-tip">

@@ -102,6 +102,7 @@ import './App.css';
  *   • Import file loads plain text or .docx (translate) or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
  *     .brf import back-translates as literary unless Music Player Mode is already on.
+ *     Import/paste does not auto-enable Music mode.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
@@ -736,9 +737,9 @@ export default function App() {
       setImportError(null);
       if (isBrf) {
         const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        // Music only if the user already opted into Music mode.
         if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          announceMusicLoaded();
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -752,7 +753,6 @@ export default function App() {
         const { kind, normalized } = classifyBrfContent(raw);
         if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
-          announceMusicLoaded();
           return;
         }
         setLiterarySourceMode('none');

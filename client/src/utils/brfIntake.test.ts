@@ -40,6 +40,7 @@ describe('classifyBrfContent', () => {
     const full = readFileSync(FUR_ELISE_PATH, 'utf8');
     expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('literary-brf');
     const easy = readFileSync(FUR_ELISE_EASY_PATH, 'utf8');
+    expect(classifyBrfContent(easy).kind).toBe('literary-brf');
     expect(classifyBrfContent(easy, { isBrfFile: true }).kind).toBe('literary-brf');
   });
 

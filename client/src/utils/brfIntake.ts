@@ -30,6 +30,8 @@ export const normalizeBrfBuffer = normalizeImportedBrf;
 /**
  * Classify raw editor/file content before liblouis.
  * Returns `literary-brf` for .brf files and Unicode braille, otherwise `plain`.
+ * Never returns `music-brf` — music is entered only via the Music mode toggle
+ * (or restoring a session already saved as music).
  */
 export function classifyBrfContent(
   raw: string,
