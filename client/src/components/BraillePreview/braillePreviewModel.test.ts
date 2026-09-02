@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { JUMBO_LINE_MARKER } from '../../utils/braille';
-import { buildBrfPageModels } from './braillePreviewModel';
+import {
+  brailleLineAtY,
+  brailleLineCount,
+  braillePageHeights,
+  brailleYForLineIndex,
+  buildBrfPageModels,
+} from './braillePreviewModel';
 
 describe('buildBrfPageModels', () => {
   it('assigns monotonic word indices across pages', () => {
@@ -40,5 +46,17 @@ describe('buildBrfPageModels', () => {
       sizePx: 48,
       chars: ['A', 'B'],
     });
+  });
+});
+
+describe('braille page layout', () => {
+  it('maps a middle line to a stable y and back', () => {
+    const models = buildBrfPageModels(['⠁\n⠃\n⠉', '⠙\n⠑']);
+    const size = 20;
+    const y = brailleYForLineIndex(models, size, 3, 0);
+    const at = brailleLineAtY(models, size, y);
+    expect(at.lineIndex0).toBe(3);
+    expect(brailleLineCount(models)).toBe(5);
+    expect(braillePageHeights(models, size)).toHaveLength(2);
   });
 });

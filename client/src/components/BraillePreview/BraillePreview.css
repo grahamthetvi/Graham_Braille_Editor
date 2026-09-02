@@ -4,19 +4,8 @@
   pointer-events: none;
 }
 
-.brf-page {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 480px;
-}
-
-.brf-page-line {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 2.5em;
-}
-
 .brf-page-line--blank {
   /* Enter-created rows must stay painted; empty unicode cells are invisible. */
-  content-visibility: visible;
   min-height: var(--braille-cell-height, 22px);
 }
 

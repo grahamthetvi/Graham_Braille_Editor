@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import { BrailleCell, type BrailleCellVariant } from '../BrailleCell';
+import { lineFromProgress, progressFromLine } from '../../utils/scrollProgress';
 import './BraillePreview.css';
 
 export interface MusicBraillePreviewHandle {
@@ -111,9 +112,8 @@ export const MusicBraillePreview = forwardRef<
       setScrollPercentage: (percentage: number) => {
         const container = containerRef.current;
         if (!container) return;
-        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-        if (maxScroll <= 0) return;
-        const target = percentage * maxScroll;
+        const { lineIndex0, frac } = lineFromProgress(percentage, linesKey);
+        const target = (lineIndex0 + frac) * lineHeight;
         if (Math.abs(container.scrollTop - target) <= 1) return;
         suppressScrollReportRef.current = true;
         container.scrollTop = target;
@@ -121,20 +121,21 @@ export const MusicBraillePreview = forwardRef<
         updateRange();
       },
     }),
-    [updateRange],
+    [lineHeight, linesKey, updateRange],
   );
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     if (!suppressScrollReportRef.current) {
-      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-      if (maxScroll > 0) {
-        onScrollPercentage(Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll);
-      }
+      const y = Math.max(0, container.scrollTop);
+      const raw = lineHeight > 0 ? y / lineHeight : 0;
+      const lineIndex0 = Math.min(Math.max(0, linesKey - 1), Math.floor(raw));
+      const frac = raw - lineIndex0;
+      onScrollPercentage(progressFromLine(lineIndex0, frac, linesKey));
     }
     updateRange();
-  }, [onScrollPercentage, updateRange]);
+  }, [lineHeight, linesKey, onScrollPercentage, updateRange]);
 
   // Follow the sounding cell into view without React scroll state.
   useEffect(() => {

@@ -3,7 +3,6 @@ import {
   Fragment,
   memo,
   useCallback,
-  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -11,7 +10,15 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrailleCell, type BrailleCellVariant } from '../BrailleCell';
-import { buildBrfPageModels, type BrfPageModel } from './braillePreviewModel';
+import {
+  brailleLineAtY,
+  brailleLineCount,
+  braillePageHeights,
+  brailleYForLineIndex,
+  buildBrfPageModels,
+  type BrfPageModel,
+} from './braillePreviewModel';
+import { lineFromProgress, progressFromLine } from '../../utils/scrollProgress';
 import './BraillePreview.css';
 
 export interface BraillePreviewPagesHandle {
@@ -35,12 +42,8 @@ export interface BraillePreviewPagesProps {
 }
 
 const OVERSCAN_PAGES = 2;
-
-function estimatePageHeightPx(brailleSize: number, linesPerPage: number): number {
-  const lineH = brailleSize + brailleSize * 0.5;
-  const chrome = 36 + 24;
-  return Math.max(120, linesPerPage * lineH + chrome);
-}
+/** Virtualizing a short catalog (this app's typical output) makes page 6+ jump. */
+const VIRTUALIZE_AFTER_PAGES = 48;
 
 function pageOffset(heights: number[], index: number, fallback: number): number {
   let top = 0;
@@ -68,7 +71,6 @@ const PageView = memo(function PageView({
   inactiveDotSize,
   cellsPerRow,
   activeWordRange,
-  onHeight,
 }: {
   model: BrfPageModel;
   pageLabel: string;
@@ -79,22 +81,9 @@ const PageView = memo(function PageView({
   inactiveDotSize: number;
   cellsPerRow: number;
   activeWordRange: [number, number] | null;
-  onHeight: (pageIndex: number, height: number) => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const report = () => onHeight(model.pageIndex, el.offsetHeight);
-    report();
-    const ro = new ResizeObserver(report);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [model.pageIndex, onHeight, model.lines.length]);
-
   return (
-    <div ref={ref} className="brf-page" aria-label={pageLabel}>
+    <div className="brf-page" aria-label={pageLabel}>
       <div className="brf-page-number" aria-hidden="true">
         {pageMarker}
       </div>
@@ -214,36 +203,66 @@ export const BraillePreviewPages = forwardRef<
 ) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const heightsRef = useRef<number[]>([]);
-  const fallbackH = estimatePageHeightPx(brailleSize, linesPerPage);
-  const [windowRange, setWindowRange] = useState({
-    start: 0,
-    end: Math.max(0, Math.min(pages.length, 5) - 1),
-  });
-  const [spacer, setSpacer] = useState({ top: 0, bottom: 0 });
-  const [prevPages, setPrevPages] = useState(pages);
   const lastPageRef = useRef(1);
   const pageChangeRafRef = useRef<number | null>(null);
   const suppressScrollReportRef = useRef(false);
 
   const models = useMemo(() => buildBrfPageModels(pages), [pages]);
+  const pageHeights = useMemo(() => braillePageHeights(models, brailleSize), [models, brailleSize]);
+  const lineCount = useMemo(() => brailleLineCount(models), [models]);
+  const virtualize = pages.length > VIRTUALIZE_AFTER_PAGES;
+  const fallbackH = pageHeights[0] ?? linesPerPage * (brailleSize + brailleSize * 0.5);
+
+  const [windowRange, setWindowRange] = useState({
+    start: 0,
+    end: Math.max(0, pages.length - 1),
+  });
+  const [spacer, setSpacer] = useState({ top: 0, bottom: 0 });
+  const [prevPages, setPrevPages] = useState(pages);
 
   if (pages !== prevPages) {
     setPrevPages(pages);
-    setWindowRange({ start: 0, end: Math.max(0, Math.min(pages.length, 5) - 1) });
+    setWindowRange({
+      start: 0,
+      end: Math.max(0, pages.length - 1),
+    });
     setSpacer({ top: 0, bottom: 0 });
   }
-
-  useEffect(() => {
-    heightsRef.current = [];
-  }, [pages]);
 
   const updateWindowFromScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container || pages.length === 0) return;
     const scrollTop = container.scrollTop;
     const clientHeight = container.clientHeight;
-    const heights = heightsRef.current;
+    const heights = pageHeights;
+
+    const mid = scrollTop + clientHeight / 2;
+    let active = 0;
+    let top = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const h = heights[i] ?? fallbackH;
+      if (top + h > mid) {
+        active = i;
+        break;
+      }
+      top += h;
+      active = i;
+    }
+    const pageNum = active + 1;
+    if (pageNum !== lastPageRef.current) {
+      lastPageRef.current = pageNum;
+      onActivePageChange(pageNum);
+    }
+
+    if (!virtualize) {
+      setWindowRange((prev) =>
+        prev.start === 0 && prev.end === pages.length - 1
+          ? prev
+          : { start: 0, end: Math.max(0, pages.length - 1) },
+      );
+      setSpacer((prev) => (prev.top === 0 && prev.bottom === 0 ? prev : { top: 0, bottom: 0 }));
+      return;
+    }
 
     let acc = 0;
     let start = 0;
@@ -278,36 +297,7 @@ export const BraillePreviewPages = forwardRef<
           pageOffset(heights, nextEnd + 1, fallbackH),
       ),
     });
-
-    const mid = scrollTop + clientHeight / 2;
-    let active = 0;
-    let top = 0;
-    for (let i = 0; i < pages.length; i++) {
-      const h = heights[i] ?? fallbackH;
-      if (top + h > mid) {
-        active = i;
-        break;
-      }
-      top += h;
-      active = i;
-    }
-    const pageNum = active + 1;
-    if (pageNum !== lastPageRef.current) {
-      lastPageRef.current = pageNum;
-      onActivePageChange(pageNum);
-    }
-  }, [fallbackH, onActivePageChange, pages.length]);
-
-  const onHeight = useCallback(
-    (pageIndex: number, height: number) => {
-      if (height <= 0) return;
-      const prev = heightsRef.current[pageIndex];
-      if (prev != null && Math.abs(prev - height) < 1) return;
-      heightsRef.current[pageIndex] = height;
-      updateWindowFromScroll();
-    },
-    [updateWindowFromScroll],
-  );
+  }, [fallbackH, onActivePageChange, pageHeights, pages.length, virtualize]);
 
   useImperativeHandle(
     ref,
@@ -316,9 +306,8 @@ export const BraillePreviewPages = forwardRef<
       setScrollPercentage: (percentage: number) => {
         const container = containerRef.current;
         if (!container) return;
-        const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-        if (maxScroll <= 0) return;
-        const target = percentage * maxScroll;
+        const { lineIndex0, frac } = lineFromProgress(percentage, lineCount);
+        const target = brailleYForLineIndex(models, brailleSize, lineIndex0, frac);
         if (Math.abs(container.scrollTop - target) <= 1) return;
         suppressScrollReportRef.current = true;
         container.scrollTop = target;
@@ -328,29 +317,26 @@ export const BraillePreviewPages = forwardRef<
       scrollToPage: (pageIndex: number) => {
         const container = containerRef.current;
         if (!container || pageIndex < 0 || pageIndex >= pages.length) return;
-        const top = pageOffset(heightsRef.current, pageIndex, fallbackH);
-        container.scrollTo({ top, behavior: 'smooth' });
+        const top = pageOffset(pageHeights, pageIndex, fallbackH);
+        container.scrollTop = top;
       },
     }),
-    [fallbackH, pages.length, updateWindowFromScroll],
+    [brailleSize, fallbackH, lineCount, models, pageHeights, pages.length, updateWindowFromScroll],
   );
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     if (!suppressScrollReportRef.current) {
-      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-      if (maxScroll > 0) {
-        const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
-        onScrollPercentage(percentage);
-      }
+      const { lineIndex0, frac } = brailleLineAtY(models, brailleSize, container.scrollTop);
+      onScrollPercentage(progressFromLine(lineIndex0, frac, lineCount));
     }
     if (pageChangeRafRef.current != null) cancelAnimationFrame(pageChangeRafRef.current);
     pageChangeRafRef.current = requestAnimationFrame(() => {
       pageChangeRafRef.current = null;
       updateWindowFromScroll();
     });
-  }, [onScrollPercentage, updateWindowFromScroll]);
+  }, [brailleSize, lineCount, models, onScrollPercentage, updateWindowFromScroll]);
 
   const visibleModels = models.slice(
     Math.max(0, windowRange.start),
@@ -393,7 +379,6 @@ export const BraillePreviewPages = forwardRef<
           inactiveDotSize={inactiveDotSize}
           cellsPerRow={cellsPerRow}
           activeWordRange={activeWordRange}
-          onHeight={onHeight}
         />
       ))}
       {spacer.bottom > 0 ? (
