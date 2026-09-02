@@ -3,8 +3,9 @@
  * Input may be ASCII BRF and/or Unicode braille cells (normalized to ASCII).
  *
  * Supports time/key signatures, ties, triplets, bar repeats, print repeats /
- * voltas (#1/#2, <7/<2), in-accord, and dual-duration disambiguation
- * (whole↔16th online; measure-fill for others).
+ * voltas (#1/#2, <7/<2), in-accord, dual-duration disambiguation
+ * (whole↔16th online; measure-fill for others), and Sao Mai single-staff
+ * melody labels (`#1"31A`, `,L#A`) plus word-sign dynamics.
  */
 
 import type {
@@ -22,6 +23,9 @@ import { unicodeBrailleToAscii } from './braille';
 import {
   linearizePianoSystems,
   segmentPianoSystems,
+  skipSaoMaiLineNumberAt,
+  skipSaoMaiMeasureLabelAt,
+  skipWordSignAt,
 } from './musicBraillePiano';
 import {
   resolveTempoMeta,
@@ -835,6 +839,30 @@ export function parseBrailleMusic(
       continue;
     }
 
+    {
+      const next = skipSaoMaiLineNumberAt(text, i);
+      if (next != null) {
+        i = next;
+        continue;
+      }
+    }
+
+    {
+      const next = skipSaoMaiMeasureLabelAt(text, i);
+      if (next != null) {
+        i = next;
+        continue;
+      }
+    }
+
+    {
+      const next = skipWordSignAt(text, i);
+      if (next != null) {
+        i = next;
+        continue;
+      }
+    }
+
     // Bar repeat at measure start (after barline / empty measure).
     // Skip in piano mode — Sao Mai fingerings/`0` residue after linearization
     // falsely duplicate measures and punch silence holes.
@@ -1322,6 +1350,10 @@ export function findMusicLexStartIndex(brf: string): number {
     }
   }
 
+  // Start at the printed meter/key so pickups, rests, and Sao Mai measure
+  // labels before the first octave mark are not dropped.
+  if (foundHeading) return searchFrom;
+
   for (let i = searchFrom; i < text.length; i++) {
     if (isLikelyOctaveNoteAt(text, i)) {
       return includeLeadingMusicPrefixes(text, i);
@@ -1382,6 +1414,17 @@ export function findMusicStartCharIndex(brf: string): number {
   if (!text) return 0;
 
   const lexStart = findMusicLexStartIndex(text);
+  const searchFrom = lexStart > 0 ? lexStart : 0;
+  for (let i = searchFrom; i < text.length; i++) {
+    if (isLikelyOctaveNoteAt(text, i)) {
+      return includeLeadingMusicPrefixes(text, i);
+    }
+  }
+  for (let i = 0; i < searchFrom; i++) {
+    if (isLikelyOctaveNoteAt(text, i)) {
+      return includeLeadingMusicPrefixes(text, i);
+    }
+  }
   if (lexStart > 0 || isLikelyOctaveNoteAt(text, 0)) return lexStart;
 
   const score = parseBrailleMusic(text);
