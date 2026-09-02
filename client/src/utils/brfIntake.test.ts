@@ -10,7 +10,9 @@ import {
 } from './brfIntake';
 import { normalizeImportedBrf } from './brailleFormat';
 
-const FUR_ELISE_PATH = join(dirname(fileURLToPath(import.meta.url)), 'fixtures/fur-elise.brf');
+const dir = dirname(fileURLToPath(import.meta.url));
+const FUR_ELISE_PATH = join(dir, 'fixtures/fur-elise.brf');
+const FUR_ELISE_EASY_PATH = join(dir, 'fixtures/fur-elise-easy.brf');
 
 describe('normalizeBrfBuffer / normalizeImportedBrf', () => {
   it('converts Unicode braille to ASCII and normalizes line endings', () => {
@@ -26,16 +28,22 @@ describe('normalizeBrfBuffer / normalizeImportedBrf', () => {
 });
 
 describe('classifyBrfContent', () => {
-  it('classifies Für Elise Unicode BRF as literary-brf (music is toggle-only)', () => {
+  it('classifies Für Elise Unicode BRF as music-brf', () => {
     const full = readFileSync(FUR_ELISE_PATH, 'utf8');
     const { kind, normalized } = classifyBrfContent(full);
-    expect(kind).toBe('literary-brf');
+    expect(kind).toBe('music-brf');
     expect(normalized.includes('.>') || normalized.includes('>')).toBe(true);
   });
 
-  it('classifies ASCII music paste as plain (not auto music)', () => {
+  it('classifies ASCII music paste as music-brf', () => {
     const ascii = normalizeBrfBuffer(readFileSync(FUR_ELISE_PATH, 'utf8'));
-    expect(classifyBrfContent(ascii).kind).toBe('plain');
+    expect(classifyBrfContent(ascii).kind).toBe('music-brf');
+  });
+
+  it('classifies easy-version single-staff Für Elise as music-brf', () => {
+    const full = readFileSync(FUR_ELISE_EASY_PATH, 'utf8');
+    expect(classifyBrfContent(full).kind).toBe('music-brf');
+    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('music-brf');
   });
 
   it('classifies plain prose as plain', () => {
@@ -52,17 +60,19 @@ describe('classifyBrfContent', () => {
     expect(kind).toBe('literary-brf');
   });
 
-  it('classifies Für Elise .brf file as literary-brf (back-translate path)', () => {
+  it('classifies Für Elise .brf file as music-brf', () => {
     const full = readFileSync(FUR_ELISE_PATH, 'utf8');
-    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('literary-brf');
+    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('music-brf');
   });
 });
 
 describe('shouldAutoRouteMusicOnTextChange', () => {
-  it('never auto-routes music on paste (toggle-only)', () => {
+  it('auto-routes a paste of Music Braille into an empty or short editor', () => {
     const music = normalizeBrfBuffer(readFileSync(FUR_ELISE_PATH, 'utf8'));
-    expect(shouldAutoRouteMusicOnTextChange('', music)).toBe(false);
-    expect(shouldAutoRouteMusicOnTextChange('hi', music)).toBe(false);
+    expect(shouldAutoRouteMusicOnTextChange('', music)).toBe(true);
+    expect(shouldAutoRouteMusicOnTextChange('hi', music)).toBe(true);
+    const easy = readFileSync(FUR_ELISE_EASY_PATH, 'utf8');
+    expect(shouldAutoRouteMusicOnTextChange('', easy)).toBe(true);
   });
 
   it('does not route small incremental ASCII edits', () => {
