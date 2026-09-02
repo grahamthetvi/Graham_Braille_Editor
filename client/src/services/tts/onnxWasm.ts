@@ -23,20 +23,10 @@ export function getOnnxWasmThreadCount(
   return Math.max(1, Math.min(n, 8));
 }
 
-type OrtWasmEnv = {
-  env: {
-    wasm: {
-      wasmPaths?: string;
-      numThreads?: number;
-      simd?: boolean;
-    };
-  };
-};
-
-let ortModule: OrtWasmEnv | null = null;
+let ortModule: typeof import('onnxruntime-web') | null = null;
 
 export function applyOnnxWasmConfig(
-  ort: OrtWasmEnv,
+  ort: typeof import('onnxruntime-web'),
   isolated: boolean | undefined = typeof crossOriginIsolated !== 'undefined' ? crossOriginIsolated : undefined,
   hardwareConcurrency: number | undefined = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : undefined,
 ): void {
@@ -47,9 +37,7 @@ export function applyOnnxWasmConfig(
 
 /** Point onnxruntime-web at same-origin WASM files before any TTS engine loads. */
 export async function ensureOnnxWasmConfigured(): Promise<void> {
-  if (!ortModule) {
-    ortModule = await import('onnxruntime-web');
-  }
+  const ort = ortModule ?? (ortModule = await import('onnxruntime-web'));
   // Re-apply each call: kitten-tts-js 0.1.2 overwrites numThreads if from_pretrained runs.
-  applyOnnxWasmConfig(ortModule);
+  applyOnnxWasmConfig(ort);
 }
