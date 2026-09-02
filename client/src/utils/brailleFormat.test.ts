@@ -27,7 +27,10 @@ describe('formatBrfPages', () => {
   it('preserves a trailing blank line when source ends with Enter', () => {
     const unicode = asciiToUnicodeBraille('hello\n');
     const pages = formatBrfPages(unicode, 40, 25, false);
-    expect(pages[0].split('\n')).toEqual([asciiToUnicodeBraille('hello'), '']);
+    const lines = pages[0].split('\n');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe(asciiToUnicodeBraille('hello'));
+    expect(lines[1]).toBe('\u2800'.repeat(40));
   });
 
   it('preserves mid-document blank lines', () => {
@@ -35,7 +38,7 @@ describe('formatBrfPages', () => {
     const pages = formatBrfPages(unicode, 40, 25, false);
     const lines = pages[0].split('\n');
     expect(lines).toHaveLength(3);
-    expect(lines[1]).toBe('');
+    expect(lines[1]).toBe('\u2800'.repeat(40));
   });
 
   it('does not add a trailing blank line when source has no trailing newline', () => {

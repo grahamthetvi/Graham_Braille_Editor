@@ -17,6 +17,15 @@ describe('buildBrfPageModels', () => {
     expect(words).toEqual([0, 1, 2]);
   });
 
+  it('renders an empty source line as a blank braille cell', () => {
+    const [page] = buildBrfPageModels(['⠁\n\n⠃']);
+    expect(page.lines).toHaveLength(3);
+    expect(page.lines[1]).toEqual({
+      kind: 'cells',
+      segments: [{ type: 'space', chars: ['\u2800'] }],
+    });
+  });
+
   it('parses jumbo lines', () => {
     const line = `${JUMBO_LINE_MARKER}48${JUMBO_LINE_MARKER}AB`;
     const [page] = buildBrfPageModels([line]);

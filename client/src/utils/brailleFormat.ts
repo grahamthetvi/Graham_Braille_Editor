@@ -847,7 +847,8 @@ function formatBrfPagesSegment(
     }
 
     if (line.length === 0) {
-      wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
+      // A full row of blank cells so Enter shows as a real braille line, not collapsed gap.
+      wrappedLines.push(BRAILLE_SPACE.repeat(cells));
     } else if (useParagraphStarts) {
       wrappedLines.push(
         ...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, BRAILLE_SPACE),
