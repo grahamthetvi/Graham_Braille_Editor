@@ -56,6 +56,7 @@
         "status": {
           "starting": "正在启动…",
           "loadingKitten": "正在加载 Kitten TTS 模型…",
+          "downloadingKitten": "正在下载 Kitten 模型… {{percent}}%",
           "synthesizingKitten": "正在使用 Kitten 合成…",
           "loadingEspeak": "正在加载 eSpeak NG…",
           "synthesizingEspeak": "正在使用 eSpeak NG 合成…",
@@ -68,7 +69,10 @@
         "errors": {
           "emptyText": "没有可朗读的内容——请先输入一些文本。",
           "textTooLong": "文本超出音频导出的 {{limit}} 字符限制。",
-          "emptyAudio": "TTS 生成了空音频。"
+          "emptyAudio": "TTS 生成了空音频。",
+          "modelDownloadFailed": "无法下载语音模型。Hugging Face 或 CDN 可能被拦截（学校和公司网络中较常见）。请改用体积更小的 eSpeak NG，或换用限制较少的网络。",
+          "storageQuota": "浏览器无法存储语音模型。这常见于无痕模式或存储已满。请改用普通窗口、释放空间，或使用 eSpeak NG。",
+          "runtimeFailed": "语音合成失败。请尝试 eSpeak NG，或刷新页面后重新导出。"
         }
       },
       "print": {
@@ -309,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten（默认）",
-      "size": "~25 MB",
-      "speed": "均衡的导出速度",
-      "description": "轻量级神经语音。适合大多数文档的默认选择。"
+      "size": "~25–60 MB",
+      "speed": "最快的神经导出（可用时使用 WebGPU）",
+      "description": "轻量级神经语音。浏览器允许时使用图形处理器，否则使用 WASM。适合大多数文档的默认选择。"
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1140,7 +1144,7 @@
       "title": "导出音频（MP3）",
       "lead": "选择语音引擎。实际差异主要是导出速度和首次使用时的模型大小——之后模型会缓存在浏览器中。",
       "engineLegend": "语音引擎",
-      "note": "所有引擎均在浏览器本地运行，无需 Bridge 或账户。",
+      "note": "所有引擎均在浏览器本地运行。神经语音会在首次使用时从 Hugging Face 下载——如果被拦截，请选择 eSpeak NG。",
       "exportButton": "下载 MP3",
       "cancel": "取消",
       "closeAriaLabel": "关闭音频导出"

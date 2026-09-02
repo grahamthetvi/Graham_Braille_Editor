@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "preview": "vite preview",
-    "postinstall": "node scripts/setup-liblouis.js && node scripts/setup-onnx-wasm.js",
+    "postinstall": "node scripts/setup-liblouis.js && node scripts/setup-onnx-wasm.js && node scripts/setup-piper-phonemize.js",
     "setup:liblouis": "node scripts/setup-liblouis.js",
     "build:liblouis": "bash scripts/build-liblouis/build.sh --install"
   },

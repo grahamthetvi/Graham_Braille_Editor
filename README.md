@@ -262,11 +262,15 @@ Under the **File** tab, click **Export** to open the export bar (same pattern as
 
 | Engine | Notes |
 |--------|--------|
-| **Kitten** (default) | Lightweight neural voice; first use downloads ~25–60 MB |
-| **eSpeak NG** | Very small robotic voice; loads quickly |
-| **Piper** | Higher-quality neural voice; larger first-time download |
+| **Kitten** (default) | Lightweight neural voice; first use downloads ~25–60 MB from Hugging Face. Uses **WebGPU** when the browser provides it, otherwise WASM. |
+| **eSpeak NG** | Very small robotic voice; loads quickly. Best fallback if neural-model downloads are blocked. |
+| **Piper** | Higher-quality neural voice (`en_US-lessac-medium`, ~60 MB). `en_US-lessac-low` is the same download size in Piper’s voice list, so medium is kept for quality. |
 
 Models are cached in the browser after the first download. Works on Windows, macOS, Linux, and ChromeOS.
+
+**If a model download fails:** school and workplace networks often block Hugging Face. The export dialog explains this and suggests eSpeak NG or a less-restricted network. Private browsing / storage quota can also prevent caching.
+
+**Speed:** local Vite `dev`/`preview` sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` so ONNX Runtime can use multi-threaded WASM (`SharedArrayBuffer`). **GitHub Pages cannot set those headers**, so production Pages stays single-threaded unless you put the site behind a CDN that adds them (Cloudflare Pages reads `public/_headers`). Piper phonemize WASM is served from the app origin; the large Piper/Kitten **voice models** still come from Hugging Face (too large to vendor).
 
 ## ⚖️ Legal Disclaimer
 

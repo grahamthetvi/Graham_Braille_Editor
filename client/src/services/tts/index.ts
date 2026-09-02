@@ -1,4 +1,5 @@
 import { encodeMp3FromFloat32 } from './encodeMp3';
+import { wrapTtsFailure } from './errors';
 import { normalizeSpeechText } from './wav';
 import {
   DEFAULT_TTS_ENGINE,
@@ -27,19 +28,23 @@ export async function synthesizeMp3InBrowser(
     throw new TtsExportError('app.file.downloadMp3.errors.textTooLong', { limit: MAX_TTS_CHARS.toLocaleString() });
   }
 
-  const pcm =
-    engine === 'espeak'
-      ? await (await import('./espeak')).synthesizeEspeakPcm(cleaned, onProgress)
-      : engine === 'piper'
-        ? await (await import('./piper')).synthesizePiperPcm(cleaned, onProgress)
-        : await (await import('./kitten')).synthesizeKittenPcm(cleaned, onProgress);
+  try {
+    const pcm =
+      engine === 'espeak'
+        ? await (await import('./espeak')).synthesizeEspeakPcm(cleaned, onProgress)
+        : engine === 'piper'
+          ? await (await import('./piper')).synthesizePiperPcm(cleaned, onProgress)
+          : await (await import('./kitten')).synthesizeKittenPcm(cleaned, onProgress);
 
-  if (pcm.samples.length === 0) {
-    throw new TtsExportError('app.file.downloadMp3.errors.emptyAudio');
+    if (pcm.samples.length === 0) {
+      throw new TtsExportError('app.file.downloadMp3.errors.emptyAudio');
+    }
+
+    onProgress?.({ phase: 'encoding', messageKey: 'app.file.downloadMp3.status.encodingMp3' });
+    return encodeMp3FromFloat32(pcm.samples, pcm.sampleRate);
+  } catch (err) {
+    throw wrapTtsFailure(err);
   }
-
-  onProgress?.({ phase: 'encoding', messageKey: 'app.file.downloadMp3.status.encodingMp3' });
-  return encodeMp3FromFloat32(pcm.samples, pcm.sampleRate);
 }
 
 export {
@@ -52,3 +57,4 @@ export {
   type TtsProgress,
   type TtsProgressCallback,
 } from './types';
+export { classifyTtsFailure, wrapTtsFailure } from './errors';

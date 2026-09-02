@@ -56,6 +56,7 @@
         "status": {
           "starting": "Iniciando…",
           "loadingKitten": "Carregando modelo Kitten TTS…",
+          "downloadingKitten": "Baixando o modelo Kitten… {{percent}}%",
           "synthesizingKitten": "Sintetizando com Kitten…",
           "loadingEspeak": "Carregando eSpeak NG…",
           "synthesizingEspeak": "Sintetizando com eSpeak NG…",
@@ -68,7 +69,10 @@
         "errors": {
           "emptyText": "Nada para falar — digite algum texto primeiro.",
           "textTooLong": "O texto excede o limite de {{limit}} caracteres para exportação de áudio.",
-          "emptyAudio": "O TTS produziu áudio vazio."
+          "emptyAudio": "O TTS produziu áudio vazio.",
+          "modelDownloadFailed": "Não foi possível baixar o modelo de voz. O Hugging Face ou a CDN podem estar bloqueados (comum em redes escolares e corporativas). Tente o eSpeak NG, bem menor, ou use uma rede menos restrita.",
+          "storageQuota": "O navegador não conseguiu armazenar o modelo de voz. Isso costuma ocorrer na navegação privada ou quando o armazenamento está cheio. Use uma janela normal, libere espaço ou escolha o eSpeak NG.",
+          "runtimeFailed": "A síntese de voz falhou. Tente o eSpeak NG ou recarregue e exporte novamente."
         }
       },
       "print": {
@@ -309,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (padrão)",
-      "size": "~25 MB",
-      "speed": "Velocidade de exportação equilibrada",
-      "description": "Voz neural leve. Bom padrão para a maioria dos documentos."
+      "size": "~25–60 MB",
+      "speed": "Exportação neural mais rápida (WebGPU quando disponível)",
+      "description": "Voz neural leve. Usa o processador gráfico quando o navegador permite; caso contrário, WASM. Bom padrão para a maioria dos documentos."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1140,7 +1144,7 @@
       "title": "Exportar áudio (MP3)",
       "lead": "Escolha um mecanismo de voz. As únicas diferenças práticas são a velocidade de exportação e o tamanho do modelo no primeiro uso — depois, os modelos ficam em cache no navegador.",
       "engineLegend": "Mecanismo de voz",
-      "note": "Todos os mecanismos rodam inteiramente no navegador. Não é necessário bridge nem conta.",
+      "note": "Todos os mecanismos rodam inteiramente no navegador. As vozes neurais são baixadas do Hugging Face no primeiro uso — se isso estiver bloqueado, escolha o eSpeak NG.",
       "exportButton": "Baixar MP3",
       "cancel": "Cancelar",
       "closeAriaLabel": "Fechar exportação de áudio"

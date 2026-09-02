@@ -47,8 +47,8 @@ import {
   synthesizeMp3InBrowser,
   TTS_ENGINE_STORAGE_KEY,
   DEFAULT_TTS_ENGINE,
-  TtsExportError,
   isTtsEngineId,
+  wrapTtsFailure,
   type TtsEngineId,
 } from './services/tts';
 import { useBraille, type MathCode } from './hooks/useBraille';
@@ -884,13 +884,8 @@ export default function App() {
       setMp3ExportStatus(null);
       setShowAudioExport(false);
     } catch (err) {
-      const msg =
-        err instanceof TtsExportError
-          ? t(err.i18nKey, err.i18nParams)
-          : err instanceof Error
-            ? err.message
-            : String(err);
-      setMp3ExportError(msg);
+      const mapped = wrapTtsFailure(err);
+      setMp3ExportError(t(mapped.i18nKey, mapped.i18nParams));
       setMp3ExportStatus(null);
       console.error('MP3 export failed', err);
     } finally {
