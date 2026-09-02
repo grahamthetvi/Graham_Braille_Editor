@@ -56,6 +56,7 @@
         "status": {
           "starting": "Démarrage…",
           "loadingKitten": "Chargement du modèle Kitten TTS…",
+          "downloadingKitten": "Téléchargement du modèle Kitten… {{percent}} %",
           "synthesizingKitten": "Synthèse avec Kitten…",
           "loadingEspeak": "Chargement d'eSpeak NG…",
           "synthesizingEspeak": "Synthèse avec eSpeak NG…",
@@ -68,7 +69,10 @@
         "errors": {
           "emptyText": "Rien à énoncer — saisissez d'abord du texte.",
           "textTooLong": "Le texte dépasse la limite de {{limit}} caractères pour l'export audio.",
-          "emptyAudio": "La synthèse vocale a produit un audio vide."
+          "emptyAudio": "La synthèse vocale a produit un audio vide.",
+          "modelDownloadFailed": "Impossible de télécharger le modèle vocal. Hugging Face ou le CDN est peut-être bloqué (fréquent sur les réseaux scolaires et d'entreprise). Essayez eSpeak NG, beaucoup plus léger, ou un réseau moins restreint.",
+          "storageQuota": "Le navigateur n'a pas pu stocker le modèle vocal. Cela arrive souvent en navigation privée ou lorsque le stockage est plein. Ouvrez une fenêtre normale, libérez de l'espace ou utilisez eSpeak NG.",
+          "runtimeFailed": "La synthèse vocale a échoué. Essayez eSpeak NG, ou rechargez puis exportez à nouveau."
         }
       },
       "print": {
@@ -309,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (par défaut)",
-      "size": "~25 MB",
-      "speed": "Vitesse d'export équilibrée",
-      "description": "Voix neuronale légère. Bon choix par défaut pour la plupart des documents."
+      "size": "~25–60 MB",
+      "speed": "Export neuronal le plus rapide (WebGPU si disponible)",
+      "description": "Voix neuronale légère. Utilise le processeur graphique lorsque le navigateur le permet, sinon WASM. Bon choix par défaut pour la plupart des documents."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1140,7 +1144,7 @@
       "title": "Exporter l'audio (MP3)",
       "lead": "Choisissez un moteur vocal. Les seules différences pratiques sont la vitesse d'export et la taille du modèle au premier usage — ensuite, les modèles restent en cache dans le navigateur.",
       "engineLegend": "Moteur vocal",
-      "note": "Tous les moteurs s'exécutent entièrement dans le navigateur. Aucune passerelle ni compte requis.",
+      "note": "Tous les moteurs s'exécutent entièrement dans le navigateur. Les voix neuronales se téléchargent depuis Hugging Face au premier usage — si c'est bloqué, choisissez eSpeak NG.",
       "exportButton": "Télécharger le MP3",
       "cancel": "Annuler",
       "closeAriaLabel": "Fermer l'export audio"

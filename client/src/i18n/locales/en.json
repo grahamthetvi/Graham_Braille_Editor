@@ -61,6 +61,7 @@
         "status": {
           "starting": "Starting…",
           "loadingKitten": "Loading Kitten TTS model…",
+          "downloadingKitten": "Downloading Kitten model… {{percent}}%",
           "synthesizingKitten": "Synthesizing with Kitten…",
           "loadingEspeak": "Loading eSpeak NG…",
           "synthesizingEspeak": "Synthesizing with eSpeak NG…",
@@ -73,7 +74,10 @@
         "errors": {
           "emptyText": "Nothing to speak — enter some text first.",
           "textTooLong": "Text exceeds {{limit}} character limit for audio export.",
-          "emptyAudio": "TTS produced empty audio."
+          "emptyAudio": "TTS produced empty audio.",
+          "modelDownloadFailed": "Could not download the voice model. Hugging Face or the CDN may be blocked (common on school and workplace networks). Try eSpeak NG, which is much smaller, or use a less-restricted network.",
+          "storageQuota": "The browser could not store the voice model. This often happens in private browsing or when storage is full. Try a normal window, free some space, or use eSpeak NG.",
+          "runtimeFailed": "Speech synthesis failed. Try eSpeak NG, or reload and export again."
         }
       },
       "print": {
@@ -456,7 +460,7 @@
       "title": "Export audio (MP3)",
       "lead": "Pick a voice engine. The only practical differences are export speed and how large the model is on first use—after that, models stay cached in your browser.",
       "engineLegend": "Voice engine",
-      "note": "All engines run entirely in your browser. No bridge or account is required.",
+      "note": "All engines run entirely in your browser. Neural voices download from Hugging Face on first use — if that is blocked, choose eSpeak NG.",
       "exportButton": "Download MP3",
       "cancel": "Cancel",
       "closeAriaLabel": "Close audio export"
@@ -466,9 +470,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (default)",
-      "size": "~25 MB",
-      "speed": "Balanced export speed",
-      "description": "Lightweight neural voice. Good default for most documents."
+      "size": "~25–60 MB",
+      "speed": "Fastest neural export (WebGPU when available)",
+      "description": "Lightweight neural voice. Uses the graphics processor when the browser allows it, otherwise WASM. Good default for most documents."
     },
     "espeak": {
       "label": "eSpeak NG",

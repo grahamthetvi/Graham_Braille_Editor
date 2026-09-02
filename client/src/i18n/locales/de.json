@@ -56,6 +56,7 @@
         "status": {
           "starting": "Wird gestartet…",
           "loadingKitten": "Kitten-TTS-Modell wird geladen…",
+          "downloadingKitten": "Kitten-Modell wird heruntergeladen… {{percent}} %",
           "synthesizingKitten": "Synthese mit Kitten…",
           "loadingEspeak": "eSpeak NG wird geladen…",
           "synthesizingEspeak": "Synthese mit eSpeak NG…",
@@ -68,7 +69,10 @@
         "errors": {
           "emptyText": "Nichts zum Vorlesen — geben Sie zuerst Text ein.",
           "textTooLong": "Der Text überschreitet das Zeichenlimit von {{limit}} für den Audio-Export.",
-          "emptyAudio": "Die Sprachsynthese hat leeres Audio erzeugt."
+          "emptyAudio": "Die Sprachsynthese hat leeres Audio erzeugt.",
+          "modelDownloadFailed": "Das Sprachmodell konnte nicht heruntergeladen werden. Hugging Face oder das CDN ist möglicherweise blockiert (häufig in Schul- und Firmennetzen). Versuchen Sie eSpeak NG (viel kleiner) oder ein weniger eingeschränktes Netzwerk.",
+          "storageQuota": "Der Browser konnte das Sprachmodell nicht speichern. Das passiert oft im privaten Modus oder bei vollem Speicher. Öffnen Sie ein normales Fenster, geben Sie Speicher frei oder nutzen Sie eSpeak NG.",
+          "runtimeFailed": "Die Sprachsynthese ist fehlgeschlagen. Versuchen Sie eSpeak NG oder laden Sie die Seite neu und exportieren Sie erneut."
         }
       },
       "print": {
@@ -309,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (Standard)",
-      "size": "~25 MB",
-      "speed": "Ausgewogene Exportgeschwindigkeit",
-      "description": "Leichte neuronale Stimme. Gute Standardwahl für die meisten Dokumente."
+      "size": "~25–60 MB",
+      "speed": "Schnellster neuronaler Export (WebGPU wenn verfügbar)",
+      "description": "Leichte neuronale Stimme. Nutzt den Grafikprozessor, wenn der Browser es zulässt, sonst WASM. Gute Standardwahl für die meisten Dokumente."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1140,7 +1144,7 @@
       "title": "Audio exportieren (MP3)",
       "lead": "Wählen Sie eine Sprach-Engine. Die praktischen Unterschiede sind nur Exportgeschwindigkeit und Modellgröße beim ersten Gebrauch—danach bleiben Modelle im Browser zwischengespeichert.",
       "engineLegend": "Sprach-Engine",
-      "note": "Alle Engines laufen vollständig im Browser. Keine Bridge und kein Konto nötig.",
+      "note": "Alle Engines laufen vollständig im Browser. Neuronale Stimmen werden beim ersten Mal von Hugging Face geladen — wenn das blockiert ist, wählen Sie eSpeak NG.",
       "exportButton": "MP3 herunterladen",
       "cancel": "Abbrechen",
       "closeAriaLabel": "Audio-Export schließen"
