@@ -5,6 +5,9 @@ import {
   matchHandSignAt,
   sanitizePianoChunkText,
   segmentPianoSystems,
+  skipSaoMaiLineNumberAt,
+  skipSaoMaiMeasureLabelAt,
+  skipWordSignAt,
   type PianoChunk,
 } from './musicBraillePiano';
 
@@ -127,5 +130,51 @@ b "Im"Y&! Jm&%()   Dm"&.&%Z &%Z&")*ZY
     expect(segments.length).toBe(2);
     expect(segments[0].hand).toBe('lh');
     expect(segments[1].hand).toBe('rh');
+  });
+});
+
+describe('skipWordSignAt', () => {
+  it('skips glued dynamics without consuming following notes', () => {
+    expect(skipWordSignAt('>MP.F%E', 0)).toBe(3);
+    expect(skipWordSignAt('>mf.$X', 0)).toBe(3);
+    expect(skipWordSignAt('>pp.&%Z', 0)).toBe(3);
+    expect(skipWordSignAt('>C"JDE', 0)).toBe(2);
+    expect(skipWordSignAt('>D"F', 0)).toBe(2);
+    expect(skipWordSignAt('>4', 0)).toBe(2);
+  });
+
+  it('skips instrument words and does not consume >/l hand signs', () => {
+    expect(skipWordSignAt(">PNO'", 0)).toBe(5);
+    expect(skipWordSignAt('>/l#c8', 0)).toBeNull();
+    expect(skipWordSignAt('>#l#c8', 0)).toBeNull();
+  });
+
+  it('skips >poco moto> / apostrophe-terminated phrases', () => {
+    const phrase = ">poco moto'.&%Z";
+    const end = skipWordSignAt(phrase, 0);
+    expect(end).toBe(phrase.indexOf('.') );
+    expect(phrase.slice(end!)).toBe('.&%Z');
+  });
+});
+
+describe('skipSaoMaiMeasureLabelAt / skipSaoMaiLineNumberAt', () => {
+  it('skips #1"31A and trailing space, leaving the notes', () => {
+    const line = '#1"31A U>MP.F%E';
+    const end = skipSaoMaiMeasureLabelAt(line, 0);
+    expect(end).toBe(line.indexOf('U'));
+    expect(skipSaoMaiMeasureLabelAt('#1"?', 0)).toBeNull();
+    expect(skipSaoMaiMeasureLabelAt('#C4', 0)).toBeNull();
+  });
+
+  it('skips two-digit labels like #12"31AB', () => {
+    const line = '#12"31AB .?X';
+    const end = skipSaoMaiMeasureLabelAt(line, 0);
+    expect(end).toBe(line.indexOf('.'));
+  });
+
+  it('skips ,L#A line numbers', () => {
+    expect(skipSaoMaiLineNumberAt(',L#A', 0)).toBe(4);
+    expect(skipSaoMaiLineNumberAt(',L#BB', 0)).toBe(5);
+    expect(skipSaoMaiLineNumberAt(',PIANO', 0)).toBeNull();
   });
 });

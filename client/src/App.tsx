@@ -73,6 +73,7 @@ import {
 import {
   classifyBrfContent,
   normalizeBrfBuffer,
+  shouldAutoRouteMusicOnTextChange,
   type ContentKind,
 } from './utils/brfIntake';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
@@ -101,6 +102,7 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text or .docx (translate) or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
+ *     Music Braille (Unicode or ASCII BRF) opens in Music Player Mode when it looks like music.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
@@ -569,17 +571,24 @@ export default function App() {
 
   const handleTextChange = useCallback(
     (text: string) => {
+      const prev = inputTextRef.current;
       setInputText(text);
       if (isMusicBrailleModeRef.current) return;
       if (literarySourceModeRef.current === 'importedLocked') return;
       if (literarySourceModeRef.current === 'brailleEditing') return;
+
+      if (shouldAutoRouteMusicOnTextChange(prev, text)) {
+        applyMusicBrfToEditor(normalizeBrfBuffer(text));
+        announceMusicLoaded();
+        return;
+      }
 
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
         translate(text, selectedTable, mathCode);
       }
     },
-    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
+    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode, applyMusicBrfToEditor, announceMusicLoaded],
   );
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
@@ -734,10 +743,10 @@ export default function App() {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       setImportError(null);
       if (isBrf) {
-        const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
-        // Music only if the user already opted into Music mode.
-        if (isMusicBrailleModeRef.current) {
+        const { kind, normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        if (kind === 'music-brf' || isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
+          announceMusicLoaded();
           return;
         }
         void backTranslateBrf(normalized, selectedTable)
@@ -749,8 +758,9 @@ export default function App() {
           });
       } else {
         const { kind, normalized } = classifyBrfContent(raw);
-        if (isMusicBrailleModeRef.current) {
+        if (kind === 'music-brf' || isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
+          announceMusicLoaded();
           return;
         }
         setLiterarySourceMode('none');

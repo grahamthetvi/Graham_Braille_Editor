@@ -2,12 +2,14 @@
  * Unified BRF intake: normalize → classify → route decisions for import,
  * paste, and session restore.
  *
- * Music mode is not inferred here — the user must toggle Music Player Mode.
- * Saved sessions may still restore as music-brf via explicit session flags.
+ * Music Braille (Sao Mai piano or single-staff melody) classifies as `music-brf`
+ * so import/paste can open Music Player Mode. Saved sessions may also restore
+ * as music-brf via explicit session flags.
  */
 
 import { isPredominantlyUnicodeBraille } from './braille';
 import { normalizeImportedBrf } from './brailleFormat';
+import { isLikelyMusicBrailleBrf } from './musicBraille';
 
 /** Canonical buffer form used by playback, export, and literary round-trip. */
 export type ContentKind = 'music-brf' | 'literary-brf' | 'plain';
@@ -28,8 +30,8 @@ export const normalizeBrfBuffer = normalizeImportedBrf;
 
 /**
  * Classify raw editor/file content before liblouis.
- * Never returns `music-brf` — music is entered only via the Music mode toggle
- * (or restoring a session already saved as music).
+ * Returns `music-brf` when the buffer looks like Music Braille (hand signs,
+ * meter + notes, Sao Mai single-staff labels, etc.).
  */
 export function classifyBrfContent(
   raw: string,
@@ -39,6 +41,9 @@ export function classifyBrfContent(
   if (!normalized.trim()) {
     return { kind: 'plain', normalized };
   }
+  if (isLikelyMusicBrailleBrf(raw ?? '') || isLikelyMusicBrailleBrf(normalized)) {
+    return { kind: 'music-brf', normalized };
+  }
   if (opts.isBrfFile || isPredominantlyUnicodeBraille(raw ?? '')) {
     return { kind: 'literary-brf', normalized };
   }
@@ -46,9 +51,18 @@ export function classifyBrfContent(
 }
 
 /**
- * @deprecated Music mode is no longer auto-routed on paste/import.
- * Always returns false; kept so call sites can be removed cleanly.
+ * True when a text change is a paste/import of Music Braille rather than a
+ * small in-editor edit. Incremental typing must not flip Music mode on.
  */
-export function shouldAutoRouteMusicOnTextChange(_prev: string, _next: string): boolean {
-  return false;
+export function shouldAutoRouteMusicOnTextChange(prev: string, next: string): boolean {
+  const prevText = prev ?? '';
+  const nextText = next ?? '';
+  if (!nextText.trim()) return false;
+  const delta = nextText.length - prevText.length;
+  const isTinyEdit =
+    prevText.length > 0 &&
+    Math.abs(delta) <= 2 &&
+    (nextText.startsWith(prevText) || prevText.startsWith(nextText));
+  if (isTinyEdit) return false;
+  return isLikelyMusicBrailleBrf(nextText);
 }
