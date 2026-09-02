@@ -260,11 +260,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       if (isExternalUpdate.current) return;
       const text = editorRef.current?.getValue() ?? '';
 
-      // Debounce: only notify after 800ms of inactivity
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      // 6-key braille editing mirrors to the preview immediately; literary typing debounces translation.
+      const debounceMs = sixKeyInputRef.current ? 0 : 800;
+      if (debounceMs === 0) {
+        onTextChangeRef.current(text);
+        return;
+      }
       debounceTimer.current = setTimeout(() => {
         onTextChangeRef.current(text);
-      }, 800);
+      }, debounceMs);
     });
 
     editorRef.current.onDidChangeCursorSelection((e) => {
@@ -392,9 +397,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
         return;
       }
 
+      if (e.key === 'Enter' || e.code === 'Enter' || e.code === 'NumpadEnter') {
+        e.preventDefault();
+        e.stopPropagation();
+        insertAtCursor('\n');
+        return;
+      }
+
       // Allow navigation / editing keys through; block other printable keys.
       const passThrough = new Set([
-        'Enter',
         'Backspace',
         'Delete',
         'Tab',

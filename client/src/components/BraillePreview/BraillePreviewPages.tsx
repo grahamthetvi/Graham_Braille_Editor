@@ -132,7 +132,10 @@ const PageView = memo(function PageView({
 
           return (
             <div key={lineIdx} className="brf-page-line">
-              {line.segments.map((seg, segIdx) => {
+              {line.segments.length === 0 ? (
+                '\u00a0'
+              ) : (
+              line.segments.map((seg, segIdx) => {
                 if (seg.type === 'space') {
                   return seg.chars.map((char, charIdx) => (
                     <BrailleCell
@@ -165,7 +168,7 @@ const PageView = memo(function PageView({
                 ) : (
                   <Fragment key={`w${segIdx}`}>{wordCells}</Fragment>
                 );
-              })}
+              }))}
             </div>
           );
         })}

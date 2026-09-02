@@ -788,6 +788,25 @@ function toBrailleNumber(num: number): string {
   return chars;
 }
 
+/** Count consecutive `\n` characters at the end of a string. */
+function countTrailingNewlines(text: string): number {
+  let count = 0;
+  for (let i = text.length - 1; i >= 0 && text[i] === '\n'; i--) count++;
+  return count;
+}
+
+/**
+ * Remove trailing blank lines beyond those implied by the source text ending.
+ * Keeps Enter-created blank lines while still trimming spurious padding.
+ */
+function trimTrailingBlankLines(lines: string[], sourceText: string): void {
+  const preserve = countTrailingNewlines(sourceText);
+  let trailingBlanks = 0;
+  for (let i = lines.length - 1; i >= 0 && lines[i] === ''; i--) trailingBlanks++;
+  const remove = Math.max(0, trailingBlanks - preserve);
+  for (let i = 0; i < remove; i++) lines.pop();
+}
+
 /**
  * One segment of Unicode braille (no form feeds). `firstPageNumber` is the 1-based
  * label for the first page of this segment when page numbers are shown.
@@ -840,10 +859,7 @@ function formatBrfPagesSegment(
     }
   }
 
-  // Trim trailing blank lines so the last page isn't mostly empty
-  while (wrappedLines.length > 0 && wrappedLines[wrappedLines.length - 1] === '') {
-    wrappedLines.pop();
-  }
+  trimTrailingBlankLines(wrappedLines, unicodeBraille);
 
   if (wrappedLines.length === 0) return [''];
 
@@ -1450,10 +1466,7 @@ function formatBrfForOutputSegment(
     }
   }
 
-  // Trim trailing blank lines
-  while (wrapped.length > 0 && wrapped[wrapped.length - 1] === '') {
-    wrapped.pop();
-  }
+  trimTrailingBlankLines(wrapped, rawBrf);
 
   const pageChunks: string[] = [];
   const contentLines = includePageNumbers ? Math.max(1, lines - 1) : lines;

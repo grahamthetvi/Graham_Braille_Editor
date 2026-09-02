@@ -3,6 +3,7 @@ import {
   buildPlainTextToMatchBrailleWrap,
   SOFT_LINE_BREAK_CHAR,
   formatBrfForOutput,
+  formatBrfPages,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   convertToRtf,
@@ -16,10 +17,33 @@ import {
   fitPrintLayoutFontToLongestLine,
   paginatePrintLines,
 } from './brailleFormat';
+import { asciiToUnicodeBraille } from './braille';
 
 function formFeedCount(s: string): number {
   return (s.match(/\f/g) ?? []).length;
 }
+
+describe('formatBrfPages', () => {
+  it('preserves a trailing blank line when source ends with Enter', () => {
+    const unicode = asciiToUnicodeBraille('hello\n');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    expect(pages[0].split('\n')).toEqual([asciiToUnicodeBraille('hello'), '']);
+  });
+
+  it('preserves mid-document blank lines', () => {
+    const unicode = asciiToUnicodeBraille('hello\n\nworld');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    const lines = pages[0].split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe('');
+  });
+
+  it('does not add a trailing blank line when source has no trailing newline', () => {
+    const unicode = asciiToUnicodeBraille('hello');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    expect(pages[0].split('\n')).toEqual([asciiToUnicodeBraille('hello')]);
+  });
+});
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
