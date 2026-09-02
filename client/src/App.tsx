@@ -1084,7 +1084,7 @@ export default function App() {
   // ── Scroll & Highlight Sync ──────────────────────────────────────────────
   const brfPagesRef = useRef<BraillePreviewPagesHandle>(null);
   const musicPreviewRef = useRef<MusicBraillePreviewHandle>(null);
-  const { isSyncing, runSynced, schedule } = useScrollSync();
+  const { syncFrom } = useScrollSync();
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
   const [syncHighlight, setSyncHighlight] = useState(true);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(1);
@@ -1114,30 +1114,24 @@ export default function App() {
 
   const handleEditorScroll = useCallback(
     (percentage: number) => {
-      if (isSyncing()) return;
-      schedule(() => {
-        runSynced(() => {
-          if (isMusicBrailleModeRef.current) {
-            musicPreviewRef.current?.setScrollPercentage(percentage);
-          } else {
-            brfPagesRef.current?.setScrollPercentage(percentage);
-          }
-        });
+      syncFrom('editor', () => {
+        if (isMusicBrailleModeRef.current) {
+          musicPreviewRef.current?.setScrollPercentage(percentage);
+        } else {
+          brfPagesRef.current?.setScrollPercentage(percentage);
+        }
       });
     },
-    [isSyncing, runSynced, schedule],
+    [syncFrom],
   );
 
   const handlePreviewScrollPercentage = useCallback(
     (percentage: number) => {
-      if (isSyncing()) return;
-      schedule(() => {
-        runSynced(() => {
-          editorRef.current?.setScrollPercentage(percentage);
-        });
+      syncFrom('preview', () => {
+        editorRef.current?.setScrollPercentage(percentage);
       });
     },
-    [isSyncing, runSynced, schedule],
+    [syncFrom],
   );
 
   const handleActivePageChange = useCallback((pageNumber1Based: number) => {

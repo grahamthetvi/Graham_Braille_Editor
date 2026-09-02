@@ -69,10 +69,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   // Prevents the onDidChangeModelContent handler from firing during a
   // programmatic setValue() call, which would cause an update loop.
   const isExternalUpdate = useRef(false);
+  const suppressScrollReportRef = useRef(false);
   const onTextChangeRef = useRef(onTextChange);
   useEffect(() => {
     onTextChangeRef.current = onTextChange;
   }, [onTextChange]);
+  const onScrollPercentageChangeRef = useRef(onScrollPercentageChange);
+  useEffect(() => {
+    onScrollPercentageChangeRef.current = onScrollPercentageChange;
+  }, [onScrollPercentageChange]);
 
   const onAttemptEditRef = useRef(onAttemptEdit);
   useEffect(() => {
@@ -186,9 +191,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       const maxScroll = Math.max(0, scrollHeight - clientHeight);
       if (maxScroll <= 0) return;
       const targetTop = Math.max(0, Math.min(1, percentage)) * maxScroll;
-      if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
-        editor.setScrollTop(targetTop);
-      }
+      if (Math.abs(editor.getScrollTop() - targetTop) <= 1) return;
+      suppressScrollReportRef.current = true;
+      editor.setScrollTop(targetTop);
+      suppressScrollReportRef.current = false;
     },
     setCursorOffset: (offset: number) => {
       const editor = editorRef.current;
@@ -242,17 +248,20 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
 
     editorRef.current.onDidScrollChange((e) => {
       const editor = editorRef.current;
-      if (!editor || !onScrollPercentageChange) return;
-      
+      const onScroll = onScrollPercentageChangeRef.current;
+      if (!editor || !onScroll) return;
+      if (suppressScrollReportRef.current) return;
+      if (!e.scrollTopChanged) return;
+
       const scrollHeight = editor.getContentHeight();
       const clientHeight = editor.getLayoutInfo().height;
       const maxScroll = Math.max(0, scrollHeight - clientHeight);
-      
+
       if (maxScroll > 0) {
         const clampedTop = Math.max(0, Math.min(e.scrollTop, maxScroll));
-        onScrollPercentageChange(clampedTop / maxScroll);
+        onScroll(clampedTop / maxScroll);
       } else {
-        onScrollPercentageChange(0);
+        onScroll(0);
       }
     });
 
@@ -463,15 +472,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || scrollPercentage === undefined) return;
-    
+
     const scrollHeight = editor.getContentHeight();
     const clientHeight = editor.getLayoutInfo().height;
     const maxScroll = Math.max(0, scrollHeight - clientHeight);
-    
+
     if (maxScroll > 0) {
       const targetTop = scrollPercentage * maxScroll;
       if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
+        suppressScrollReportRef.current = true;
         editor.setScrollTop(targetTop);
+        suppressScrollReportRef.current = false;
       }
     }
   }, [scrollPercentage]);
