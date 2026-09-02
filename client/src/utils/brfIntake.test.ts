@@ -28,22 +28,22 @@ describe('normalizeBrfBuffer / normalizeImportedBrf', () => {
 });
 
 describe('classifyBrfContent', () => {
-  it('classifies Für Elise Unicode BRF as music-brf', () => {
+  it('classifies Für Elise Unicode BRF as literary-brf (music is toggle-only)', () => {
     const full = readFileSync(FUR_ELISE_PATH, 'utf8');
     const { kind, normalized } = classifyBrfContent(full);
-    expect(kind).toBe('music-brf');
+    expect(kind).toBe('literary-brf');
     expect(normalized.includes('.>') || normalized.includes('>')).toBe(true);
   });
 
-  it('classifies ASCII music paste as music-brf', () => {
+  it('classifies ASCII music paste as plain (not auto music)', () => {
     const ascii = normalizeBrfBuffer(readFileSync(FUR_ELISE_PATH, 'utf8'));
-    expect(classifyBrfContent(ascii).kind).toBe('music-brf');
+    expect(classifyBrfContent(ascii).kind).toBe('plain');
   });
 
-  it('classifies easy-version single-staff Für Elise as music-brf', () => {
+  it('classifies easy-version Für Elise as literary-brf, not music-brf', () => {
     const full = readFileSync(FUR_ELISE_EASY_PATH, 'utf8');
-    expect(classifyBrfContent(full).kind).toBe('music-brf');
-    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('music-brf');
+    expect(classifyBrfContent(full).kind).toBe('literary-brf');
+    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('literary-brf');
   });
 
   it('classifies plain prose as plain', () => {
@@ -60,19 +60,19 @@ describe('classifyBrfContent', () => {
     expect(kind).toBe('literary-brf');
   });
 
-  it('classifies Für Elise .brf file as music-brf', () => {
+  it('classifies Für Elise .brf file as literary-brf (back-translate path)', () => {
     const full = readFileSync(FUR_ELISE_PATH, 'utf8');
-    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('music-brf');
+    expect(classifyBrfContent(full, { isBrfFile: true }).kind).toBe('literary-brf');
   });
 });
 
 describe('shouldAutoRouteMusicOnTextChange', () => {
-  it('auto-routes a paste of Music Braille into an empty or short editor', () => {
+  it('never auto-routes music on paste (toggle-only)', () => {
     const music = normalizeBrfBuffer(readFileSync(FUR_ELISE_PATH, 'utf8'));
-    expect(shouldAutoRouteMusicOnTextChange('', music)).toBe(true);
-    expect(shouldAutoRouteMusicOnTextChange('hi', music)).toBe(true);
+    expect(shouldAutoRouteMusicOnTextChange('', music)).toBe(false);
+    expect(shouldAutoRouteMusicOnTextChange('hi', music)).toBe(false);
     const easy = readFileSync(FUR_ELISE_EASY_PATH, 'utf8');
-    expect(shouldAutoRouteMusicOnTextChange('', easy)).toBe(true);
+    expect(shouldAutoRouteMusicOnTextChange('', easy)).toBe(false);
   });
 
   it('does not route small incremental ASCII edits', () => {
