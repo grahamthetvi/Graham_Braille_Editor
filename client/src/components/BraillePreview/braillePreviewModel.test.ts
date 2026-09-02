@@ -17,13 +17,19 @@ describe('buildBrfPageModels', () => {
     expect(words).toEqual([0, 1, 2]);
   });
 
-  it('renders an empty source line as a blank braille cell', () => {
+  it('hello, blank line, world is three rows with a blank in the middle', () => {
     const [page] = buildBrfPageModels(['⠁\n\n⠃']);
-    expect(page.lines).toHaveLength(3);
-    expect(page.lines[1]).toEqual({
-      kind: 'cells',
-      segments: [{ type: 'space', chars: ['\u2800'] }],
-    });
+    expect(page.lines).toEqual([
+      {
+        kind: 'cells',
+        segments: [{ type: 'word', wordIndex: 0, chars: ['⠁'] }],
+      },
+      { kind: 'blank' },
+      {
+        kind: 'cells',
+        segments: [{ type: 'word', wordIndex: 1, chars: ['⠃'] }],
+      },
+    ]);
   });
 
   it('parses jumbo lines', () => {

@@ -15,8 +15,9 @@
 }
 
 .brf-page-line--blank {
-  /* Keep Enter-created rows painted; empty cells are easy to skip with content-visibility. */
+  /* Enter-created rows must stay painted; empty unicode cells are invisible. */
   content-visibility: visible;
+  min-height: var(--braille-cell-height, 22px);
 }
 
 /* Fast path: one Unicode braille glyph per cell (no per-dot paint). */

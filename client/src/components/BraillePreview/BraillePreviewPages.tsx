@@ -27,6 +27,7 @@ export interface BraillePreviewPagesProps {
   showEmptyDots: boolean;
   cellVariant: BrailleCellVariant;
   linesPerPage: number;
+  cellsPerRow: number;
   activeWordRange: [number, number] | null;
   onScrollPercentage: (percentage: number) => void;
   onActivePageChange: (pageNumber1Based: number) => void;
@@ -65,6 +66,7 @@ const PageView = memo(function PageView({
   cellVariant,
   brailleSize,
   inactiveDotSize,
+  cellsPerRow,
   activeWordRange,
   onHeight,
 }: {
@@ -75,6 +77,7 @@ const PageView = memo(function PageView({
   cellVariant: BrailleCellVariant;
   brailleSize: number;
   inactiveDotSize: number;
+  cellsPerRow: number;
   activeWordRange: [number, number] | null;
   onHeight: (pageIndex: number, height: number) => void;
 }) {
@@ -130,23 +133,25 @@ const PageView = memo(function PageView({
             );
           }
 
-          const isBlankLine =
-            line.segments.length === 0 ||
-            line.segments.every((seg) => seg.type === 'space');
+          if (line.kind === 'blank') {
+            const emptyCount = Math.max(1, cellsPerRow);
+            return (
+              <div key={lineIdx} className="brf-page-line brf-page-line--blank">
+                {Array.from({ length: emptyCount }, (_, cellIdx) => (
+                  <BrailleCell
+                    key={cellIdx}
+                    char={'\u2800'}
+                    showEmptyDots={true}
+                    variant="dots"
+                  />
+                ))}
+              </div>
+            );
+          }
 
           return (
-            <div
-              key={lineIdx}
-              className={`brf-page-line${isBlankLine ? ' brf-page-line--blank' : ''}`}
-            >
-              {line.segments.length === 0 ? (
-                <BrailleCell
-                  char={'\u2800'}
-                  showEmptyDots={showEmptyDots}
-                  variant={cellVariant}
-                />
-              ) : (
-              line.segments.map((seg, segIdx) => {
+            <div key={lineIdx} className="brf-page-line">
+              {line.segments.map((seg, segIdx) => {
                 if (seg.type === 'space') {
                   return seg.chars.map((char, charIdx) => (
                     <BrailleCell
@@ -179,7 +184,7 @@ const PageView = memo(function PageView({
                 ) : (
                   <Fragment key={`w${segIdx}`}>{wordCells}</Fragment>
                 );
-              }))}
+              })}
             </div>
           );
         })}
@@ -199,6 +204,7 @@ export const BraillePreviewPages = forwardRef<
     showEmptyDots,
     cellVariant,
     linesPerPage,
+    cellsPerRow,
     activeWordRange,
     onScrollPercentage,
     onActivePageChange,
@@ -380,6 +386,7 @@ export const BraillePreviewPages = forwardRef<
           cellVariant={cellVariant}
           brailleSize={brailleSize}
           inactiveDotSize={inactiveDotSize}
+          cellsPerRow={cellsPerRow}
           activeWordRange={activeWordRange}
           onHeight={onHeight}
         />

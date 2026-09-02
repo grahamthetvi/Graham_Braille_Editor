@@ -30,7 +30,18 @@ describe('formatBrfPages', () => {
     const lines = pages[0].split('\n');
     expect(lines).toHaveLength(2);
     expect(lines[0]).toBe(asciiToUnicodeBraille('hello'));
-    expect(lines[1]).toBe('\u2800'.repeat(40));
+    expect(lines[1]).toBe('');
+  });
+
+  it('hello, Enter, Enter, world keeps a blank braille row between the words', () => {
+    const unicode = asciiToUnicodeBraille('hello\n\nworld');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    const lines = pages[0].split('\n');
+    expect(lines).toEqual([
+      asciiToUnicodeBraille('hello'),
+      '',
+      asciiToUnicodeBraille('world'),
+    ]);
   });
 
   it('preserves mid-document blank lines', () => {
@@ -38,7 +49,7 @@ describe('formatBrfPages', () => {
     const pages = formatBrfPages(unicode, 40, 25, false);
     const lines = pages[0].split('\n');
     expect(lines).toHaveLength(3);
-    expect(lines[1]).toBe('\u2800'.repeat(40));
+    expect(lines[1]).toBe('');
   });
 
   it('does not add a trailing blank line when source has no trailing newline', () => {
