@@ -77,6 +77,7 @@ export const MusicBraillePreview = forwardRef<
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const suppressScrollReportRef = useRef(false);
   const lineHeight = useMemo(
     () => Math.max(16, brailleSize + brailleSize * 0.5),
     [brailleSize],
@@ -113,20 +114,24 @@ export const MusicBraillePreview = forwardRef<
         const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
         if (maxScroll <= 0) return;
         const target = percentage * maxScroll;
-        if (Math.abs(container.scrollTop - target) > 1) {
-          container.scrollTop = target;
-        }
+        if (Math.abs(container.scrollTop - target) <= 1) return;
+        suppressScrollReportRef.current = true;
+        container.scrollTop = target;
+        suppressScrollReportRef.current = false;
+        updateRange();
       },
     }),
-    [],
+    [updateRange],
   );
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-    if (maxScroll > 0) {
-      onScrollPercentage(Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll);
+    if (!suppressScrollReportRef.current) {
+      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+      if (maxScroll > 0) {
+        onScrollPercentage(Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll);
+      }
     }
     updateRange();
   }, [onScrollPercentage, updateRange]);

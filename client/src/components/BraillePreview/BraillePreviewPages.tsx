@@ -224,6 +224,7 @@ export const BraillePreviewPages = forwardRef<
   const [prevPages, setPrevPages] = useState(pages);
   const lastPageRef = useRef(1);
   const pageChangeRafRef = useRef<number | null>(null);
+  const suppressScrollReportRef = useRef(false);
 
   const models = useMemo(() => buildBrfPageModels(pages), [pages]);
 
@@ -318,9 +319,11 @@ export const BraillePreviewPages = forwardRef<
         const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
         if (maxScroll <= 0) return;
         const target = percentage * maxScroll;
-        if (Math.abs(container.scrollTop - target) > 1) {
-          container.scrollTop = target;
-        }
+        if (Math.abs(container.scrollTop - target) <= 1) return;
+        suppressScrollReportRef.current = true;
+        container.scrollTop = target;
+        suppressScrollReportRef.current = false;
+        updateWindowFromScroll();
       },
       scrollToPage: (pageIndex: number) => {
         const container = containerRef.current;
@@ -329,16 +332,18 @@ export const BraillePreviewPages = forwardRef<
         container.scrollTo({ top, behavior: 'smooth' });
       },
     }),
-    [fallbackH, pages.length],
+    [fallbackH, pages.length, updateWindowFromScroll],
   );
 
   const handleScroll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
-    if (maxScroll > 0) {
-      const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
-      onScrollPercentage(percentage);
+    if (!suppressScrollReportRef.current) {
+      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight);
+      if (maxScroll > 0) {
+        const percentage = Math.max(0, Math.min(container.scrollTop, maxScroll)) / maxScroll;
+        onScrollPercentage(percentage);
+      }
     }
     if (pageChangeRafRef.current != null) cancelAnimationFrame(pageChangeRafRef.current);
     pageChangeRafRef.current = requestAnimationFrame(() => {
