@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Importar arquivo",
-        "ariaLabel": "Importar arquivo de texto ou BRF",
-        "title": "Texto simples: traduz para braille. .brf: retrotraduz para texto (tabela selecionada) e mostra o BRF à direita. A retrotradução do Grau 2 é aproximada; tente novamente após o carregamento do liblouis, se necessário."
+        "ariaLabel": "Importar arquivo de texto, Word (.docx) ou BRF",
+        "title": "Texto simples: traduz para braille. .docx: converte o texto do Word neste navegador (o arquivo permanece no seu dispositivo) e depois traduz. .brf: retrotraduz para texto (tabela selecionada) e mostra o BRF à direita. A retrotradução do Grau 2 é aproximada; tente novamente após o carregamento do liblouis, se necessário. Arquivos .doc antigos não são compatíveis — salve primeiro como .docx no Word.",
+        "success": "Documento Word importado como texto do editor.",
+        "errors": {
+          "tooLarge": "Este arquivo Word é maior que {{limitMb}} MB, o limite de importação.",
+          "notDocx": "Este arquivo não é um documento Word .docx válido.",
+          "encrypted": "Este arquivo Word está protegido por senha. Remova a senha no Word, salve como .docx e importe novamente.",
+          "empty": "Este documento Word não tem texto legível para importar.",
+          "legacyDoc": "Arquivos .doc antigos não são compatíveis. No Word, escolha Arquivo → Salvar como → .docx e importe esse arquivo.",
+          "generic": "Não foi possível importar este arquivo Word."
+        }
       },
       "drafts": {
         "label": "Rascunhos",

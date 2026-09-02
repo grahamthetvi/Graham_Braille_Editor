@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Datei importieren",
-        "ariaLabel": "Text- oder BRF-Datei importieren",
-        "title": "Klartext: wird in Braille übersetzt. .brf: Rückübersetzung in Text (ausgewählte Tabelle) und Anzeige der BRF rechts. Die Rückübersetzung von Kurzschrift (Grade 2) ist ungefähr; bei Bedarf nach dem Laden von liblouis erneut versuchen."
+        "ariaLabel": "Text-, Word- (.docx) oder BRF-Datei importieren",
+        "title": "Klartext: wird in Braille übersetzt. .docx: Word-Text wird in diesem Browser umgewandelt (die Datei bleibt auf Ihrem Gerät) und dann übersetzt. .brf: Rückübersetzung in Text (ausgewählte Tabelle) und Anzeige der BRF rechts. Die Rückübersetzung von Kurzschrift (Grade 2) ist ungefähr; bei Bedarf nach dem Laden von liblouis erneut versuchen. Ältere .doc-Dateien werden nicht unterstützt — speichern Sie sie zuerst in Word als .docx.",
+        "success": "Word-Dokument als Editortext importiert.",
+        "errors": {
+          "tooLarge": "Diese Word-Datei ist größer als {{limitMb}} MB, das Importlimit.",
+          "notDocx": "Diese Datei ist kein gültiges Word-.docx-Dokument.",
+          "encrypted": "Diese Word-Datei ist passwortgeschützt. Entfernen Sie das Passwort in Word, speichern Sie als .docx und importieren Sie erneut.",
+          "empty": "Dieses Word-Dokument enthält keinen lesbaren Text zum Importieren.",
+          "legacyDoc": "Ältere .doc-Dateien werden nicht unterstützt. Wählen Sie in Word Datei → Speichern unter → .docx und importieren Sie dann diese Datei.",
+          "generic": "Diese Word-Datei konnte nicht importiert werden."
+        }
       },
       "drafts": {
         "label": "Entwürfe",

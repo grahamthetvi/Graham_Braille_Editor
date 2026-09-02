@@ -43,7 +43,7 @@ export default defineConfig({
   optimizeDeps: {
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
     // ONNX / TTS packages are large and load on demand for MP3 export.
-    exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng'],
+    exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng', 'mammoth'],
   },
   assetsInclude: ['**/*.wasm'],
   build: {

@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Import file",
-        "ariaLabel": "Import text or BRF file",
-        "title": "Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+        "ariaLabel": "Import text, Word (.docx), or BRF file",
+        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
+        "success": "Imported Word document as editor text.",
+        "errors": {
+          "tooLarge": "This Word file is larger than {{limitMb}} MB, which is the import limit.",
+          "notDocx": "This file is not a valid Word .docx document.",
+          "encrypted": "This Word file is password-protected. Remove the password in Word, save as .docx, and import again.",
+          "empty": "This Word document has no readable text to import.",
+          "legacyDoc": "Legacy .doc files are not supported. In Word, choose File → Save As → .docx, then import that file.",
+          "generic": "Could not import this Word file."
+        }
       },
       "drafts": {
         "label": "Drafts",
