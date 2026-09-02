@@ -11,7 +11,8 @@ export type BrfCellSegment = BrfSpaceSegment | BrfWordSegment;
 
 export type BrfLineModel =
   | { kind: 'jumbo'; sizePx: number; chars: string[] }
-  | { kind: 'cells'; segments: BrfCellSegment[] };
+  | { kind: 'cells'; segments: BrfCellSegment[] }
+  | { kind: 'blank' };
 
 export type BrfPageModel = {
   pageIndex: number;
@@ -32,8 +33,9 @@ export function buildBrfPageModels(pages: string[]): BrfPageModel[] {
         return { kind: 'jumbo', sizePx, chars: text.length ? Array.from(text) : [] };
       }
 
-      if (!line) {
-        return { kind: 'cells', segments: [{ type: 'space', chars: ['\u2800'] }] };
+      // Empty source line (Enter) or a line of only blank cells — keep a distinct row.
+      if (!line || /^[\s\u2800]+$/.test(line)) {
+        return { kind: 'blank' };
       }
 
       const tokens = line.split(/([\s\u2800]+)/);

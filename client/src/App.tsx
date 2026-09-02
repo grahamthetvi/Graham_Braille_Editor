@@ -2106,6 +2106,7 @@ export default function App() {
                   showEmptyDots={showEmptyDots}
                   cellVariant={brailleCellVariant}
                   linesPerPage={pageSettings.linesPerPage}
+                  cellsPerRow={pageSettings.cellsPerRow}
                   activeWordRange={activeBrfWordRange}
                   onScrollPercentage={handlePreviewScrollPercentage}
                   onActivePageChange={handleActivePageChange}
