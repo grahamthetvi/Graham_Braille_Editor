@@ -16,7 +16,7 @@ export type BbzImportErrorCode = 'too-large' | 'not-bbz' | 'invalid-bbx' | 'empt
 export class BbzImportError extends Error {
   readonly code: BbzImportErrorCode;
 
-  constructor(code: BbzImportErrorCode, message = code) {
+  constructor(code: BbzImportErrorCode, message: string = code) {
     super(message);
     this.name = 'BbzImportError';
     this.code = code;
