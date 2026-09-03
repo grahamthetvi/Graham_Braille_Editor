@@ -568,7 +568,7 @@
       },
       "music": {
         "heading": "Music Braille",
-        "body": "Graham does not yet convert sheet music into Music Braille automatically. For Music Braille, open Music Player Mode under Teaching Tools or Music Braille Guide under Help & Support. We recommend creating or exporting MusicXML in MuseScore, converting it with Sao Mai Braille (SMB desktop or online), then optionally importing the .brf here to preview or emboss. You can also Add to translation page so the instructions themselves can be embossed as braille."
+        "body": "Graham does not yet convert sheet music into Music Braille automatically. For Music Braille, turn on Music Player Mode under Teaching Tools before you paste or import a Music BRF, or open Music Braille Guide under Help & Support. We recommend creating or exporting MusicXML in MuseScore, converting it with Sao Mai Braille (SMB desktop or online), then importing the .brf here with Music Player Mode on to preview or emboss. You can also Add to translation page so the instructions themselves can be embossed as braille."
       },
       "graphics": {
         "heading": "Tactile Graphics & 3D Printing",

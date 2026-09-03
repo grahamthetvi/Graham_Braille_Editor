@@ -101,7 +101,8 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text or .docx (translate) or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
- *     Music Braille playback requires toggling Music Player Mode; import/paste does not auto-enable it.
+ *     .brf import back-translates as literary unless Music Player Mode is already on.
+ *     Import/paste does not auto-enable Music mode.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille

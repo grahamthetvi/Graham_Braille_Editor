@@ -1,6 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as monaco from 'monaco-editor';
 import { SixKeyChordTracker, UNICODE_BRAILLE_BLANK, sixKeyEventToDot } from '../utils/sixKeyBraille';
+import { lineFromProgress, progressFromLine } from '../utils/scrollProgress';
 
 interface EditorProps {
   onTextChange: (text: string) => void;
@@ -42,6 +43,40 @@ export interface EditorHandle {
   setCursorOffset: (offset: number) => void;
   /** Focus the Monaco editor. */
   focus: () => void;
+}
+
+function editorLineProgress(editor: monaco.editor.IStandaloneCodeEditor): number {
+  const model = editor.getModel();
+  if (!model) return 0;
+  const lineCount = model.getLineCount();
+  const scrollTop = editor.getScrollTop();
+  let lo = 1;
+  let hi = lineCount;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi + 1) / 2);
+    if (editor.getTopForLineNumber(mid) <= scrollTop + 0.5) lo = mid;
+    else hi = mid - 1;
+  }
+  const top = editor.getTopForLineNumber(lo);
+  const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+  const next = lo < lineCount ? editor.getTopForLineNumber(lo + 1) : top + lineHeight;
+  const frac = next > top ? Math.max(0, Math.min(1, (scrollTop - top) / (next - top))) : 0;
+  return progressFromLine(lo - 1, frac, lineCount);
+}
+
+function setEditorLineProgress(editor: monaco.editor.IStandaloneCodeEditor, percentage: number): void {
+  const model = editor.getModel();
+  if (!model) return;
+  const lineCount = model.getLineCount();
+  const { lineIndex0, frac } = lineFromProgress(percentage, lineCount);
+  const line = lineIndex0 + 1;
+  const top = editor.getTopForLineNumber(line);
+  const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+  const next = line < lineCount ? editor.getTopForLineNumber(line + 1) : top + lineHeight;
+  const target = top + (next - top) * frac;
+  if (Math.abs(editor.getScrollTop() - target) > 1) {
+    editor.setScrollTop(target);
+  }
 }
 
 /**
@@ -186,14 +221,8 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     setScrollPercentage: (percentage: number) => {
       const editor = editorRef.current;
       if (!editor) return;
-      const scrollHeight = editor.getContentHeight();
-      const clientHeight = editor.getLayoutInfo().height;
-      const maxScroll = Math.max(0, scrollHeight - clientHeight);
-      if (maxScroll <= 0) return;
-      const targetTop = Math.max(0, Math.min(1, percentage)) * maxScroll;
-      if (Math.abs(editor.getScrollTop() - targetTop) <= 1) return;
       suppressScrollReportRef.current = true;
-      editor.setScrollTop(targetTop);
+      setEditorLineProgress(editor, percentage);
       suppressScrollReportRef.current = false;
     },
     setCursorOffset: (offset: number) => {
@@ -252,17 +281,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       if (!editor || !onScroll) return;
       if (suppressScrollReportRef.current) return;
       if (!e.scrollTopChanged) return;
-
-      const scrollHeight = editor.getContentHeight();
-      const clientHeight = editor.getLayoutInfo().height;
-      const maxScroll = Math.max(0, scrollHeight - clientHeight);
-
-      if (maxScroll > 0) {
-        const clampedTop = Math.max(0, Math.min(e.scrollTop, maxScroll));
-        onScroll(clampedTop / maxScroll);
-      } else {
-        onScroll(0);
-      }
+      onScroll(editorLineProgress(editor));
     });
 
     editorRef.current.onDidChangeModelContent((e) => {
@@ -472,19 +491,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || scrollPercentage === undefined) return;
-
-    const scrollHeight = editor.getContentHeight();
-    const clientHeight = editor.getLayoutInfo().height;
-    const maxScroll = Math.max(0, scrollHeight - clientHeight);
-
-    if (maxScroll > 0) {
-      const targetTop = scrollPercentage * maxScroll;
-      if (Math.abs(editor.getScrollTop() - targetTop) > 1) {
-        suppressScrollReportRef.current = true;
-        editor.setScrollTop(targetTop);
-        suppressScrollReportRef.current = false;
-      }
-    }
+    suppressScrollReportRef.current = true;
+    setEditorLineProgress(editor, scrollPercentage);
+    suppressScrollReportRef.current = false;
   }, [scrollPercentage]);
 
   return (

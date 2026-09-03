@@ -2,8 +2,9 @@
  * Unified BRF intake: normalize → classify → route decisions for import,
  * paste, and session restore.
  *
- * Music mode is not inferred here — the user must toggle Music Player Mode.
- * Saved sessions may still restore as music-brf via explicit session flags.
+ * Music Player Mode is an explicit user choice (toolbar toggle, session restore
+ * of a session saved in that mode, or importing while Music mode is already on).
+ * Content is never classified as music by heuristic.
  */
 
 import { isPredominantlyUnicodeBraille } from './braille';
@@ -28,6 +29,7 @@ export const normalizeBrfBuffer = normalizeImportedBrf;
 
 /**
  * Classify raw editor/file content before liblouis.
+ * Returns `literary-brf` for .brf files and Unicode braille, otherwise `plain`.
  * Never returns `music-brf` — music is entered only via the Music mode toggle
  * (or restoring a session already saved as music).
  */
@@ -43,14 +45,4 @@ export function classifyBrfContent(
     return { kind: 'literary-brf', normalized };
   }
   return { kind: 'plain', normalized };
-}
-
-/**
- * @deprecated Music mode is not auto-routed on paste/import.
- * Always returns false; the user must toggle Music Player Mode.
- */
-export function shouldAutoRouteMusicOnTextChange(prev: string, next: string): boolean {
-  void prev;
-  void next;
-  return false;
 }

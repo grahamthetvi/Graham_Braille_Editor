@@ -9,7 +9,7 @@ interface MusicBrailleGuideModalProps {
 export const MUSIC_BRAILLE_GUIDE_TEXT = `Music Braille Recommendation
 Graham Braille Editor
 
-Graham Braille Editor translates literary text and math into braille. For Music Braille playback, turn on **Music Player Mode** under Teaching Tools, then type or import Music Braille (BRF). Importing or pasting does **not** switch into Music mode automatically — you must toggle it yourself. Music Braille is never back-translated through liblouis. The built-in player highlights each cell as it sounds. Use **Next note** / **Prev note** to step one event at a time; each step plays the pitch and announces the note name and duration (for example, "C 4, quarter note").
+Graham Braille Editor translates literary text and math into braille. For Music Braille playback, turn on **Music Player Mode** under Teaching Tools, then type or import Music Braille (BRF). Music mode does not turn on by itself — you choose it. While Music mode is on, Music Braille is never back-translated through liblouis. The built-in player highlights each cell as it sounds. Use **Next note** / **Prev note** to step one event at a time; each step plays the pitch and announces the note name and duration (for example, "C 4, quarter note").
 
 To create Music Braille from sheet music, we recommend this free workflow:
 
@@ -40,7 +40,7 @@ Online (no install; works on many platforms):
 4. Translate, then download the BRF.
 
 C. Emboss or review in Graham (optional)
-1. In Graham Braille Editor, turn on **Music Player Mode** under Teaching Tools, then use Import file and choose the .brf.
+1. In Graham Braille Editor, turn on **Music Player Mode** under Teaching Tools, then Import file and choose the .brf.
 2. Preview on the right, then Print or emboss as usual.
 
 Tips
