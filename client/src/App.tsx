@@ -76,7 +76,7 @@ import {
   normalizeBrfBuffer,
   type ContentKind,
 } from './utils/brfIntake';
-import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable } from './utils/tableRegistry';
+import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable, getGrade2TableFor } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
@@ -517,15 +517,24 @@ export default function App() {
       if (literarySourceModeRef.current === 'brailleEditing') return false;
       if (!isPredominantlyUnicodeBraille(text)) return false;
 
-      const { normalized } = classifyBrfContent(text);
+      const { normalized, isContracted, cleaned } = classifyBrfContent(text);
+      let targetTable = selectedTable;
+      if (isContracted) {
+        const g2 = getGrade2TableFor(selectedTable);
+        if (g2 && g2 !== selectedTable) {
+          targetTable = g2;
+          setSelectedTable(g2);
+        }
+      }
+      const candidateBrf = cleaned || normalized;
 
       const gen = ++unicodeBackTranslateGenRef.current;
-      void backTranslateBrf(normalized, selectedTable)
+      void backTranslateBrf(candidateBrf, targetTable)
         .then(({ plainText, brf }) => {
           if (gen !== unicodeBackTranslateGenRef.current) return;
           // Keep the Unicode source if liblouis returned nothing useful.
-          if (!plainText.trim() && normalized.trim()) return;
-          applyBackTranslatedPlain(plainText, brf || normalized);
+          if (!plainText.trim() && candidateBrf.trim()) return;
+          applyBackTranslatedPlain(plainText, brf || candidateBrf);
         })
         .catch((err: unknown) => {
           console.error('[unicode auto back-translate]', err);
@@ -552,7 +561,20 @@ export default function App() {
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
     if (isMusicBrailleMode) return;
-    if (literarySourceMode === 'importedLocked' || literarySourceMode === 'brailleEditing') return;
+    if (literarySourceMode === 'importedLocked') {
+      const sourceBrf = importedBrailleRef.current;
+      if (sourceBrf && sourceBrf.trim()) {
+        void backTranslateBrf(sourceBrf, selectedTable)
+          .then(({ plainText, brf }) => {
+            applyBackTranslatedPlain(plainText, brf || sourceBrf);
+          })
+          .catch((err: unknown) => {
+            console.error('[re-back-translate on table change]', err);
+          });
+      }
+      return;
+    }
+    if (literarySourceMode === 'brailleEditing') return;
     const text = inputTextRef.current;
     if (!text.trim()) return;
     if (isPredominantlyUnicodeBraille(text)) {
@@ -560,7 +582,7 @@ export default function App() {
       return;
     }
     translate(text, selectedTable, mathCode);
-  }, [selectedTable, mathCode, translate, isMusicBrailleMode, literarySourceMode, tryAutoBackTranslateUnicode]);
+  }, [selectedTable, mathCode, translate, isMusicBrailleMode, literarySourceMode, tryAutoBackTranslateUnicode, backTranslateBrf, applyBackTranslatedPlain]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -615,7 +637,7 @@ export default function App() {
         return;
       }
 
-      const { kind, normalized } = classifyBrfContent(text);
+      const { kind, normalized, isContracted, cleaned } = classifyBrfContent(text);
 
       setIsMusicBrailleMode(false);
       setLiterarySourceMode('none');
@@ -624,9 +646,18 @@ export default function App() {
       if (!text.trim()) return;
 
       if (kind === 'literary-brf') {
-        void backTranslateBrf(normalized, selectedTable)
+        let targetTable = selectedTable;
+        if (isContracted) {
+          const g2 = getGrade2TableFor(selectedTable);
+          if (g2 && g2 !== selectedTable) {
+            targetTable = g2;
+            setSelectedTable(g2);
+          }
+        }
+        const candidateBrf = cleaned || normalized;
+        void backTranslateBrf(candidateBrf, targetTable)
           .then(({ plainText, brf }) => {
-            applyBackTranslatedPlain(plainText, brf || normalized);
+            applyBackTranslatedPlain(plainText, brf || candidateBrf);
           })
           .catch((err: unknown) => {
             console.error('[session restore brf]', err);
@@ -665,21 +696,30 @@ export default function App() {
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
       if (isBrf) {
-        const { normalized } = classifyBrfContent(raw, { isBrfFile: true });
+        const { normalized, isContracted, cleaned } = classifyBrfContent(raw, { isBrfFile: true });
         // Music only if the user already opted into Music mode.
         if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
           return;
         }
-        void backTranslateBrf(normalized, selectedTable)
+        let targetTable = selectedTable;
+        if (isContracted) {
+          const g2 = getGrade2TableFor(selectedTable);
+          if (g2 && g2 !== selectedTable) {
+            targetTable = g2;
+            setSelectedTable(g2);
+          }
+        }
+        const candidateBrf = cleaned || normalized;
+        void backTranslateBrf(candidateBrf, targetTable)
           .then(({ plainText, brf }) => {
-            applyBackTranslatedPlain(plainText, brf || normalized);
+            applyBackTranslatedPlain(plainText, brf || candidateBrf);
           })
           .catch((err: unknown) => {
             console.error('[brf import]', err);
           });
       } else {
-        const { kind, normalized } = classifyBrfContent(raw);
+        const { kind, normalized, isContracted, cleaned } = classifyBrfContent(raw);
         if (isMusicBrailleModeRef.current) {
           applyMusicBrfToEditor(normalized);
           return;
@@ -689,9 +729,18 @@ export default function App() {
         setInputText(raw);
         setFileContent(raw);
         if (kind === 'literary-brf') {
-          void backTranslateBrf(normalized, selectedTable)
+          let targetTable = selectedTable;
+          if (isContracted) {
+            const g2 = getGrade2TableFor(selectedTable);
+            if (g2 && g2 !== selectedTable) {
+              targetTable = g2;
+              setSelectedTable(g2);
+            }
+          }
+          const candidateBrf = cleaned || normalized;
+          void backTranslateBrf(candidateBrf, targetTable)
             .then(({ plainText, brf }) => {
-              applyBackTranslatedPlain(plainText, brf || normalized);
+              applyBackTranslatedPlain(plainText, brf || candidateBrf);
             })
             .catch((err: unknown) => {
               console.error('[file import brf]', err);

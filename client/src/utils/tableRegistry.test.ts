@@ -12,6 +12,8 @@ import {
   TABLE_RENAMES,
   migrateTableFilename,
   isKnownTable,
+  isGrade2Table,
+  getGrade2TableFor,
 } from './tableRegistry';
 import { UI_LOCALES } from '../i18n/locales';
 
@@ -58,5 +60,34 @@ describe('tableRegistry', () => {
   it('has a substantial literary/computer coverage', () => {
     expect(ALL_TABLES.length).toBeGreaterThanOrEqual(150);
     expect(TABLE_GROUPS.length).toBeGreaterThanOrEqual(10);
+  });
+
+  describe('isGrade2Table', () => {
+    it('identifies Grade 2 and Grade 3 tables', () => {
+      expect(isGrade2Table('en-ueb-g2.ctb')).toBe(true);
+      expect(isGrade2Table('en-us-g2.ctb')).toBe(true);
+      expect(isGrade2Table('en-g3.ctb')).toBe(true);
+      expect(isGrade2Table('es-g2.ctb')).toBe(true);
+      expect(isGrade2Table('en-ueb-g1.ctb')).toBe(false);
+      expect(isGrade2Table('de-g0.utb')).toBe(false);
+    });
+  });
+
+  describe('getGrade2TableFor', () => {
+    it('resolves Grade 2 counterparts for common Grade 1 tables', () => {
+      expect(getGrade2TableFor('en-ueb-g1.ctb')).toBe('en-ueb-g2.ctb');
+      expect(getGrade2TableFor('en-us-g1.ctb')).toBe('en-us-g2.ctb');
+      expect(getGrade2TableFor('es-g1.ctb')).toBe('es-g2.ctb');
+      expect(getGrade2TableFor('en-gb-g1.utb')).toBe('en-GB-g2.ctb');
+    });
+
+    it('keeps existing Grade 2 tables', () => {
+      expect(getGrade2TableFor('en-ueb-g2.ctb')).toBe('en-ueb-g2.ctb');
+      expect(getGrade2TableFor('en-us-g2.ctb')).toBe('en-us-g2.ctb');
+    });
+
+    it('falls back to en-ueb-g2.ctb for unknown or unmapped tables', () => {
+      expect(getGrade2TableFor('nemeth.ctb')).toBe('en-ueb-g2.ctb');
+    });
   });
 });
