@@ -16,16 +16,22 @@
     "file": {
       "import": {
         "label": "Import file",
-        "ariaLabel": "Import text, Word (.docx), or BRF file",
-        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
+        "ariaLabel": "Import text, Word (.docx), BrailleBlaster (.bbz), or BRF file",
+        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. .bbz: extract editable text from a BrailleBlaster archive (v3.x), then translate — formatting and graphics are not preserved. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
         "success": "Imported Word document as editor text.",
+        "bbzSuccess": "Imported BrailleBlaster document as editor text.",
         "errors": {
           "tooLarge": "This Word file is larger than {{limitMb}} MB, which is the import limit.",
           "notDocx": "This file is not a valid Word .docx document.",
           "encrypted": "This Word file is password-protected. Remove the password in Word, save as .docx, and import again.",
           "empty": "This Word document has no readable text to import.",
           "legacyDoc": "Legacy .doc files are not supported. In Word, choose File → Save As → .docx, then import that file.",
-          "generic": "Could not import this Word file."
+          "generic": "Could not import this Word file.",
+          "bbzTooLarge": "This BrailleBlaster file is larger than {{limitMb}} MB, which is the import limit.",
+          "notBbz": "This file is not a valid BrailleBlaster .bbz archive (missing bbx_location or BBX document).",
+          "invalidBbx": "This BrailleBlaster archive contains an unreadable BBX document.",
+          "bbzEmpty": "This BrailleBlaster document has no readable text to import.",
+          "bbzGeneric": "Could not import this BrailleBlaster file."
         }
       },
       "drafts": {

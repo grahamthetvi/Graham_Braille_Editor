@@ -84,6 +84,12 @@ import {
   isDocxFile,
   isLegacyDocFile,
 } from './utils/docxImport';
+import {
+  BBZ_MAX_BYTES,
+  BbzImportError,
+  importBbzToEditorText,
+  isBbzFile,
+} from './utils/bbzImport';
 import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
@@ -99,7 +105,7 @@ import './App.css';
  *   • Worker translates in chunks for large documents, streaming PROGRESS events.
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
- *   • Import file loads plain text or .docx (translate) or .brf (back-translate + BRF preview).
+ *   • Import file loads plain text, .docx (translate), .bbz (BrailleBlaster archive → text), or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
  *     .brf import back-translates as literary unless Music Player Mode is already on.
  *     Import/paste does not auto-enable Music mode.
@@ -526,6 +532,26 @@ export default function App() {
     [t],
   );
 
+  const messageForBbzImportError = useCallback(
+    (err: unknown): string => {
+      const limitMb = Math.round(BBZ_MAX_BYTES / (1024 * 1024));
+      if (err instanceof BbzImportError) {
+        switch (err.code) {
+          case 'too-large':
+            return t('app.file.import.errors.bbzTooLarge', { limitMb });
+          case 'not-bbz':
+            return t('app.file.import.errors.notBbz');
+          case 'invalid-bbx':
+            return t('app.file.import.errors.invalidBbx');
+          case 'empty':
+            return t('app.file.import.errors.bbzEmpty');
+        }
+      }
+      return t('app.file.import.errors.bbzGeneric');
+    },
+    [t],
+  );
+
   const applyMusicBrfToEditor = useCallback((asciiBrf: string) => {
     setIsMusicBrailleMode(true);
     setLiterarySourceMode('none');
@@ -754,6 +780,33 @@ export default function App() {
         } catch (err) {
           console.error('[docx import]', err);
           const msg = messageForDocxImportError(err);
+          setImportError(msg);
+          announceStatus(msg);
+        }
+      })();
+      return;
+    }
+
+    if (isBbzFile(file)) {
+      void (async () => {
+        try {
+          if (file.size > BBZ_MAX_BYTES) {
+            throw new BbzImportError('too-large');
+          }
+          const buffer = await file.arrayBuffer();
+          const { text } = await importBbzToEditorText(buffer);
+          setLiterarySourceMode('none');
+          importedBrailleRef.current = '';
+          setShowBackTranslatedEditModal(false);
+          setIsMusicBrailleMode(false);
+          setInputText(text);
+          setFileContent(text);
+          setImportError(null);
+          announceStatus(t('app.file.import.bbzSuccess'));
+          translate(text, selectedTable, mathCode);
+        } catch (err) {
+          console.error('[bbz import]', err);
+          const msg = messageForBbzImportError(err);
           setImportError(msg);
           announceStatus(msg);
         }
@@ -1280,7 +1333,7 @@ export default function App() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.text,.md,.rst,.adoc,.brf,.docx,.doc,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
+                  accept=".txt,.text,.md,.rst,.adoc,.brf,.bbz,.docx,.doc,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/zip"
                   aria-hidden="true"
                   tabIndex={-1}
                   style={{ display: 'none' }}
