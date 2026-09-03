@@ -596,20 +596,43 @@ function cleanNemethBackTranslation(text: string): string {
 }
 
 /**
+ * Resolves a table for back-translating standard North American Braille ASCII (BRF).
+ * Prepending `en-us-brf.dis` ensures that standard 6-dot Braille ASCII (0x20..0x5F,
+ * including uppercase A-Z, [, \, ], @) is decoded without 8-dot computer braille (dot 7)
+ * artifacts such as `\124567/`, `\2467/`, `\12567/`, and broken contractions.
+ */
+function resolveBackTranslateTable(table: string): string {
+  if (table.includes('.dis')) return table;
+  return `en-us-brf.dis,${table}`;
+}
+
+/**
  * Back-translates ASCII BRF line-by-line so newlines match the source file.
  * Grade 2 / contractions are not guaranteed to round-trip to the original prose.
  */
 function backTranslateTextPreservingNewlines(brf: string, table: string): string {
   if (!brf) return '';
+  if (brf.includes('\f')) {
+    return brf
+      .split('\f')
+      .map(seg => backTranslateTextPreservingNewlines(seg, table))
+      .join('\f');
+  }
+  const resolvedTable = resolveBackTranslateTable(table);
   const lines = brf.split('\n');
   return lines.map(line => {
     if (!line) return '';
     const hasCR = line.endsWith('\r');
     const cleanLine = hasCR ? line.slice(0, -1) : line;
     if (!cleanLine) return hasCR ? '\r' : '';
-    let plain = liblouis!.backTranslateString(table, cleanLine) || '';
+    let plain = liblouis!.backTranslateString(resolvedTable, cleanLine) || '';
     if (table === NEMETH_BACK_TRANSLATE_TABLE) {
       plain = cleanNemethBackTranslation(plain);
+    } else {
+      // In UEB, dots 2-3-6 (`8`) followed by space is an open quote followed by a space,
+      // but liblouis's legacy fallback translates standalone 2-3-6 as `his`.
+      // If a line starts with `his ` and ends with `"`, restore the opening quote.
+      plain = plain.replace(/^(\s*)his\s+(.*?"\s*)$/i, '$1"$2');
     }
     return hasCR ? plain + '\r' : plain;
   }).join('\n');
