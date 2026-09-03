@@ -204,15 +204,20 @@ export function WebUsbDebugPanel() {
             <section className="usb-debug__section">
               <h3>Access Denied on ChromeOS</h3>
               <p className="usb-debug__help">
-                The ViewPlus Max is a USB printer. ChromeOS grabs it after the first
-                {' '}<code>close()</code>, so later <code>open()</code> calls fail even though Request still works.
-                Graham now keeps the USB port open after a successful grab.
+                The ViewPlus Max is a USB printer (class 7/1/2). ChromeOS can claim it
+                even when <strong>no printer is saved</strong> — printscanmgr / the USB
+                printer detector probes IEEE-1284 ID and keeps the handle. After the first
+                {' '}<code>close()</code>, later <code>open()</code> calls fail even though
+                Request still works. Graham keeps the USB port open after a successful grab.
               </p>
               <p className="usb-debug__help">
-                Recover: leave this tab open → unplug the Max → remove it under
-                {' '}<strong>Settings → Print → Printers</strong> while unplugged → plug it back in.
-                Grab-on-connect will retry <code>open()</code> for about two seconds to beat ChromeOS.
-                After it works, do not unplug and do not close this tab.
+                Recover: leave this tab focused → unplug the Max for 10+ seconds → check
+                {' '}<strong>chrome://os-settings/cupsPrinters</strong> (not only Settings →
+                Print → Printers) for hidden automatic/discovered printers and remove them
+                while unplugged → plug back in with Graham already open. Wait until Held/Opened
+                is yes <em>before</em> Print. Grab-on-connect retries <code>open()</code> for
+                about three seconds to beat ChromeOS. After it works, do not unplug and do not
+                close this tab.
               </p>
             </section>
           )}

@@ -161,7 +161,7 @@ export interface UsbHardwareBus {
     getDevices(): Promise<UsbHardwareDevice[]>;
     addEventListener?(
         type: 'connect' | 'disconnect',
-        listener: (event: UsbConnectionEventLike) => void,
+        listener: (event: UsbConnectionEventLike) => void | Promise<void>,
     ): void;
     removeEventListener?(
         type: 'connect' | 'disconnect',
@@ -195,15 +195,62 @@ const USB_CLASS_LABELS: Record<number, string> = {
 export const VIEWPLUS_VENDOR_ID = 0x12f2;
 
 export const USB_ACCESS_DENIED_HELP =
-    'USB Access Denied: ChromeOS claimed this USB printer (the ViewPlus Max is printer-class). Probe and Forget cannot steal it back once ChromeOS has the port. Keep this Graham tab open. Unplug the embosser, remove it under Settings → Print → Printers while it is unplugged, then plug it back in. Graham grabs the USB port on connect and keeps it open so ChromeOS cannot reclaim it. After a successful print, do not unplug and do not close this tab.';
+    'USB Access Denied: ChromeOS claimed this USB printer (the ViewPlus Max is printer-class 7/1/2). ChromeOS can own the port even when Settings → Print → Printers shows nothing saved — printscanmgr / the USB printer detector probes IEEE-1284 ID and keeps the handle. Probe and Forget cannot steal it back. Keep this Graham tab focused. Unplug the Max for 10+ seconds, check chrome://os-settings/cupsPrinters for hidden automatic or discovered printers and remove them while unplugged, then plug back in with this tab already open and wait until Debug shows Held/Opened before Print. After it works, do not unplug and do not close this tab.';
 
 export const USB_ATTEMPT_EVENT = 'graham-usb-attempt';
 export const USB_SESSION_EVENT = 'graham-usb-session';
 
-const OPEN_RETRY_TRIES = 25;
-const OPEN_RETRY_MS = 80;
+/** Print / authorized open budget (~2s). ChromeOS 1284 probes often outlast a weaker retry. */
+export const USB_OPEN_RETRY_TRIES = 25;
+export const USB_OPEN_RETRY_MS = 80;
+/** Plug-in / visibility grab budget (~3.2s) to beat printscanmgr claiming class-7. */
+export const USB_CONNECT_RETRY_TRIES = 40;
 
 let lastAttempt: UsbAttemptLog | null = null;
+let testBusOverride: UsbHardwareBus | null | undefined;
+let retryTriesOverride: number | undefined;
+let retryDelayMsOverride: number | undefined;
+let visibilityListenerAttached = false;
+
+function openRetryTries(): number {
+    return retryTriesOverride ?? USB_OPEN_RETRY_TRIES;
+}
+
+function openRetryDelayMs(): number {
+    return retryDelayMsOverride ?? USB_OPEN_RETRY_MS;
+}
+
+function connectRetryTries(): number {
+    return retryTriesOverride ?? USB_CONNECT_RETRY_TRIES;
+}
+
+/** Test-only: inject a fake `navigator.usb`. Pass `null` to simulate no WebUSB. */
+export function setUsbHardwareBusForTests(bus: UsbHardwareBus | null | undefined): void {
+    testBusOverride = bus;
+}
+
+/** Test-only: shorten or lengthen open retries without waiting on real timers. */
+export function setUsbOpenRetryForTests(opts: { tries?: number; delayMs?: number } | null): void {
+    if (!opts) {
+        retryTriesOverride = undefined;
+        retryDelayMsOverride = undefined;
+        return;
+    }
+    if (opts.tries != null) retryTriesOverride = opts.tries;
+    if (opts.delayMs != null) retryDelayMsOverride = opts.delayMs;
+}
+
+/** Test-only: drop the held session, listeners flag, and bus override. */
+export function resetUsbClientForTests(): void {
+    held = null;
+    holderStarted = false;
+    usbListenersAttached = false;
+    visibilityListenerAttached = false;
+    lastAttempt = null;
+    testBusOverride = undefined;
+    retryTriesOverride = undefined;
+    retryDelayMsOverride = undefined;
+}
 
 export function getLastUsbAttempt(): UsbAttemptLog | null {
     return lastAttempt;
@@ -382,9 +429,21 @@ function pushStep(steps: UsbAttemptStep[], name: string, ok: boolean, detail?: s
 }
 
 function usbBus(): UsbHardwareBus | null {
+    if (testBusOverride !== undefined) return testBusOverride;
     if (typeof navigator === 'undefined') return null;
     const usb = (navigator as Navigator & { usb?: UsbHardwareBus }).usb;
     return usb ?? null;
+}
+
+function chromeOsClass7OpenHint(tries: number, authorizedCount: number | null): string {
+    const seconds = ((tries * openRetryDelayMs()) / 1000).toFixed(tries * openRetryDelayMs() % 1000 === 0 ? 0 : 1);
+    const devices =
+        authorizedCount == null
+            ? ''
+            : authorizedCount === 0
+              ? ' getDevices() was empty (Forget or no site permission yet).'
+              : ` getDevices() had ${authorizedCount} authorized device(s).`;
+    return `Access Denied after ${tries} open tries (~${seconds}s).${devices} ChromeOS owns USB printer class 7 even with no saved printer.`;
 }
 
 function notifyUsbSession(): void {
@@ -401,6 +460,7 @@ interface HeldUsbSession {
 
 let held: HeldUsbSession | null = null;
 let holderStarted = false;
+let usbListenersAttached = false;
 
 export function getUsbSessionSnapshot(): UsbSessionSnapshot {
     return {
@@ -449,7 +509,8 @@ async function requestUsbDevice(): Promise<UsbHardwareDevice> {
 async function openUsbDevice(
     device: UsbHardwareDevice,
     steps: UsbAttemptStep[],
-    tries = OPEN_RETRY_TRIES,
+    tries = openRetryTries(),
+    authorizedCount: number | null = null,
 ): Promise<void> {
     if (device.opened) {
         pushStep(steps, 'open', true, 'already open');
@@ -460,6 +521,7 @@ async function openUsbDevice(
     for (let i = 0; i < attempts; i++) {
         try {
             await device.open();
+            // Never close() after a failed open — ChromeOS would keep the class-7 fd.
             pushStep(steps, 'open', true, i === 0 ? undefined : `won race on retry ${i + 1}`);
             return;
         } catch (err) {
@@ -468,10 +530,11 @@ async function openUsbDevice(
                 pushStep(steps, 'open', false, errorMessageOf(err));
                 throw wrapWebUsbError(err);
             }
-            if (i < attempts - 1) await sleep(OPEN_RETRY_MS);
+            if (i < attempts - 1) await sleep(openRetryDelayMs());
         }
     }
-    pushStep(steps, 'open', false, errorMessageOf(lastErr));
+    // Failed open: do not call close(). The device was never ours.
+    pushStep(steps, 'open', false, `${errorMessageOf(lastErr)}. ${chromeOsClass7OpenHint(attempts, authorizedCount)}`);
     throw wrapWebUsbError(lastErr);
 }
 
@@ -498,9 +561,10 @@ function isAlreadyClaimedError(err: unknown): boolean {
 async function prepareHeldDevice(
     device: UsbHardwareDevice,
     steps: UsbAttemptStep[],
-    tries = OPEN_RETRY_TRIES,
+    tries = openRetryTries(),
+    authorizedCount: number | null = null,
 ): Promise<HeldUsbSession> {
-    await openUsbDevice(device, steps, tries);
+    await openUsbDevice(device, steps, tries, authorizedCount);
     held = { device, target: findBulkOutEndpoint(device), claimed: false };
     notifyUsbSession();
 
@@ -530,6 +594,29 @@ async function prepareHeldDevice(
     return held;
 }
 
+async function tryOpenCandidates(
+    candidates: UsbHardwareDevice[],
+    steps: UsbAttemptStep[],
+    tries: number,
+    authorizedCount: number,
+    detailSuffix = '',
+): Promise<UsbHardwareDevice | undefined> {
+    let lastErr: unknown;
+    for (const candidate of candidates) {
+        const id = `${toUsbHexId(candidate.vendorId)}:${toUsbHexId(candidate.productId)}`;
+        pushStep(steps, 'authorized', true, detailSuffix ? `${id}${detailSuffix}` : id);
+        try {
+            await prepareHeldDevice(candidate, steps, tries, authorizedCount);
+            return candidate;
+        } catch (err) {
+            lastErr = err;
+            pushStep(steps, 'authorizedOpen', false, errorMessageOf(err));
+        }
+    }
+    if (lastErr) throw lastErr;
+    return undefined;
+}
+
 async function acquireDevice(steps: UsbAttemptStep[], prompt: boolean): Promise<UsbHardwareDevice> {
     if (heldIsUsable()) {
         const summary = summarizeUsbDevice(held!.device);
@@ -542,23 +629,28 @@ async function acquireDevice(steps: UsbAttemptStep[], prompt: boolean): Promise<
         throw new WebUsbPrintError('unsupported', 'WebUSB is not supported in this browser.');
     }
 
+    const tries = openRetryTries();
     const authorized = await usb.getDevices();
+    pushStep(
+        steps,
+        'getDevices',
+        authorized.length > 0,
+        authorized.length === 0
+            ? 'empty — picker needed; ChromeOS may still own class-7 with no saved printer'
+            : `${authorized.length} authorized`,
+    );
+
     const preferred = selectPreferredUsbDevice(authorized);
     const candidates = preferred
         ? [preferred, ...authorized.filter((d) => d !== preferred)]
         : authorized;
 
     let lastErr: unknown;
-    for (const candidate of candidates) {
-        const id = `${toUsbHexId(candidate.vendorId)}:${toUsbHexId(candidate.productId)}`;
-        pushStep(steps, 'authorized', true, id);
-        try {
-            await prepareHeldDevice(candidate, steps, prompt ? 8 : OPEN_RETRY_TRIES);
-            return candidate;
-        } catch (err) {
-            lastErr = err;
-            pushStep(steps, 'authorizedOpen', false, errorMessageOf(err));
-        }
+    try {
+        const opened = await tryOpenCandidates(candidates, steps, tries, authorized.length);
+        if (opened) return opened;
+    } catch (err) {
+        lastErr = err;
     }
 
     if (!prompt) {
@@ -574,11 +666,24 @@ async function acquireDevice(steps: UsbAttemptStep[], prompt: boolean): Promise<
     const device = await requestUsbDevice();
     const summary = summarizeUsbDevice(device);
     pushStep(steps, 'requestDevice', true, `${summary.vendorIdHex}:${summary.productIdHex}`);
-    await prepareHeldDevice(device, steps);
-    return device;
+    try {
+        await prepareHeldDevice(device, steps, tries, authorized.length);
+        return device;
+    } catch (err) {
+        lastErr = err;
+        const again = await usb.getDevices();
+        const rest = again.filter((d) => d !== device);
+        try {
+            const opened = await tryOpenCandidates(rest, steps, tries, again.length, ' after picker');
+            if (opened) return opened;
+        } catch (inner) {
+            lastErr = inner;
+        }
+        throw wrapWebUsbError(lastErr);
+    }
 }
 
-async function grabDevice(device: UsbHardwareDevice, reason: string, tries = OPEN_RETRY_TRIES): Promise<void> {
+async function grabDevice(device: UsbHardwareDevice, reason: string, tries = connectRetryTries()): Promise<void> {
     const attempt: UsbAttemptLog = {
         at: new Date().toISOString(),
         kind: 'probe',
@@ -592,7 +697,7 @@ async function grabDevice(device: UsbHardwareDevice, reason: string, tries = OPE
             recordUsbAttempt(attempt);
             return;
         }
-        await prepareHeldDevice(device, attempt.steps, tries);
+        await prepareHeldDevice(device, attempt.steps, tries, 1);
         attempt.device = summarizeUsbDevice(device);
     } catch (err) {
         const wrapped = wrapWebUsbError(err);
@@ -602,32 +707,49 @@ async function grabDevice(device: UsbHardwareDevice, reason: string, tries = OPE
     recordUsbAttempt(attempt);
 }
 
-function onUsbConnect(event: UsbConnectionEventLike): void {
-    if (event?.device) void grabDevice(event.device, 'connect');
+function onUsbConnect(event: UsbConnectionEventLike): Promise<void> | void {
+    if (event?.device) return grabDevice(event.device, 'connect', connectRetryTries());
 }
 
 function onUsbDisconnect(event: UsbConnectionEventLike): void {
     if (event?.device) clearHeld(event.device);
 }
 
+function onVisibilityChange(): void {
+    if (typeof document === 'undefined') return;
+    if (document.visibilityState === 'visible') void startUsbHolder();
+}
+
+function ensureUsbListeners(): void {
+    const usb = usbBus();
+    if (usb) {
+        if (!holderStarted) {
+            holderStarted = true;
+            notifyUsbSession();
+        }
+        if (!usbListenersAttached) {
+            usbListenersAttached = true;
+            usb.addEventListener?.('connect', onUsbConnect);
+            usb.addEventListener?.('disconnect', onUsbDisconnect);
+        }
+    }
+    if (typeof document !== 'undefined' && !visibilityListenerAttached) {
+        visibilityListenerAttached = true;
+        document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+}
+
 export async function startUsbHolder(): Promise<void> {
+    ensureUsbListeners();
     const usb = usbBus();
     if (!usb) return;
-
-    if (!holderStarted) {
-        holderStarted = true;
-        usb.addEventListener?.('connect', onUsbConnect);
-        usb.addEventListener?.('disconnect', onUsbDisconnect);
-        notifyUsbSession();
-    }
-
     if (heldIsUsable()) return;
 
     const devices = await usb.getDevices();
     const preferred = selectPreferredUsbDevice(devices);
     const ordered = preferred ? [preferred, ...devices.filter((d) => d !== preferred)] : devices;
     for (const device of ordered) {
-        await grabDevice(device, 'startup', 8);
+        await grabDevice(device, 'startup', connectRetryTries());
         if (heldIsUsable()) return;
     }
 }
@@ -669,7 +791,7 @@ export async function printBrfWebUSB(data: Uint8Array): Promise<void> {
 
     let thrown: WebUsbPrintError | undefined;
     try {
-        await startUsbHolder();
+        ensureUsbListeners();
         const device = await acquireDevice(attempt.steps, true);
         const session = heldIsUsable() && held ? held : await prepareHeldDevice(device, attempt.steps);
         attempt.device = summarizeUsbDevice(session.device);
