@@ -344,3 +344,35 @@ export function isKnownTable(file: string): boolean {
   const migrated = migrateTableFilename(file);
   return ALL_TABLES.some((t) => t.file === migrated);
 }
+
+/** True if the table represents contracted (Grade 2 or higher) braille. */
+export function isGrade2Table(file: string): boolean {
+  const migrated = migrateTableFilename(file);
+  return migrated.includes('g2') || migrated.includes('g3');
+}
+
+/**
+ * Returns the contracted (Grade 2) counterpart for a table, or `en-ueb-g2.ctb` as fallback.
+ */
+export function getGrade2TableFor(file: string): string {
+  const migrated = migrateTableFilename(file);
+  const mappings: Record<string, string> = {
+    'en-ueb-g1.ctb': 'en-ueb-g2.ctb',
+    'en-us-g1.ctb': 'en-us-g2.ctb',
+    'en-gb-g1.utb': 'en-GB-g2.ctb',
+    'es-g1.ctb': 'es-g2.ctb',
+    'fr-bfu-comp6.utb': 'fr-bfu-g2.ctb',
+    'de-g0.utb': 'de-g2.ctb',
+    'de-g1.ctb': 'de-g2.ctb',
+    'pt-pt-g1.utb': 'pt-pt-g2.ctb',
+    'no-no-g0.utb': 'no-no-g2.ctb',
+    'no-no-g1.ctb': 'no-no-g2.ctb',
+    'sv-6g0d.utb': 'sv-6g2d.ctb',
+    'sv-6g1d.ctb': 'sv-6g2d.ctb',
+    'ar-ar-g1.utb': 'ar-ar-g2.ctb',
+    'zhcn-g1.ctb': 'zhcn-g2.ctb',
+  };
+  if (mappings[migrated]) return mappings[migrated];
+  if (isGrade2Table(migrated)) return migrated;
+  return 'en-ueb-g2.ctb';
+}
