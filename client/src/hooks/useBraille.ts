@@ -28,9 +28,9 @@ export type BackTranslateBrfResult = { plainText: string; brf: string };
 
 export interface UseBrailleReturn {
   /** Call this with plain text and an optional liblouis table filename and math code. */
-  translate: (text: string, table?: string, mathCode?: MathCode) => void;
+  translate: (text: string, table?: string, mathCode?: MathCode, cellsPerRow?: number) => void;
   /** One-shot translate that resolves with the ASCII BRF result. */
-  translateAsync: (text: string, table?: string, mathCode?: MathCode) => Promise<string>;
+  translateAsync: (text: string, table?: string, mathCode?: MathCode, cellsPerRow?: number) => Promise<string>;
   /** Translates only the math portions of the text and returns the new text via a Promise. */
   convertMath: (text: string, mathCode?: MathCode) => Promise<string>;
   /**
@@ -78,7 +78,12 @@ export function useBraille(): UseBrailleReturn {
   const [workerReady, setWorkerReady] = useState(false);
   const [wordMap, setWordMap] = useState<WordMapData | null>(null);
   const isWorkerReadyRef = useRef(false);
-  const pendingTranslateRef = useRef<{ text: string; table: string; mathCode: MathCode } | null>(null);
+  const pendingTranslateRef = useRef<{
+    text: string;
+    table: string;
+    mathCode: MathCode;
+    cellsPerRow?: number;
+  } | null>(null);
 
   const pendingTranslatePromiseRef = useRef<{
     resolve: (result: string) => void;
@@ -193,18 +198,18 @@ export function useBraille(): UseBrailleReturn {
   // -------------------------------------------------------------------------
   // Public translate function
   // -------------------------------------------------------------------------
-  const translate = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth') => {
+  const translate = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth', cellsPerRow?: number) => {
     if (!workerRef.current) return;
     if (!isWorkerReadyRef.current) {
-      pendingTranslateRef.current = { text, table, mathCode };
+      pendingTranslateRef.current = { text, table, mathCode, cellsPerRow };
       setIsLoading(true);
       return;
     }
     startWorkerTask();
-    workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
+    workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode, cellsPerRow });
   }, [startWorkerTask]);
 
-  const translateAsync = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth'): Promise<string> => {
+  const translateAsync = useCallback((text: string, table = DEFAULT_TABLE, mathCode: MathCode = 'nemeth', cellsPerRow?: number): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (!workerRef.current) {
         reject(new Error('Worker not ready'));
@@ -216,7 +221,7 @@ export function useBraille(): UseBrailleReturn {
       }
       pendingTranslatePromiseRef.current = { resolve, reject, sourceText: text };
       startWorkerTask();
-      workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode });
+      workerRef.current.postMessage({ type: 'TRANSLATE', text, table, mathCode, cellsPerRow });
     });
   }, [startWorkerTask]);
 
@@ -249,9 +254,9 @@ export function useBraille(): UseBrailleReturn {
 
   useEffect(() => {
     if (workerReady && pendingTranslateRef.current) {
-      const { text, table, mathCode } = pendingTranslateRef.current;
+      const { text, table, mathCode, cellsPerRow } = pendingTranslateRef.current;
       pendingTranslateRef.current = null;
-      translate(text, table, mathCode);
+      translate(text, table, mathCode, cellsPerRow);
     }
   }, [workerReady, translate]);
 

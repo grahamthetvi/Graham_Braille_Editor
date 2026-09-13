@@ -20,7 +20,7 @@
  * the UI can render a live progress bar.
  *
  * Message protocol  (main → worker):
- *   { type: 'TRANSLATE', text, table?, mathCode? }
+ *   { type: 'TRANSLATE', text, table?, mathCode?, cellsPerRow? }
  *   { type: 'CONVERT_MATH_ONLY', text, mathCode? }
  *   { type: 'BACK_TRANSLATE', text: brf, table? }
  *
@@ -266,9 +266,16 @@ import {
   wrapMathBrailleForLiteraryContext,
   type MathCode,
 } from '../utils/mathBraille';
+import {
+  isPrintTableFenceParams,
+  parsePrintTableFence,
+} from '../types/table';
+import { flattenPrintTable, formatTableSpecToBrf } from '../utils/tableBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
 import { parseTypeformMarkup, serializeTypeformMarkup } from '../utils/typeformMarkup';
 import { restoreUebOpenQuoteFromHis } from '../utils/uebBackTranslate';
+
+const DEFAULT_CELLS_PER_ROW = 40;
 
 // Initialize SRE for Nemeth or UEB Braille output (not liblouis MathML tables).
 let currentMathCode: MathCode | '' = '';
@@ -436,13 +443,58 @@ function translateTextWithPositionsAndFormFeeds(text: string, table: string): Te
   return { output: resultParts.join('\f'), outputPos };
 }
 
+function prefixPreformattedLines(body: string): string {
+  const lines = body.split('\n');
+  return '\n' + lines.map((l) => '\u0001' + l).join('\n') + '\n';
+}
+
+function translateTableCellText(text: string, textTable: string): string {
+  if (!text.trim()) return '';
+  try {
+    const parsed = parseTypeformMarkup(text);
+    return liblouis!.translateString(textTable, parsed.plain, false, parsed.typeform) || text;
+  } catch {
+    return text;
+  }
+}
+
+async function previewTableFence(
+  params: string,
+  body: string,
+  textTable: string,
+  cellsPerRow: number,
+): Promise<string> {
+  if (!isPrintTableFenceParams(params)) {
+    return prefixPreformattedLines(body);
+  }
+  const spec = parsePrintTableFence(params, body);
+  if (!spec) {
+    return prefixPreformattedLines(body);
+  }
+  const result = await formatTableSpecToBrf(
+    spec,
+    (s) => translateTableCellText(s, textTable),
+    cellsPerRow,
+  );
+  const brf = result.brf.replace(/\n+$/, '');
+  if (!brf.trim()) {
+    return prefixPreformattedLines(
+      translateTableCellText(flattenPrintTable(spec.cells), textTable),
+    );
+  }
+  return prefixPreformattedLines(brf);
+}
+
 async function translateDocumentWithMathAndPositions(
-  text: string, textTable: string, mathCode: MathCode
+  text: string,
+  textTable: string,
+  mathCode: MathCode,
+  cellsPerRow: number,
 ): Promise<{ result: string; outputPos: number[] }> {
   if (!liblouis) return { result: '', outputPos: [] };
 
   const outputPos = new Array<number>(text.length).fill(-1);
-  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n:::)|(:::table\n([\s\S]*?)\n:::)|(:::jumbo([^\n]*)\n([\s\S]*?)\n:::)/gs;
+  const chunkRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n([\s\S]*?)\n:::)|(:::graphic\n([\s\S]*?)\n:::)|(:::table([^\n]*)\n([\s\S]*?)\n:::)|(:::jumbo([^\n]*)\n([\s\S]*?)\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -463,13 +515,13 @@ async function translateDocumentWithMathAndPositions(
     const matchStart = match.index;
     const matchLen = match[0].length;
 
-    if (match[11] !== undefined) {
+    if (match[12] !== undefined) {
       // Jumbo / large-print block: translate the inner text to BRF format (ASCII braille),
       // tagged with the jumbo marker + font size so the preview renders it as big print/braille.
-      const params = match[12] ?? '';
+      const params = match[13] ?? '';
       const sizeMatch = params.match(/size\s*=\s*(\d+)/);
       const jumboSize = sizeMatch ? sizeMatch[1] : '48';
-      const lines = match[13].split('\n');
+      const lines = match[14].split('\n');
       const translatedLines: string[] = [];
       for (const l of lines) {
         if (!l.trim()) {
@@ -487,8 +539,12 @@ async function translateDocumentWithMathAndPositions(
       }
       result += jumboContent;
     } else if (match[9] !== undefined) {
-      const lines = match[10].split('\n');
-      const tableContent = '\n' + lines.map(l => '\u0001' + l).join('\n') + '\n';
+      const tableContent = await previewTableFence(
+        match[10] ?? '',
+        match[11] ?? '',
+        textTable,
+        cellsPerRow,
+      );
       for (let i = 0; i < matchLen; i++) {
         outputPos[matchStart + i] = result.length + Math.floor(i * tableContent.length / matchLen);
       }
@@ -722,7 +778,7 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
  */
 async function convertMathOnly(text: string, mathCode: MathCode): Promise<string> {
   // Regex to match block math $$...$$, inline math \(...\), and chart/graphic/table/jumbo blocks
-  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)|(:::table\n[\s\S]*?\n:::)|(:::jumbo[^\n]*\n[\s\S]*?\n:::)/gs;
+  const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)|(:::table[^\n]*\n[\s\S]*?\n:::)|(:::jumbo[^\n]*\n[\s\S]*?\n:::)/gs;
 
   let result = '';
   let lastIndex = 0;
@@ -765,13 +821,24 @@ async function convertMathOnly(text: string, mathCode: MathCode): Promise<string
 // ─── Message handler ─────────────────────────────────────────────────────────
 
 self.addEventListener('message', async (event: MessageEvent) => {
-  const { type, text, table = DEFAULT_TABLE, mathCode: rawMathCode = 'nemeth' } = event.data as {
+  const {
+    type,
+    text,
+    table = DEFAULT_TABLE,
+    mathCode: rawMathCode = 'nemeth',
+    cellsPerRow: rawCellsPerRow,
+  } = event.data as {
     type?: string;
     text: string;
     table?: string;
     mathCode?: string;
+    cellsPerRow?: number;
   };
   const mathCode: MathCode = isMathCode(rawMathCode) ? rawMathCode : 'nemeth';
+  const cellsPerRow =
+    typeof rawCellsPerRow === 'number' && Number.isFinite(rawCellsPerRow) && rawCellsPerRow >= 10
+      ? Math.min(100, Math.floor(rawCellsPerRow))
+      : DEFAULT_CELLS_PER_ROW;
 
   if (!ready || !liblouis) {
     self.postMessage({
@@ -810,7 +877,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
       const result = await convertMathOnly(text, mathCode);
       self.postMessage({ type: 'CONVERT_MATH_RESULT', result });
     } else if (text.length <= CHUNK_THRESHOLD) {
-      const { result, outputPos } = await translateDocumentWithMathAndPositions(text, table, mathCode);
+      const { result, outputPos } = await translateDocumentWithMathAndPositions(text, table, mathCode, cellsPerRow);
       const wordMap = buildWordMap(text, result, outputPos);
       self.postMessage({ type: 'RESULT', result, sourceText: text, wordMap });
     } else {
@@ -821,7 +888,7 @@ self.addEventListener('message', async (event: MessageEvent) => {
       let outOffset = 0;
 
       for (let i = 0; i < chunks.length; i++) {
-        const { result, outputPos } = await translateDocumentWithMathAndPositions(chunks[i], table, mathCode);
+        const { result, outputPos } = await translateDocumentWithMathAndPositions(chunks[i], table, mathCode, cellsPerRow);
         for (let j = 0; j < chunks[i].length; j++) {
           if (outputPos[j] >= 0) {
             globalOutputPos[srcOffset + j] = outputPos[j] + outOffset;

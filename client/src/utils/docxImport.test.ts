@@ -9,10 +9,14 @@ import {
   DocxImportError,
   PAGE_BREAK_SENTINEL,
   docxHtmlToEditorText,
+  htmlToTableGrids,
+  importDocxTables,
   importDocxToEditorText,
   isDocxFile,
   isLegacyDocFile,
+  mergeImportedTableGrids,
 } from './docxImport';
+import { tableGridToTsv } from '../types/table';
 
 const FIXTURE_DIR = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
@@ -184,26 +188,45 @@ describe('docxHtmlToEditorText', () => {
     expect(text).toBe('Page one\n\nPage two');
   });
 
-  it('turns HTML tables into :::table fences with cell text', async () => {
+  it('turns HTML tables into print-source :::table fences', async () => {
     const html =
       '<p>Intro</p><table><thead><tr><th>Animal</th><th>Size</th></tr></thead><tbody><tr><td>cat</td><td>small</td></tr><tr><td>dog</td><td>large</td></tr></tbody></table><p>Outro</p>';
     const text = await docxHtmlToEditorText(html);
     expect(text.startsWith('Intro')).toBe(true);
-    expect(text).toContain(':::table');
-    expect(text).toContain('Animal');
-    expect(text).toContain('cat');
-    expect(text).toContain('small');
-    expect(text).toContain('dog');
+    expect(text).toContain(':::table print');
+    expect(text).toContain('Animal\tSize');
+    expect(text).toContain('cat\tsmall');
+    expect(text).toContain('dog\tlarge');
     expect(text).toMatch(/Outro$/);
-    expect(text).toContain('"3');
+    expect(text).not.toContain('"3');
+    expect(text).not.toMatch(/,qu>t}/);
   });
 
   it('keeps empty cells so columns stay aligned', async () => {
     const html = '<table><tr><th>A</th><th>B</th></tr><tr><td>x</td><td></td></tr></table>';
     const text = await docxHtmlToEditorText(html);
-    expect(text.startsWith(':::table')).toBe(true);
-    expect(text).toContain('x');
-    expect(text).toContain('"');
+    expect(text).toContain(':::table print');
+    expect(text).toContain('A\tB');
+    expect(text).toContain('x\t');
+  });
+
+  it('joins wrapped paragraphs inside a table cell with spaces', async () => {
+    const html =
+      '<table><tr><td>antics</td><td><p>Ridiculous and</p><p>unpredictable behavior</p></td></tr></table>';
+    const text = await docxHtmlToEditorText(html, {
+      formatTable: (spec) => spec.cells.map((row) => row.join('|')).join('\n'),
+    });
+    expect(text).toBe('antics|Ridiculous and unpredictable behavior');
+  });
+
+  it('merges adjacent page-split HTML tables that repeat the header', async () => {
+    const html =
+      '<table><tr><th>Word</th><th>Def</th></tr><tr><td>antics</td><td>pranks</td></tr></table>' +
+      '<table><tr><th>Word</th><th>Def</th></tr><tr><td>invalidate</td><td>cancel</td></tr></table>';
+    const text = await docxHtmlToEditorText(html);
+    expect(text.match(/:::table print/g)?.length).toBe(1);
+    expect(text).toContain('antics\tpranks');
+    expect(text).toContain('invalidate\tcancel');
   });
 
   it('expands colspan so later columns line up', async () => {
@@ -231,6 +254,123 @@ describe('docxHtmlToEditorText', () => {
     expect(text.includes(':::table')).toBe(false);
     expect(text).toContain('c0');
     expect(text).toContain('c20');
+  });
+});
+
+const UNIT2_VOCAB: string[][] = [
+  ['antics', 'n. pl.', 'Ridiculous and unpredictable behavior or actions', 'pranks, shenanigans', 'N/A'],
+  ['avowed', 'adj., part.', 'Declared openly and without shame, acknowledged', 'admitted, sworn', 'unacknowledged, undisclosed'],
+  ['banter', 'v., n.', '(v.) To exchange playful remarks, tease; (n.) talk that is playful and teasing', 'joking, raillery', 'serious talk'],
+  ['bountiful', 'adj.', 'Giving freely, generous; plentiful, given abundantly', 'liberal, abundant, copious', 'scarce, scanty, in short supply'],
+  ['congested', 'adj., part.', 'Overcrowded, filled or occupied to excess', 'jammed, packed, choked', 'uncluttered, unimpeded'],
+  ['detriment', 'n.', 'Harm or loss; injury, damage; a disadvantage; a cause of harm, injury, loss, or damage', 'hindrance, liability', 'advantage, help, plus'],
+  ['durable', 'adj., n. pl.', '(adj.) Sturdy, long-lasting; (n. pl.) consumer goods used repeatedly over a series of years', 'long-lasting, enduring', 'fragile, perishable, fleeting, ephemeral'],
+  ['enterprising', 'adj.', 'Energetic, willing and able to start something new, showing boldness and imagination', 'vigorous, ambitious, aggressive, audacious', 'lazy, indolent, timid, diffident'],
+  ['frugal', 'adj.', 'Economical, avoiding waste and luxury; scanty, poor, meager', 'thrifty, skimpy', 'wasteful, improvident, lavish, extravagant'],
+  ['gingerly', 'adj., adv.', 'With extreme care or caution', 'cautiously, warily, circumspectly', 'firmly, confidently, aggressively'],
+  ['glut', 'v., n.', '(v.) To provide more than is needed or wanted; to feed or fill to the point of overstuffing; (n.) an oversupply', '(v.) flood, inundate; (n.) surplus, plethora', '(n.) shortage, scarcity, dearth, paucity'],
+  ['incognito', 'adj., adv., n.', '(adj., adv.) In a disguised state, under an assumed name or identity; (n.) the state of being disguised; a person in disguise', 'disguised', 'undisguised'],
+  ['invalidate', 'v.', 'To make valueless, take away all force or effect', 'cancel, annul, disapprove, discredit', 'support, confirm, back up, legalize'],
+  ['legendary', 'adj.', 'Described in well-known stories; existing in old stories (legends) rather than in real life', 'mythical, fabulous, famous, celebrated', 'N/A'],
+  ['maim', 'v.', 'To cripple, disable, injure, mar, disfigure, mutilate', 'cripple, disable, injure, mutilate', 'N/A'],
+  ['minimize', 'v.', 'To make as small as possible, make the least of; to make smaller than before', 'belittle, downplay, underrate', 'magnify, enlarge, exaggerate'],
+  ['oblique', 'adj.', 'Slanting or sloping; not straightforward or direct', 'diagonal, indirect', 'direct, straight to the point'],
+  ['veer', 'v.', 'To change direction or course suddenly, turn aside, shift, swerve', 'swerve, turn aside, shift', 'N/A'],
+  ['venerate', 'v.', 'To regard with reverence, look up to with great respect', 'worship, revere, idolize', 'despise, detest, ridicule, deride'],
+  ['wanton', 'adj., n.', '(adj.) Reckless; heartless, unjustifiable; loose in morals; (n.) a spoiled, pampered person; one with low morals', 'rash, malicious, spiteful, unprovoked', 'justified, morally strict, responsible'],
+];
+
+describe('htmlToTableGrids / mergeImportedTableGrids', () => {
+  it('extracts a 5-column vocabulary table with wrapped cell text', () => {
+    const html = `
+      <p>Unit 2 Vocabulary List</p>
+      <table>
+        <tr>
+          <th>Word</th><th><p>Part(s) of</p><p>Speech</p></th><th>Definition</th><th>Synonyms</th><th>Antonyms</th>
+        </tr>
+        <tr>
+          <td>antics</td>
+          <td>n. pl.</td>
+          <td><p>Ridiculous and</p><p>unpredictable behavior or actions</p></td>
+          <td><p>pranks,</p><p>shenanigans</p></td>
+          <td>N/A</td>
+        </tr>
+        <tr>
+          <td>avowed</td>
+          <td>adj., part.</td>
+          <td>Declared openly and without shame, acknowledged</td>
+          <td>admitted, sworn</td>
+          <td><p>unacknowledged,</p><p>undisclosed</p></td>
+        </tr>
+      </table>`;
+    const grids = htmlToTableGrids(html);
+    expect(grids).toHaveLength(1);
+    expect(grids[0][0]).toEqual(['Word', 'Part(s) of Speech', 'Definition', 'Synonyms', 'Antonyms']);
+    expect(grids[0][1][0]).toBe('antics');
+    expect(grids[0][1][2]).toBe('Ridiculous and unpredictable behavior or actions');
+    expect(grids[0][1][3]).toBe('pranks, shenanigans');
+    expect(grids[0][2][0]).toBe('avowed');
+    expect(grids[0][2][4]).toBe('unacknowledged, undisclosed');
+  });
+
+  it('expands colspan into empty following cells', () => {
+    const html = '<table><tr><td colspan="2">Name</td><td>Date</td></tr><tr><td>a</td><td>b</td><td>c</td></tr></table>';
+    const [grid] = htmlToTableGrids(html);
+    expect(grid[0]).toEqual(['Name', '', 'Date']);
+    expect(grid[1]).toEqual(['a', 'b', 'c']);
+  });
+
+  it('merges page-split tables and drops a repeated header row', () => {
+    const page1 = [
+      ['Word', 'Definition'],
+      ['antics', 'pranks'],
+      ['incognito', 'in a disguised state'],
+    ];
+    const page2 = [
+      ['Word', 'Definition'],
+      ['invalidate', 'to make valueless'],
+    ];
+    const merged = mergeImportedTableGrids([page1, page2]);
+    expect(merged).toEqual([
+      ['Word', 'Definition'],
+      ['antics', 'pranks'],
+      ['incognito', 'in a disguised state'],
+      ['invalidate', 'to make valueless'],
+    ]);
+  });
+
+  it('prefers the widest data table when a 2-column name block sits above', () => {
+    const nameBlock = [
+      ['Name', ''],
+      ['Quiz Date', ''],
+    ];
+    const vocab = [
+      ['Word', 'Part(s) of Speech', 'Definition'],
+      ['antics', 'n. pl.', 'Ridiculous behavior'],
+    ];
+    const merged = mergeImportedTableGrids([nameBlock, vocab]);
+    expect(merged[0]).toEqual(['Word', 'Part(s) of Speech', 'Definition']);
+    expect(merged).toHaveLength(2);
+  });
+
+  it('serializes grids to TSV for the print editor', () => {
+    expect(tableGridToTsv([['a', 'b'], ['1', '2']])).toBe('a\tb\n1\t2');
+  });
+
+  it('recovers every Unit 2 vocabulary row from a Word-like HTML table', () => {
+    const rows = UNIT2_VOCAB.map(
+      ([word, pos, def, syn, ant]) =>
+        `<tr><td>${word}</td><td>${pos}</td><td>${def}</td><td>${syn}</td><td>${ant}</td></tr>`,
+    ).join('');
+    const html = `<table><tr><th>Word</th><th>Part(s) of Speech</th><th>Definition</th><th>Synonyms</th><th>Antonyms</th></tr>${rows}</table>`;
+    const [grid] = htmlToTableGrids(html);
+    expect(grid).toHaveLength(UNIT2_VOCAB.length + 1);
+    expect(grid[0]).toEqual(['Word', 'Part(s) of Speech', 'Definition', 'Synonyms', 'Antonyms']);
+    for (let i = 0; i < UNIT2_VOCAB.length; i++) {
+      expect(grid[i + 1][0]).toBe(UNIT2_VOCAB[i][0]);
+      expect(grid[i + 1][2]).toContain(UNIT2_VOCAB[i][2].slice(0, 20));
+    }
+    expect(grid.map((r) => r[0]).slice(1)).toEqual(UNIT2_VOCAB.map((r) => r[0]));
   });
 });
 
@@ -262,7 +402,7 @@ describe('importDocxToEditorText', () => {
     expect(text).toContain('2. Read the page');
   });
 
-  it('converts Word tables into :::table fences', async () => {
+  it('converts Word tables into print-source :::table fences', async () => {
     const xml = wrapDocument(
       p('Roster') +
         wTbl([
@@ -275,11 +415,11 @@ describe('importDocxToEditorText', () => {
     await maybeWriteFixture('simple-table.docx', buffer);
     const { text } = await importDocxToEditorText(buffer);
     expect(text).toContain('Roster');
-    expect(text).toContain(':::table');
-    expect(text).toContain('Animal');
-    expect(text).toContain('cat');
-    expect(text).toContain('small');
+    expect(text).toContain(':::table print');
+    expect(text).toContain('Animal\tSize');
+    expect(text).toContain('cat\tsmall');
     expect(text.trimEnd().endsWith(':::')).toBe(true);
+    expect(text).not.toContain('"3');
   });
 
   it('keeps hyperlink display text and treats page breaks as paragraph breaks', async () => {
@@ -359,4 +499,91 @@ describe('importDocxToEditorText', () => {
       expect((err as DocxImportError).code).toBe('not-docx');
     }
   });
+
+  it('extracts an OOXML table with wrapped cell paragraphs as a print grid', async () => {
+    const xml = wrapDocument(
+      p('Unit 2 Vocabulary List') +
+        wTblParas([
+          [['Word'], ['Part(s) of', 'Speech'], ['Definition'], ['Synonyms'], ['Antonyms']],
+          [
+            ['antics'],
+            ['n. pl.'],
+            ['Ridiculous and', 'unpredictable behavior or actions'],
+            ['pranks,', 'shenanigans'],
+            ['N/A'],
+          ],
+          [
+            ['avowed'],
+            ['adj., part.'],
+            ['Declared openly and without shame, acknowledged'],
+            ['admitted, sworn'],
+            ['unacknowledged,', 'undisclosed'],
+          ],
+        ]),
+    );
+    const buffer = await buildDocx(xml);
+    await maybeWriteFixture('vocab-table.docx', buffer);
+
+    const editor = await importDocxToEditorText(buffer);
+    expect(editor.text).toContain('Unit 2 Vocabulary List');
+    expect(editor.text).toContain(':::table print');
+    expect(editor.text).toMatch(/antics\t/);
+    expect(editor.text).toContain('Ridiculous and unpredictable behavior or actions');
+    expect(editor.text).toContain('pranks, shenanigans');
+    expect(editor.text).not.toMatch(/,qu>t}/);
+
+    const { primary, tables } = await importDocxTables(buffer);
+    expect(tables).toHaveLength(1);
+    expect(primary[0]).toEqual(['Word', 'Part(s) of Speech', 'Definition', 'Synonyms', 'Antonyms']);
+    expect(primary[1][0]).toBe('antics');
+    expect(primary[1][2]).toBe('Ridiculous and unpredictable behavior or actions');
+    expect(primary[2][0]).toBe('avowed');
+    expect(primary[2][4]).toBe('unacknowledged, undisclosed');
+  });
+
+  it('merges two OOXML tables that repeat the same header (page split)', async () => {
+    const header = [['Word'], ['Definition']];
+    const xml = wrapDocument(
+      wTblParas([header, [['antics'], ['pranks']]]) + wTblParas([header, [['invalidate'], ['cancel']]]),
+    );
+    const buffer = await buildDocx(xml);
+    const { primary, tables } = await importDocxTables(buffer);
+    expect(tables).toHaveLength(2);
+    expect(primary.map((r) => r[0])).toEqual(['Word', 'antics', 'invalidate']);
+    const editor = await importDocxToEditorText(buffer);
+    expect(editor.text).toContain('antics');
+    expect(editor.text).toContain('invalidate');
+    expect(editor.text).toContain(':::table print');
+  });
+
+  it('throws empty when a Word file has no tables', async () => {
+    const xml = wrapDocument(p('No tables here.'));
+    const buffer = await buildDocx(xml);
+    await expect(importDocxTables(buffer)).rejects.toMatchObject({ code: 'empty' });
+  });
 });
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/** OOXML table: rows of cells of paragraphs. */
+function wTblParas(rows: string[][][]): string {
+  const body = rows
+    .map(
+      (row) =>
+        `<w:tr>${row
+          .map((paras) => {
+            const pXml = paras
+              .map((t) => `<w:p><w:r><w:t xml:space="preserve">${escapeXml(t)}</w:t></w:r></w:p>`)
+              .join('');
+            return `<w:tc><w:tcPr><w:tcW w:w="2000" w:type="dxa"/></w:tcPr>${pXml}</w:tc>`;
+          })
+          .join('')}</w:tr>`,
+    )
+    .join('');
+  return `<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>${body}</w:tbl>`;
+}

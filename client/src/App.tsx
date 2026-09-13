@@ -89,7 +89,6 @@ import {
   isDocxFile,
   isLegacyDocFile,
 } from './utils/docxImport';
-import { tableSpecToEditorBlock } from './utils/tableBraille';
 import {
   BBZ_MAX_BYTES,
   BbzImportError,
@@ -113,7 +112,8 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text, .docx (translate), .bbz (BrailleBlaster archive → text), or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
- *     Word tables become `:::table` blocks using the same Braille Formats layout as the Table tool.
+ *     Word tables become print-source `:::table` blocks; the preview worker
+ *     translates cells with the current liblouis table and Braille Formats layout.
  *     .brf import back-translates as literary unless Music Player Mode is already on.
  *     Import/paste does not auto-enable Music mode.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
@@ -492,7 +492,7 @@ export default function App() {
   const [showAudioExport, setShowAudioExport] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, translateAsync, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
+  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
     useBraille();
   const workerReadyRef = useRef(workerReady);
   workerReadyRef.current = workerReady;
@@ -654,10 +654,10 @@ export default function App() {
 
       if (tryAutoBackTranslateUnicode(text)) return;
       if (text.trim()) {
-        translate(text, selectedTable, mathCode);
+        translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
       }
     },
-    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode],
+    [tryAutoBackTranslateUnicode, translate, selectedTable, mathCode, pageSettings.cellsPerRow],
   );
   // ── Re-translate when literary table, math code, or music-mode toggle changes ──
   useEffect(() => {
@@ -682,8 +682,8 @@ export default function App() {
       tryAutoBackTranslateUnicode(text);
       return;
     }
-    translate(text, selectedTable, mathCode);
-  }, [selectedTable, mathCode, translate, isMusicBrailleMode, literarySourceMode, tryAutoBackTranslateUnicode, backTranslateBrf, applyBackTranslatedPlain]);
+    translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
+  }, [selectedTable, mathCode, translate, isMusicBrailleMode, literarySourceMode, tryAutoBackTranslateUnicode, backTranslateBrf, applyBackTranslatedPlain, pageSettings.cellsPerRow]);
 
   // ── File import (plain text or .brf) ─────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -767,7 +767,7 @@ export default function App() {
       }
 
       if (tryAutoBackTranslateUnicode(text)) return;
-      translate(text, selectedTable, mathCode);
+      translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
     }).catch(err => {
       console.error('Failed to restore session', err);
     });
@@ -809,17 +809,7 @@ export default function App() {
           }
           const buffer = await file.arrayBuffer();
           await waitForFlag(() => workerReadyRef.current, 20000);
-          const { text } = await importDocxToEditorText(buffer, {
-            cellsPerRow: pageSettings.cellsPerRow,
-            formatTable: (spec) =>
-              tableSpecToEditorBlock(
-                spec,
-                workerReadyRef.current
-                  ? (s) => translateAsync(s, selectedTable, mathCode)
-                  : (s) => s,
-                pageSettings.cellsPerRow,
-              ),
-          });
+          const { text } = await importDocxToEditorText(buffer);
           setLiterarySourceMode('none');
           importedBrailleRef.current = '';
           setShowBackTranslatedEditModal(false);
@@ -828,7 +818,7 @@ export default function App() {
           setFileContent(text);
           setImportError(null);
           announceStatus(t('app.file.import.success'));
-          translate(text, selectedTable, mathCode);
+          translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
         } catch (err) {
           console.error('[docx import]', err);
           const msg = messageForDocxImportError(err);
@@ -855,7 +845,7 @@ export default function App() {
           setFileContent(text);
           setImportError(null);
           announceStatus(t('app.file.import.bbzSuccess'));
-          translate(text, selectedTable, mathCode);
+          translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
         } catch (err) {
           console.error('[bbz import]', err);
           const msg = messageForBbzImportError(err);
@@ -924,7 +914,7 @@ export default function App() {
           return;
         }
         if (tryAutoBackTranslateUnicode(raw)) return;
-        translate(raw, selectedTable, mathCode);
+        translate(raw, selectedTable, mathCode, pageSettings.cellsPerRow);
       }
     };
     reader.readAsText(file, 'utf-8');
