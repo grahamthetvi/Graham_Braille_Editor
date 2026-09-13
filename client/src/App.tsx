@@ -84,6 +84,7 @@ import {
   isDocxFile,
   isLegacyDocFile,
 } from './utils/docxImport';
+import { tableSpecToEditorBlock } from './utils/tableBraille';
 import {
   BBZ_MAX_BYTES,
   BbzImportError,
@@ -107,6 +108,7 @@ import './App.css';
  *     discrete page blocks (Word-like scrolling view).
  *   • Import file loads plain text, .docx (translate), .bbz (BrailleBlaster archive → text), or .brf (back-translate + BRF preview).
  *     Word files are converted to editor text in the browser; they never leave the device.
+ *     Word tables become `:::table` blocks using the same Braille Formats layout as the Table tool.
  *     .brf import back-translates as literary unless Music Player Mode is already on.
  *     Import/paste does not auto-enable Music mode.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
@@ -131,6 +133,16 @@ type Theme = 'dark' | 'light' | 'high-contrast';
  *   brailleEditing  — LHS is Unicode braille source with 6-key; RHS mirrors LHS
  */
 type LiterarySourceMode = 'none' | 'importedLocked' | 'printEditing' | 'brailleEditing';
+
+async function waitForFlag(get: () => boolean, timeoutMs: number): Promise<boolean> {
+  if (get()) return true;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (get()) return true;
+  }
+  return false;
+}
 
 const monacoThemeMap: Record<Theme, string> = {
   dark: 'vs-dark',
@@ -453,8 +465,10 @@ export default function App() {
   const [showAudioExport, setShowAudioExport] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
+  const { translate, translateAsync, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
     useBraille();
+  const workerReadyRef = useRef(workerReady);
+  workerReadyRef.current = workerReady;
 
   // ── Track input stats for the status bar ────────────────────────────────
   const [inputText, setInputText] = useState('');
@@ -767,7 +781,18 @@ export default function App() {
             throw new DocxImportError('too-large');
           }
           const buffer = await file.arrayBuffer();
-          const { text } = await importDocxToEditorText(buffer);
+          await waitForFlag(() => workerReadyRef.current, 20000);
+          const { text } = await importDocxToEditorText(buffer, {
+            cellsPerRow: pageSettings.cellsPerRow,
+            formatTable: (spec) =>
+              tableSpecToEditorBlock(
+                spec,
+                workerReadyRef.current
+                  ? (s) => translateAsync(s, selectedTable, mathCode)
+                  : (s) => s,
+                pageSettings.cellsPerRow,
+              ),
+          });
           setLiterarySourceMode('none');
           importedBrailleRef.current = '';
           setShowBackTranslatedEditModal(false);

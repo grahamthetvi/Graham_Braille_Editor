@@ -35,6 +35,17 @@ function listP(text: string, numId: string): string {
   return `<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="${numId}"/></w:numPr></w:pPr><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`;
 }
 
+function wTc(text: string): string {
+  return `<w:tc><w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p></w:tc>`;
+}
+
+function wTbl(rows: string[][]): string {
+  const trs = rows
+    .map((row) => `<w:tr>${row.map((cell) => wTc(cell)).join('')}</w:tr>`)
+    .join('');
+  return `<w:tbl>${trs}</w:tbl>`;
+}
+
 const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -143,34 +154,83 @@ describe('isDocxFile / isLegacyDocFile', () => {
 });
 
 describe('docxHtmlToEditorText', () => {
-  it('turns headings into plain paragraphs without markdown hashes', () => {
-    const text = docxHtmlToEditorText('<h1>Chapter One</h1><p>Hello world.</p>');
+  it('turns headings into plain paragraphs without markdown hashes', async () => {
+    const text = await docxHtmlToEditorText('<h1>Chapter One</h1><p>Hello world.</p>');
     expect(text).toBe('Chapter One\n\nHello world.');
     expect(text.includes('#')).toBe(false);
   });
 
-  it('keeps lists as one item per line with print prefixes', () => {
+  it('keeps lists as one item per line with print prefixes', async () => {
     const html = '<p>Intro</p><ul><li>Apples</li><li>Bananas</li></ul><ol><li>First</li><li>Second</li></ol>';
-    const text = docxHtmlToEditorText(html);
+    const text = await docxHtmlToEditorText(html);
     expect(text).toBe('Intro\n\n- Apples\n- Bananas\n\n1. First\n2. Second');
   });
 
-  it('keeps visible hyperlink text only', () => {
-    const text = docxHtmlToEditorText('<p>See <a href="https://example.com/secret">the guide</a> please.</p>');
+  it('keeps visible hyperlink text only', async () => {
+    const text = await docxHtmlToEditorText('<p>See <a href="https://example.com/secret">the guide</a> please.</p>');
     expect(text).toBe('See the guide please.');
     expect(text.includes('https://')).toBe(false);
   });
 
-  it('inserts image alt text and skips images without alt', () => {
-    const withAlt = docxHtmlToEditorText('<p>Before</p><p><img alt="A water cycle diagram" src="data:image/png;base64,xx"/></p><p>After</p>');
+  it('inserts image alt text and skips images without alt', async () => {
+    const withAlt = await docxHtmlToEditorText('<p>Before</p><p><img alt="A water cycle diagram" src="data:image/png;base64,xx"/></p><p>After</p>');
     expect(withAlt).toBe('Before\n\n[Image: A water cycle diagram]\n\nAfter');
-    const noAlt = docxHtmlToEditorText('<p>Before</p><p><img src="x.png"/></p><p>After</p>');
+    const noAlt = await docxHtmlToEditorText('<p>Before</p><p><img src="x.png"/></p><p>After</p>');
     expect(noAlt).toBe('Before\n\nAfter');
   });
 
-  it('turns page-break sentinels into blank-line paragraph breaks', () => {
-    const text = docxHtmlToEditorText(`<p>Page one</p><p>${PAGE_BREAK_SENTINEL}</p><p>Page two</p>`);
+  it('turns page-break sentinels into blank-line paragraph breaks', async () => {
+    const text = await docxHtmlToEditorText(`<p>Page one</p><p>${PAGE_BREAK_SENTINEL}</p><p>Page two</p>`);
     expect(text).toBe('Page one\n\nPage two');
+  });
+
+  it('turns HTML tables into :::table fences with cell text', async () => {
+    const html =
+      '<p>Intro</p><table><thead><tr><th>Animal</th><th>Size</th></tr></thead><tbody><tr><td>cat</td><td>small</td></tr><tr><td>dog</td><td>large</td></tr></tbody></table><p>Outro</p>';
+    const text = await docxHtmlToEditorText(html);
+    expect(text.startsWith('Intro')).toBe(true);
+    expect(text).toContain(':::table');
+    expect(text).toContain('Animal');
+    expect(text).toContain('cat');
+    expect(text).toContain('small');
+    expect(text).toContain('dog');
+    expect(text).toMatch(/Outro$/);
+    expect(text).toContain('"3');
+  });
+
+  it('keeps empty cells so columns stay aligned', async () => {
+    const html = '<table><tr><th>A</th><th>B</th></tr><tr><td>x</td><td></td></tr></table>';
+    const text = await docxHtmlToEditorText(html);
+    expect(text.startsWith(':::table')).toBe(true);
+    expect(text).toContain('x');
+    expect(text).toContain('"');
+  });
+
+  it('expands colspan so later columns line up', async () => {
+    const html =
+      '<table><tr><td colspan="2">Name</td><td>Age</td></tr><tr><td>Ada</td><td>Lovelace</td><td>36</td></tr></table>';
+    const text = await docxHtmlToEditorText(html, {
+      formatTable: (spec) => spec.cells.map((row) => row.join('|')).join('\n'),
+    });
+    expect(text).toBe('Name||Age\nAda|Lovelace|36');
+  });
+
+  it('flattens nested tables into the parent cell instead of extra rows', async () => {
+    const html =
+      '<table><tr><td>outer</td><td><table><tr><td>inner</td></tr></table></td></tr><tr><td>r2c1</td><td>r2c2</td></tr></table>';
+    const text = await docxHtmlToEditorText(html, {
+      formatTable: (spec) => spec.cells.map((row) => row.join('|')).join('\n'),
+    });
+    expect(text).toBe('outer|inner\nr2c1|r2c2');
+  });
+
+  it('flattens tables that exceed column limits', async () => {
+    const cols = Array.from({ length: 21 }, (_, i) => `<td>c${i}</td>`).join('');
+    const html = `<table><tr>${cols}</tr></table>`;
+    const text = await docxHtmlToEditorText(html);
+    expect(text.includes(':::table')).toBe(false);
+    expect(text).toContain('c0');
+    expect(text).toContain('c20');
   });
 });
 
@@ -200,6 +260,26 @@ describe('importDocxToEditorText', () => {
     expect(text).toContain('- Paper');
     expect(text).toContain('1. Open the book');
     expect(text).toContain('2. Read the page');
+  });
+
+  it('converts Word tables into :::table fences', async () => {
+    const xml = wrapDocument(
+      p('Roster') +
+        wTbl([
+          ['Animal', 'Size'],
+          ['cat', 'small'],
+          ['dog', 'large'],
+        ]),
+    );
+    const buffer = await buildDocx(xml);
+    await maybeWriteFixture('simple-table.docx', buffer);
+    const { text } = await importDocxToEditorText(buffer);
+    expect(text).toContain('Roster');
+    expect(text).toContain(':::table');
+    expect(text).toContain('Animal');
+    expect(text).toContain('cat');
+    expect(text).toContain('small');
+    expect(text.trimEnd().endsWith(':::')).toBe(true);
   });
 
   it('keeps hyperlink display text and treats page breaks as paragraph breaks', async () => {

@@ -61,7 +61,9 @@ export default defineConfig({
   optimizeDeps: {
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
     // ONNX / TTS packages are large and load on demand for MP3 export.
-    exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng', 'mammoth'],
+    exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng'],
+    // Mammoth is CommonJS; Vite must pre-bundle it or the browser hits `require is not defined`.
+    include: ['mammoth'],
   },
   assetsInclude: ['**/*.wasm'],
   build: {

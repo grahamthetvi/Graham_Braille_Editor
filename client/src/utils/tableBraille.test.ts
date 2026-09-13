@@ -4,6 +4,7 @@ import {
   layoutBrailleTable,
   resolveAutoFormat,
   formatTableInsertBlock,
+  tableSpecToEditorBlock,
   wrapTnAscii,
   GUIDE_DOT,
   SEP_FILL,
@@ -205,5 +206,48 @@ describe('generateTableBrf + insert block', () => {
     const block = formatTableInsertBlock(result.brf);
     expect(block.startsWith(':::table\n')).toBe(true);
     expect(block.trimEnd().endsWith(':::')).toBe(true);
+  });
+});
+
+describe('tableSpecToEditorBlock', () => {
+  it('fences a simple identity-translated table', async () => {
+    const block = await tableSpecToEditorBlock(
+      {
+        cells: [
+          ['Animal', 'Size'],
+          ['cat', 'small'],
+        ],
+        hasColumnHeadings: true,
+        format: 'auto',
+        columnGap: 2,
+        guideDots: true,
+      },
+      (s) => s,
+      40
+    );
+    expect(block.startsWith(':::table\n')).toBe(true);
+    expect(block).toContain('Animal');
+    expect(block).toContain('cat');
+    expect(block.trimEnd().endsWith(':::')).toBe(true);
+  });
+
+  it('uses the provided translator for cell text', async () => {
+    const block = await tableSpecToEditorBlock(
+      {
+        cells: [
+          ['A', 'B'],
+          ['one', 'two'],
+        ],
+        hasColumnHeadings: true,
+        format: 'simple',
+        columnGap: 2,
+        guideDots: false,
+      },
+      (s) => s.toUpperCase(),
+      40
+    );
+    expect(block).toContain('ONE');
+    expect(block).toContain('TWO');
+    expect(block.includes('one')).toBe(false);
   });
 });
