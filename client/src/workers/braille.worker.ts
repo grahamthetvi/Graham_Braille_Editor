@@ -24,6 +24,8 @@
  *   { type: 'CONVERT_MATH_ONLY', text, mathCode? }
  *   { type: 'BACK_TRANSLATE', text: brf, table? }
  *
+ * Math: LaTeX → KaTeX MathML → Speech Rule Engine (not liblouis MathML tables).
+ *
  * Message protocol  (worker → main):
  *   { type: 'READY' }
  *   { type: 'RESULT',   result: string, sourceText: string }
@@ -40,11 +42,23 @@ interface TranslateResult {
   outputPos: number[];
 }
 
+interface BackTranslateResult {
+  output: string;
+  typeform: number[];
+}
+
 interface LiblouisEasyApi {
   setLiblouisBuild(capi: object): void;
-  translateString(table: string, text: string): string | null;
-  translate(table: string, text: string): TranslateResult | null;
+  translateString(
+    table: string,
+    text: string,
+    backtranslate?: boolean,
+    typeform?: number[],
+  ): string | null;
+  translate(table: string, text: string, typeform?: number[]): TranslateResult | null;
+  backTranslate(table: string, brf: string): BackTranslateResult | null;
   backTranslateString(table: string, brf: string): string | null;
+  hyphenate?(table: string, text: string): string | null;
   enableOnDemandTableLoading(url: string): void;
   setLogLevel(level: number): void;
 }
@@ -220,7 +234,7 @@ async function init(): Promise<void> {
   if (
     !liblouis ||
     typeof liblouis.translateString !== 'function' ||
-    typeof liblouis.backTranslateString !== 'function'
+    typeof liblouis.backTranslate !== 'function'
   ) {
     throw new Error('easy-api.js did not expose a full liblouis instance on self');
   }
@@ -241,26 +255,31 @@ import katex from 'katex';
 import * as sre from 'speech-rule-engine';
 import {
   NEMETH_INDICATOR_PAD,
-  UEB_NEMETH_CLOSE,
   UEB_NEMETH_CLOSE_ASCII,
-  UEB_NEMETH_OPEN,
   UEB_NEMETH_OPEN_ASCII,
   unicodeBrailleToAscii,
 } from '../utils/braille';
+import {
+  isMathCode,
+  NEMETH_BACK_TRANSLATE_TABLE,
+  sreSetupForMathCode,
+  wrapMathBrailleForLiteraryContext,
+  type MathCode,
+} from '../utils/mathBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
+import { parseTypeformMarkup, serializeTypeformMarkup } from '../utils/typeformMarkup';
+import { restoreUebOpenQuoteFromHis } from '../utils/uebBackTranslate';
 
-// Initialize SRE for Nemeth or UEB Braille output
-let currentMathCode = '';
+// Initialize SRE for Nemeth or UEB Braille output (not liblouis MathML tables).
+let currentMathCode: MathCode | '' = '';
 
-async function ensureSreReady(mathCode: string) {
+async function ensureSreReady(mathCode: MathCode) {
   if (currentMathCode === mathCode) return;
-  const domain = mathCode === 'nemeth' ? 'nemeth' : 'default';
-  const locale = mathCode === 'nemeth' ? 'nemeth' : 'en';
+  const { domain, locale } = sreSetupForMathCode(mathCode);
   await sre.setupEngine({
-    domain: domain,
+    domain,
     modality: 'braille',
-    // We don't need spoken output, just the braille ascii
-    locale: locale,
+    locale,
   });
   currentMathCode = mathCode;
 }
@@ -281,11 +300,11 @@ function cleanMathML(mathml: string): string {
 }
 
 /**
- * Translates LaTeX math into Nemeth or UEB math Braille Code
+ * Translates LaTeX math into Nemeth or UEB math Braille via KaTeX + SRE.
+ * liblouis `nemeth.ctb` is not used here (back-translate only).
  */
-async function translateMath(latex: string, mathCode: string): Promise<string> {
+async function translateMath(latex: string, mathCode: MathCode): Promise<string> {
   try {
-    // Ensure the engine is booted for appropriate format
     await ensureSreReady(mathCode);
 
     // 1. Convert LaTeX to MathML string
@@ -297,28 +316,13 @@ async function translateMath(latex: string, mathCode: string): Promise<string> {
     // 2. Clean the MathML (KaTeX still mixes some HTML in the output sometimes, or at least wrapper spans)
     const cleanXml = cleanMathML(katexHtml);
 
-    // 3. Translate using Nemeth SRE Engine
+    // 3. Translate using Speech Rule Engine (Nemeth or UEB), not lou_translate
     const result = sre.toSpeech(cleanXml);
     return wrapMathBrailleForLiteraryContext(result || '', mathCode);
   } catch (err) {
     console.warn('[braille-worker] Math translation failed:', err, latex);
     return `[Math Error: ${latex}]`;
   }
-}
-
-/** Liblouis table for Nemeth body back-translation (matches tableRegistry). */
-const NEMETH_BACK_TRANSLATE_TABLE = 'nemeth.ctb';
-
-function wrapMathBrailleForLiteraryContext(braille: string, mathCode: string): string {
-  if (mathCode !== 'nemeth' || !braille) return braille;
-  if (braille.startsWith('[Math Error:')) return braille;
-  return (
-    UEB_NEMETH_OPEN +
-    NEMETH_INDICATOR_PAD +
-    braille +
-    NEMETH_INDICATOR_PAD +
-    UEB_NEMETH_CLOSE
-  );
 }
 
 const SOFT_LINE_BREAK_CR = '\r';
@@ -329,6 +333,37 @@ const LEGACY_SOFT_LINE_LS = '\u2028';
 interface TextWithPositions {
   output: string;
   outputPos: number[];
+}
+
+function translateLineWithTypeform(
+  line: string,
+  table: string,
+): { output: string; outputPos: number[] } {
+  const forTranslate = line
+    .replaceAll(SOFT_LINE_BREAK_CR, ' ')
+    .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
+  if (!forTranslate) {
+    return { output: '', outputPos: new Array<number>(line.length).fill(-1) };
+  }
+
+  const parsed = parseTypeformMarkup(forTranslate);
+  const result = liblouis!.translate(table, parsed.plain, parsed.typeform);
+  const linePos = new Array<number>(line.length).fill(-1);
+
+  if (result && result.outputPos) {
+    const n = Math.min(parsed.plainToSrc.length, result.outputPos.length);
+    for (let i = 0; i < n; i++) {
+      const src = parsed.plainToSrc[i];
+      if (src >= 0 && src < line.length) {
+        linePos[src] = result.outputPos[i];
+      }
+    }
+    return { output: result.output, outputPos: linePos };
+  }
+
+  const translated =
+    liblouis!.translateString(table, parsed.plain, false, parsed.typeform) || '';
+  return { output: translated, outputPos: linePos };
 }
 
 function translateTextWithPositions(text: string, table: string): TextWithPositions {
@@ -346,29 +381,15 @@ function translateTextWithPositions(text: string, table: string): TextWithPositi
     if (!line) {
       resultLines.push('');
     } else {
-      const forTranslate = line
-        .replaceAll(SOFT_LINE_BREAK_CR, ' ')
-        .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
-
-      if (!forTranslate) {
-        resultLines.push('');
-      } else {
-        const result = liblouis!.translate(table, forTranslate);
-
-        if (result && result.outputPos) {
-          resultLines.push(result.output);
-          const linePos = result.outputPos;
-          const len = Math.min(line.length, linePos.length);
-          for (let i = 0; i < len; i++) {
-            outputPos[srcOffset + i] = linePos[i] + outOffset;
-          }
-          outOffset += result.output.length;
-        } else {
-          const translated = liblouis!.translateString(table, forTranslate) || '';
-          resultLines.push(translated);
-          outOffset += translated.length;
+      const { output, outputPos: linePos } = translateLineWithTypeform(line, table);
+      resultLines.push(output);
+      const len = Math.min(line.length, linePos.length);
+      for (let i = 0; i < len; i++) {
+        if (linePos[i] >= 0) {
+          outputPos[srcOffset + i] = linePos[i] + outOffset;
         }
       }
+      outOffset += output.length;
     }
 
     if (li < lines.length - 1) {
@@ -416,7 +437,7 @@ function translateTextWithPositionsAndFormFeeds(text: string, table: string): Te
 }
 
 async function translateDocumentWithMathAndPositions(
-  text: string, textTable: string, mathCode: string
+  text: string, textTable: string, mathCode: MathCode
 ): Promise<{ result: string; outputPos: number[] }> {
   if (!liblouis) return { result: '', outputPos: [] };
 
@@ -454,7 +475,9 @@ async function translateDocumentWithMathAndPositions(
         if (!l.trim()) {
           translatedLines.push('');
         } else {
-          const translated = liblouis!.translateString(textTable, l) || '';
+          const parsed = parseTypeformMarkup(l);
+          const translated =
+            liblouis!.translateString(textTable, parsed.plain, false, parsed.typeform) || '';
           translatedLines.push(translated);
         }
       }
@@ -625,14 +648,18 @@ function backTranslateTextPreservingNewlines(brf: string, table: string): string
     const hasCR = line.endsWith('\r');
     const cleanLine = hasCR ? line.slice(0, -1) : line;
     if (!cleanLine) return hasCR ? '\r' : '';
-    let plain = liblouis!.backTranslateString(resolvedTable, cleanLine) || '';
+    const result = liblouis!.backTranslate(resolvedTable, cleanLine);
+    let plain = result?.output || '';
     if (table === NEMETH_BACK_TRANSLATE_TABLE) {
       plain = cleanNemethBackTranslation(plain);
     } else {
+      if (result?.typeform?.length) {
+        plain = serializeTypeformMarkup(plain, result.typeform);
+      }
       // In UEB, dots 2-3-6 (`8`) followed by space is an open quote followed by a space,
       // but liblouis's legacy fallback translates standalone 2-3-6 as `his`.
       // If a line starts with `his ` and ends with `"`, restore the opening quote.
-      plain = plain.replace(/^(\s*)his\s+(.*?"\s*)$/i, '$1"$2');
+      plain = restoreUebOpenQuoteFromHis(plain);
     }
     return hasCR ? plain + '\r' : plain;
   }).join('\n');
@@ -693,7 +720,7 @@ function backTranslateBrfRespectingNemethPassages(brf: string, textTable: string
  * Extracts math blocks, translates them to Braille ASCII, and replaces the math
  * blocks in the original text, leaving the non-math text untouched.
  */
-async function convertMathOnly(text: string, mathCode: string): Promise<string> {
+async function convertMathOnly(text: string, mathCode: MathCode): Promise<string> {
   // Regex to match block math $$...$$, inline math \(...\), and chart/graphic/table/jumbo blocks
   const mathRegex = /(\$\$(.*?)\$\$)|(\\\((.*?)\\\))|(:::chart\n[\s\S]*?\n:::)|(:::graphic\n[\s\S]*?\n:::)|(:::table\n[\s\S]*?\n:::)|(:::jumbo[^\n]*\n[\s\S]*?\n:::)/gs;
 
@@ -738,12 +765,13 @@ async function convertMathOnly(text: string, mathCode: string): Promise<string> 
 // ─── Message handler ─────────────────────────────────────────────────────────
 
 self.addEventListener('message', async (event: MessageEvent) => {
-  const { type, text, table = DEFAULT_TABLE, mathCode = 'nemeth' } = event.data as {
+  const { type, text, table = DEFAULT_TABLE, mathCode: rawMathCode = 'nemeth' } = event.data as {
     type?: string;
     text: string;
     table?: string;
     mathCode?: string;
   };
+  const mathCode: MathCode = isMathCode(rawMathCode) ? rawMathCode : 'nemeth';
 
   if (!ready || !liblouis) {
     self.postMessage({

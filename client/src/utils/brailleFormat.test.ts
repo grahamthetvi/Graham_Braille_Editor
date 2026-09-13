@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import {
   buildPlainTextToMatchBrailleWrap,
   SOFT_LINE_BREAK_CHAR,
@@ -18,6 +21,7 @@ import {
   paginatePrintLines,
 } from './brailleFormat';
 import { asciiToUnicodeBraille } from './braille';
+import { createHyphenator } from './hyphenation';
 
 function formFeedCount(s: string): number {
   return (s.match(/\f/g) ?? []).length;
@@ -117,6 +121,30 @@ describe('formatBrfForOutput', () => {
     const rawBrf = 'j|rney\f|r way';
     const result = formatBrfForOutput(rawBrf, 40, 25, false);
     expect(result).toBe('j\\rney\r\n\f\\r way\r\n');
+  });
+
+  it('hyphenates an overflowing word instead of only hard-breaking', () => {
+    const hyphenate = (word: string) => (word === 'abcdefghij' ? [4] : []);
+    const hard = formatBrfForOutput('abcdefghij', 6, 25, false);
+    const hyph = formatBrfForOutput('abcdefghij', 6, 25, false, undefined, hyphenate);
+    expect(hard).toBe('abcdef\r\nghij\r\n');
+    expect(hyph).toBe('abcd-\r\nefghij\r\n');
+  });
+
+  it('hyphenates a long Grade-1 letter word and hard-breaks Grade-2 cell junk', () => {
+    const text = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../public/tables/hyph_en_US.dic'),
+      'utf8',
+    );
+    const hyphenate = createHyphenator(text);
+    const g1 = formatBrfForOutput('international', 8, 25, false, undefined, hyphenate);
+    expect(g1).toContain('-');
+    expect(g1.replace(/[\r\n-]/g, '')).toBe('international');
+
+    const g2cells = '&!?(+$]&!?(+$]';
+    const g2 = formatBrfForOutput(g2cells, 6, 25, false, undefined, hyphenate);
+    expect(g2).not.toContain('-');
+    expect(g2.replace(/[\r\n]/g, '')).toBe(g2cells);
   });
 });
 

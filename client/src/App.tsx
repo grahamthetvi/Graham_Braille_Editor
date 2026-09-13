@@ -78,6 +78,11 @@ import {
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable, getGrade2TableFor } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
 import {
+  createHyphenator,
+  hyphenDictionaryForTable,
+  type HyphenateAsciiWord,
+} from './utils/hyphenation';
+import {
   DOCX_MAX_BYTES,
   DocxImportError,
   importDocxToEditorText,
@@ -297,6 +302,28 @@ export default function App() {
     } catch {
       /* ignore */
     }
+  }, [selectedTable]);
+
+  const [hyphenateWord, setHyphenateWord] = useState<HyphenateAsciiWord | undefined>();
+
+  useEffect(() => {
+    const dict = hyphenDictionaryForTable(selectedTable);
+    const base = (import.meta.env.BASE_URL as string).replace(/\/$/, '');
+    let cancelled = false;
+    fetch(`${base}/tables/${dict}`)
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.text();
+      })
+      .then((text) => {
+        if (!cancelled) setHyphenateWord(() => createHyphenator(text));
+      })
+      .catch(() => {
+        if (!cancelled) setHyphenateWord(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedTable]);
 
   // ── UI locale & table auto-pairing ───────────────────────────────────────
@@ -954,6 +981,7 @@ export default function App() {
         firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
         runoverStartCell: pageSettings.paragraphRunoverStartCell,
       },
+      hyphenateWord,
     );
   }
 
@@ -1040,6 +1068,7 @@ export default function App() {
       paperFormat: pageSettings.paperFormat,
       includePageNumbers: pageSettings.showPageNumbers ?? false,
       paragraphStarts,
+      hyphenateWord,
     });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
@@ -1068,6 +1097,7 @@ export default function App() {
         paperFormat: pageSettings.paperFormat,
         includePageNumbers: pageSettings.showPageNumbers ?? false,
         paragraphStarts,
+        hyphenateWord,
       },
     );
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
@@ -1162,6 +1192,7 @@ export default function App() {
             pageSettings.linesPerPage,
             pageSettings.showPageNumbers,
             paragraphStarts,
+            hyphenateWord,
           )
         : [],
     [
@@ -1171,6 +1202,7 @@ export default function App() {
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
+      hyphenateWord,
     ],
   );
   const formattedBrfForPrint = useMemo(() => {
@@ -1181,6 +1213,7 @@ export default function App() {
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
+      hyphenateWord,
     );
   }, [
     canonicalBrfAscii,
@@ -1188,6 +1221,7 @@ export default function App() {
     pageSettings.linesPerPage,
     pageSettings.showPageNumbers,
     paragraphStarts,
+    hyphenateWord,
   ]);
 
   const stlBuildBase = useMemo(

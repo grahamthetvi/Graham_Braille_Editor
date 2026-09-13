@@ -67,6 +67,7 @@ export function isContractedBrf(raw: string): boolean {
   const strongWords = (ascii.match(/(?:^|[\s"'])(?:[&=(?!])(?=[\s"',.:;!?]|$)/g) || []).length;
 
   // Standalone single-letter words (excluding A and I, which exist in Grade 1/uncontracted)
+  // b, c, d, e, f, g, h, j, k, l, m, n, p, q, r, s, t, u, v, w, x, y, z
   const consonantWords = (ascii.match(/(?:^|[\s"'])[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z](?=[\s"',.:;!?]|$)/g) || []).length;
 
   // Common group contractions embedded in words: + (ing), $ (ed), ] (er), > (ar), < (in), % (ch), / (st), \ (ou)
@@ -97,6 +98,7 @@ export function splitBrfPages(raw: string): string[][] {
     const line = lines[i];
     curPage.push(line);
 
+    // Standalone page number line followed by blank lines or EOF
     const isStandalonePageNum = /^\s{3,}(?:#?[A-Ja-j]{1,4}|#?\d{1,4})\s*$/.test(line);
     if (isStandalonePageNum) {
       let nextNonEmpty = -1;
@@ -136,6 +138,7 @@ export function stripBraillePageNumbersAndPadding(raw: string): string {
 
     let lines = pageLines.slice(0, end + 1);
 
+    // Check last line of page for page number
     const lastLine = lines[lines.length - 1];
     const standaloneLast = lastLine.match(/^\s*(?:#?[A-Ja-j]{1,4}|#?\d{1,4})\s*$/);
     const inlineLast = lastLine.match(/^(.*?)(?:\s{3,}(?:#?[A-Ja-j]{1,4}|#?\d{1,4}))\s*$/);
@@ -150,6 +153,7 @@ export function stripBraillePageNumbersAndPadding(raw: string): string {
       lines.pop();
     }
 
+    // Check first line of page for header / page number
     if (lines.length > 0) {
       const firstLine = lines[0];
       const standaloneFirst = firstLine.match(/^\s*(?:#?[A-Ja-j]{1,4}|#?\d{1,4})\s*$/);

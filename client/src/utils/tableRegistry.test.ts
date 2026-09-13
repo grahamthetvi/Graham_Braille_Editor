@@ -57,6 +57,15 @@ describe('tableRegistry', () => {
     }
   });
 
+  it('registers 3.39 New Zealand English and Haitian Creole tables', () => {
+    expect(isKnownTable('en-nz-g1.utb')).toBe(true);
+    expect(isKnownTable('en-nz-g2.ctb')).toBe(true);
+    expect(isKnownTable('ht-g1.utb')).toBe(true);
+    expect(existsSync(resolve(tablesDir, 'en-nz-g1.utb'))).toBe(true);
+    expect(existsSync(resolve(tablesDir, 'en-nz-g2.ctb'))).toBe(true);
+    expect(existsSync(resolve(tablesDir, 'ht-g1.utb'))).toBe(true);
+  });
+
   it('has a substantial literary/computer coverage', () => {
     expect(ALL_TABLES.length).toBeGreaterThanOrEqual(150);
     expect(TABLE_GROUPS.length).toBeGreaterThanOrEqual(10);
@@ -79,6 +88,7 @@ describe('tableRegistry', () => {
       expect(getGrade2TableFor('en-us-g1.ctb')).toBe('en-us-g2.ctb');
       expect(getGrade2TableFor('es-g1.ctb')).toBe('es-g2.ctb');
       expect(getGrade2TableFor('en-gb-g1.utb')).toBe('en-GB-g2.ctb');
+      expect(getGrade2TableFor('en-nz-g1.utb')).toBe('en-nz-g2.ctb');
     });
 
     it('keeps existing Grade 2 tables', () => {
