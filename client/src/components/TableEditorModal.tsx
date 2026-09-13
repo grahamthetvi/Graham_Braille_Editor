@@ -2,11 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBraille, type MathCode } from '../hooks/useBraille';
 import {
-  DEFAULT_TN_BLANK_OTHER,
-  DEFAULT_TN_BLANK_SIMPLE,
-  DEFAULT_TN_LINEAR,
-  DEFAULT_TN_LISTED,
-  DEFAULT_TN_STAIRSTEP,
   defaultTableSpec,
   parseTableCsv,
   resizeGrid,
@@ -20,7 +15,7 @@ import {
   defaultBlankTnForFormat,
   defaultTnForFormat,
   formatTableInsertBlock,
-  generateTableBrf,
+  formatTableSpecToBrf,
   type ResolvedTableFormat,
 } from '../utils/tableBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
@@ -31,27 +26,6 @@ export interface TableEditorModalProps {
   brailleTable?: string;
   mathCode?: MathCode;
   cellsPerRow: number;
-}
-
-async function translateAll(
-  texts: string[],
-  translateAsync: (text: string, table?: string, mathCode?: MathCode) => Promise<string>,
-  table: string,
-  mathCode: MathCode
-): Promise<string[]> {
-  const out: string[] = [];
-  for (const t of texts) {
-    if (!t.trim()) {
-      out.push('');
-      continue;
-    }
-    try {
-      out.push(await translateAsync(t, table, mathCode));
-    } catch {
-      out.push(t);
-    }
-  }
-  return out;
 }
 
 function tnDefaultFor(format: TableFormat): string {
@@ -180,79 +154,11 @@ export function TableEditorModal({
     setBusy(true);
     setPreviewError(null);
     try {
-      const flatCells = spec.cells.flat();
-      const translatedFlat = await translateAll(flatCells, translateAsync, brailleTable, mathCode);
-      const translatedCells: string[][] = [];
-      let idx = 0;
-      for (const row of spec.cells) {
-        const tr: string[] = [];
-        for (let c = 0; c < row.length; c++) {
-          tr.push(translatedFlat[idx++] ?? '');
-        }
-        translatedCells.push(tr);
-      }
-
-      const resolvedHint: ResolvedTableFormat | 'auto' =
-        spec.format === 'auto' ? 'auto' : spec.format;
-      const needsTn = spec.format !== 'simple';
-      const tnPrint =
-        needsTn || spec.format === 'auto'
-          ? (spec.transcriberNote?.trim() ||
-              (spec.format === 'listed'
-                ? DEFAULT_TN_LISTED
-                : spec.format === 'stairstep'
-                  ? DEFAULT_TN_STAIRSTEP
-                  : spec.format === 'linear'
-                    ? DEFAULT_TN_LINEAR
-                    : ''))
-          : '';
-
-      // For auto, TN is filled after resolve — generate without TN first if auto+empty,
-      // then we attach listed/stairstep/linear defaults inside generate via tnBrf.
-      let tnBrf = '';
-      if (tnPrint) {
-        tnBrf = (await translateAll([tnPrint], translateAsync, brailleTable, mathCode))[0] ?? '';
-      }
-
-      let blankTnBrf = '';
-      if (tableHasBlankCells(spec)) {
-        const blankPrint =
-          spec.blankCellNote?.trim() ||
-          (resolvedHint === 'simple' || resolvedHint === 'auto'
-            ? DEFAULT_TN_BLANK_SIMPLE
-            : DEFAULT_TN_BLANK_OTHER);
-        blankTnBrf =
-          (await translateAll([blankPrint], translateAsync, brailleTable, mathCode))[0] ?? '';
-      }
-
-      let titleBrf = '';
-      if (spec.title?.trim()) {
-        titleBrf =
-          (await translateAll([spec.title.trim()], translateAsync, brailleTable, mathCode))[0] ??
-          '';
-      }
-
-      // When format is auto and no TN yet, generate once to learn format, then add default TN.
-      let result = generateTableBrf(
+      const result = await formatTableSpecToBrf(
         spec,
-        { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
+        (text) => translateAsync(text, brailleTable, mathCode),
         cellsPerRow
       );
-
-      if (spec.format === 'auto' && !tnBrf && result.format !== 'simple') {
-        const autoTn =
-          result.format === 'listed'
-            ? DEFAULT_TN_LISTED
-            : result.format === 'stairstep'
-              ? DEFAULT_TN_STAIRSTEP
-              : DEFAULT_TN_LINEAR;
-        tnBrf = (await translateAll([autoTn], translateAsync, brailleTable, mathCode))[0] ?? '';
-        result = generateTableBrf(
-          { ...spec, format: result.format },
-          { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
-          cellsPerRow
-        );
-      }
 
       setPreviewBrf(result.brf);
       setPreviewFormat(result.format);
@@ -293,74 +199,11 @@ export function TableEditorModal({
     setBusy(true);
     setPreviewError(null);
     try {
-      const flatCells = spec.cells.flat();
-      const translatedFlat = await translateAll(flatCells, translateAsync, brailleTable, mathCode);
-      const translatedCells: string[][] = [];
-      let idx = 0;
-      for (const row of spec.cells) {
-        const tr: string[] = [];
-        for (let c = 0; c < row.length; c++) {
-          tr.push(translatedFlat[idx++] ?? '');
-        }
-        translatedCells.push(tr);
-      }
-
-      const needsTn = spec.format !== 'simple';
-      let tnPrint =
-        needsTn || spec.format === 'auto'
-          ? (spec.transcriberNote?.trim() ||
-              (spec.format === 'listed'
-                ? DEFAULT_TN_LISTED
-                : spec.format === 'stairstep'
-                  ? DEFAULT_TN_STAIRSTEP
-                  : spec.format === 'linear'
-                    ? DEFAULT_TN_LINEAR
-                    : ''))
-          : '';
-
-      let tnBrf = '';
-      if (tnPrint) {
-        tnBrf = (await translateAll([tnPrint], translateAsync, brailleTable, mathCode))[0] ?? '';
-      }
-
-      let blankTnBrf = '';
-      if (tableHasBlankCells(spec)) {
-        const blankPrint =
-          spec.blankCellNote?.trim() ||
-          (spec.format === 'listed' || spec.format === 'stairstep' || spec.format === 'linear'
-            ? DEFAULT_TN_BLANK_OTHER
-            : DEFAULT_TN_BLANK_SIMPLE);
-        blankTnBrf =
-          (await translateAll([blankPrint], translateAsync, brailleTable, mathCode))[0] ?? '';
-      }
-
-      let titleBrf = '';
-      if (spec.title?.trim()) {
-        titleBrf =
-          (await translateAll([spec.title.trim()], translateAsync, brailleTable, mathCode))[0] ??
-          '';
-      }
-
-      let result = generateTableBrf(
+      const result = await formatTableSpecToBrf(
         spec,
-        { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
+        (text) => translateAsync(text, brailleTable, mathCode),
         cellsPerRow
       );
-
-      if (spec.format === 'auto' && !tnBrf && result.format !== 'simple') {
-        const autoTn =
-          result.format === 'listed'
-            ? DEFAULT_TN_LISTED
-            : result.format === 'stairstep'
-              ? DEFAULT_TN_STAIRSTEP
-              : DEFAULT_TN_LINEAR;
-        tnBrf = (await translateAll([autoTn], translateAsync, brailleTable, mathCode))[0] ?? '';
-        result = generateTableBrf(
-          { ...spec, format: result.format },
-          { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
-          cellsPerRow
-        );
-      }
 
       if (!result.brf.trim()) {
         setPreviewError(result.warnings[0] ?? t('tableEditor.errors.noPreview'));

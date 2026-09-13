@@ -6,60 +6,62 @@ import {
   buildPlainTextToMatchBrailleWrap,
   SOFT_LINE_BREAK_CHAR,
   formatBrfForOutput,
+  formatBrfPages,
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   convertToRtf,
   buildBrfDownloadPayload,
   buildGmailComposeUrl,
   buildPrintLayoutRtfBody,
+  buildPrintLayoutRtf,
+  buildGradingPrintLayoutRtf,
+  formatGradingSheetHeader,
+  printLayoutPageMetrics,
+  fitPrintLayoutFontToLongestLine,
   paginatePrintLines,
-  formatPlainTextForPrintDownload,
-  RTF_FS_BASE,
-  RTF_FS_MIN,
 } from './brailleFormat';
+import { asciiToUnicodeBraille } from './braille';
 import { createHyphenator } from './hyphenation';
-
-/** Reconstruct word start cells from a print-layout RTF inner line (base grid = \fs24). */
-function rtfLineWordStarts(line: string): { word: string; fs: number; startCell: number }[] {
-  const words: { word: string; fs: number; startCell: number }[] = [];
-  let cell = 0;
-  let i = 0;
-  while (i < line.length) {
-    if (line.startsWith('{\\fs', i)) {
-      const m = line.slice(i).match(/^\{\\fs(\d+) /);
-      if (!m) {
-        i++;
-        continue;
-      }
-      const fs = Number(m[1]);
-      const contentStart = i + m[0].length;
-      const end = line.indexOf('}', contentStart);
-      const text = end >= 0 ? line.slice(contentStart, end) : '';
-      if (text.length > 0) {
-        words.push({ word: text, fs, startCell: cell });
-        cell += (text.length * fs) / RTF_FS_BASE;
-      }
-      i = end >= 0 ? end + 1 : i + 1;
-      continue;
-    }
-    if (line[i] === ' ') {
-      cell += 1;
-      i++;
-      continue;
-    }
-    let j = i;
-    while (j < line.length && line[j] !== ' ' && line[j] !== '{') j++;
-    const text = line.slice(i, j);
-    words.push({ word: text, fs: RTF_FS_BASE, startCell: cell });
-    cell += text.length;
-    i = j;
-  }
-  return words;
-}
 
 function formFeedCount(s: string): number {
   return (s.match(/\f/g) ?? []).length;
 }
+
+describe('formatBrfPages', () => {
+  it('preserves a trailing blank line when source ends with Enter', () => {
+    const unicode = asciiToUnicodeBraille('hello\n');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    const lines = pages[0].split('\n');
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe(asciiToUnicodeBraille('hello'));
+    expect(lines[1]).toBe('');
+  });
+
+  it('hello, Enter, Enter, world keeps a blank braille row between the words', () => {
+    const unicode = asciiToUnicodeBraille('hello\n\nworld');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    const lines = pages[0].split('\n');
+    expect(lines).toEqual([
+      asciiToUnicodeBraille('hello'),
+      '',
+      asciiToUnicodeBraille('world'),
+    ]);
+  });
+
+  it('preserves mid-document blank lines', () => {
+    const unicode = asciiToUnicodeBraille('hello\n\nworld');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    const lines = pages[0].split('\n');
+    expect(lines).toHaveLength(3);
+    expect(lines[1]).toBe('');
+  });
+
+  it('does not add a trailing blank line when source has no trailing newline', () => {
+    const unicode = asciiToUnicodeBraille('hello');
+    const pages = formatBrfPages(unicode, 40, 25, false);
+    expect(pages[0].split('\n')).toEqual([asciiToUnicodeBraille('hello')]);
+  });
+});
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
   it('m not equal n: one braille token spanning rows packs multiple words on early rows (long line)', () => {
@@ -250,48 +252,38 @@ describe('paginatePrintLines', () => {
   });
 });
 
-describe('buildPrintLayoutRtfBody slot scaling', () => {
-  it('shrinks Grade 2 "the" (1 cell) so "cat" starts on the same cell as BRF', () => {
+describe('buildPrintLayoutRtfBody line matching', () => {
+  it('keeps contracted words at one size with a space between them', () => {
     const source = 'the cat';
     const asciiBrf = '! cat';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
-    expect(inner).toMatch(/\\fs(\d+)/);
-    const fsMatch = inner.match(/\\fs(\d+)/);
-    const fs = Number(fsMatch?.[1]);
-    expect(fs).toBeGreaterThanOrEqual(RTF_FS_MIN);
-    expect(fs).toBeLessThan(RTF_FS_BASE);
-    expect(inner).toContain('the');
-    const starts = rtfLineWordStarts(inner.split('\n')[0]);
-    const theWord = starts.find(w => w.word === 'the');
-    const catWord = starts.find(w => w.word === 'cat');
-    expect(theWord).toBeDefined();
-    expect(catWord).toBeDefined();
-    expect(theWord?.fs).toBeLessThan(RTF_FS_BASE);
-    expect(catWord?.startCell).toBe(2);
-    expect(catWord?.fs).toBe(RTF_FS_BASE);
+    expect(inner).toBe('the cat');
+    expect(inner).not.toMatch(/\\fs\d+/);
   });
 
-  it('does not emit \\fs below the 8pt floor; the next word may drift', () => {
+  it('puts the same print words on a line as the wrapped braille line', () => {
+    const source = 'the cat sat on the mat';
+    const asciiBrf = '! cat sat on ! mat';
+    const inner = buildPrintLayoutRtfBody(source, asciiBrf, 15);
+    expect(inner).toBe('the cat sat on the\nmat');
+    expect(inner).not.toMatch(/\\fs\d+/);
+  });
+
+  it('does not emit mid-line \\fs for long uncontracted words', () => {
     const source = 'abcde f';
     const asciiBrf = 'x f';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
-    const fsValues = [...inner.matchAll(/\\fs(\d+)/g)].map(m => Number(m[1]));
-    expect(fsValues.length).toBeGreaterThan(0);
-    expect(Math.min(...fsValues)).toBeGreaterThanOrEqual(RTF_FS_MIN);
-    const starts = rtfLineWordStarts(inner.split('\n')[0]);
-    const second = starts.find(w => w.word === 'f');
-    expect(second).toBeDefined();
-    expect(second!.startCell).toBeGreaterThan(2);
+    expect(inner).not.toMatch(/\\fs\d+/);
+    expect(inner).toContain('abcde');
+    expect(inner).toContain(' f');
   });
 
-  it('keeps uncontracted equal-length words at base size with column padding', () => {
+  it('joins uncontracted words with ordinary spaces, not cell-column padding', () => {
     const source = 'hello brave world';
     const asciiBrf = ',hello brave world';
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, 40);
     expect(inner).not.toMatch(/\\fs\d+/);
-    expect(inner).toBe('hello  brave world');
-    const wrap = buildPlainTextToMatchBrailleWrap(source, asciiBrf, 40);
-    expect(inner).toBe(wrap);
+    expect(inner).toBe('hello brave world');
   });
 
   it('preserves paragraph 3-1 wrap after pagination', () => {
@@ -299,11 +291,7 @@ describe('buildPrintLayoutRtfBody slot scaling', () => {
     const asciiBrf = source;
     const cells = 20;
     const paragraphStarts = { firstLineStartCell: 3, runoverStartCell: 1 };
-    const wrap = formatPlainTextForPrintDownload(
-      buildPlainTextToMatchBrailleWrap(source, asciiBrf, cells, paragraphStarts),
-    );
     const inner = buildPrintLayoutRtfBody(source, asciiBrf, cells, paragraphStarts);
-    expect(inner).toBe(wrap);
     const visualLines = inner.split('\n');
     expect(visualLines.length).toBeGreaterThan(1);
     expect(visualLines[0].startsWith('  ')).toBe(true);
@@ -312,6 +300,91 @@ describe('buildPrintLayoutRtfBody slot scaling', () => {
     const firstPageLines = paginated.split('\f')[0].split('\n');
     expect(firstPageLines[0].startsWith('  ')).toBe(true);
     expect(firstPageLines[0]).toBe(visualLines[0]);
+  });
+});
+
+describe('printLayoutPageMetrics', () => {
+  it('fills wide tractor paper for 40×25', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 40, linesPerPage: 25, paperFormat: 'wide' });
+    expect(m.paperWidthTwips).toBe(16560);
+    expect(m.paperHeightTwips).toBe(15840);
+    expect(m.fsBase).toBe(60);
+    expect(m.slTwips).toBe(576);
+  });
+
+  it('fills US Letter for 32×25', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    expect(m.paperWidthTwips).toBe(12240);
+    expect(m.fsBase).toBe(56);
+  });
+});
+
+describe('fitPrintLayoutFontToLongestLine', () => {
+  it('keeps cell-pitch size when print is no wider than the braille row', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    const fitted = fitPrintLayoutFontToLongestLine(m, 32);
+    expect(fitted.fsBase).toBe(m.fsBase);
+    expect(fitted.slTwips).toBe(m.slTwips);
+  });
+
+  it('shrinks font so a longer print line still fits, without changing line pitch', () => {
+    const m = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    const fitted = fitPrintLayoutFontToLongestLine(m, 48);
+    const printable = m.paperWidthTwips - m.marginLeftTwips - m.marginRightTwips;
+    expect(fitted.fsBase).toBeLessThan(m.fsBase);
+    expect(fitted.fsBase * 6 * 48).toBeLessThanOrEqual(printable);
+    expect(fitted.slTwips).toBe(m.slTwips);
+  });
+});
+
+describe('buildPrintLayoutRtf', () => {
+  it('emits paper size and scaled Courier in the RTF header', () => {
+    const rtf = buildPrintLayoutRtf('hello', 'hello', {
+      cellsPerRow: 40,
+      linesPerPage: 25,
+      paperFormat: 'wide',
+    });
+    expect(rtf).toContain('\\paperw16560');
+    expect(rtf).toContain('\\paperh15840');
+    expect(rtf).toContain('\\fs60');
+    expect(rtf).toContain('\\sl576');
+    expect(rtf.match(/\\fs\d+/g)?.every(tok => tok === '\\fs60')).toBe(true);
+  });
+
+  it('keeps line spacing when contracted print is wider than the braille row', () => {
+    const source = 'the cat sat on the mat today again';
+    const asciiBrf = '! cat sat on ! mat today again';
+    const rtf = buildPrintLayoutRtf(source, asciiBrf, {
+      cellsPerRow: 32,
+      linesPerPage: 25,
+      paperFormat: 'us-letter',
+    });
+    const letter = printLayoutPageMetrics({ cellsPerRow: 32, linesPerPage: 25, paperFormat: 'us-letter' });
+    expect(rtf).toContain(`\\sl${letter.slTwips}`);
+    const fsTokens = rtf.match(/\\fs(\d+)/g) ?? [];
+    expect(fsTokens.length).toBeGreaterThan(0);
+    expect(new Set(fsTokens).size).toBe(1);
+  });
+});
+
+describe('formatGradingSheetHeader', () => {
+  it('wraps separator lines to cellsPerRow', () => {
+    const header = formatGradingSheetHeader(32, 100, 500);
+    const lines = header.split('\n');
+    expect(lines[0].length).toBe(32);
+    expect(lines[0]).toBe('='.repeat(32));
+  });
+});
+
+describe('buildGradingPrintLayoutRtf', () => {
+  it('prepends a cell-width grading header', () => {
+    const rtf = buildGradingPrintLayoutRtf('hello', 'hello', 1, 5, false, {
+      cellsPerRow: 32,
+      linesPerPage: 25,
+      paperFormat: 'us-letter',
+    });
+    expect(rtf).toContain('GRADING SHEET');
+    expect(rtf).toContain('\\paperw12240');
   });
 });
 

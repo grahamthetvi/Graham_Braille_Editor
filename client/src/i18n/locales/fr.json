@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Importer un fichier",
-        "ariaLabel": "Importer un fichier texte ou BRF",
-        "title": "Texte brut : traduit en braille. .brf : rétro-traduction en texte (table sélectionnée) et affichage du BRF à droite. La rétro-traduction en grade 2 est approximative ; réessayez après le chargement de liblouis si nécessaire."
+        "ariaLabel": "Importer un fichier texte, Word (.docx) ou BRF",
+        "title": "Texte brut : traduit en braille. .docx : convertit le texte Word dans ce navigateur (le fichier reste sur votre appareil), puis traduit. .brf : rétro-traduction en texte (table sélectionnée) et affichage du BRF à droite. La rétro-traduction en grade 2 est approximative ; réessayez après le chargement de liblouis si nécessaire. Les fichiers .doc hérités ne sont pas pris en charge — enregistrez-les d’abord au format .docx dans Word.",
+        "success": "Document Word importé comme texte de l’éditeur.",
+        "errors": {
+          "tooLarge": "Ce fichier Word dépasse {{limitMb}} Mo, la limite d’importation.",
+          "notDocx": "Ce fichier n’est pas un document Word .docx valide.",
+          "encrypted": "Ce fichier Word est protégé par un mot de passe. Retirez le mot de passe dans Word, enregistrez-le en .docx, puis importez-le à nouveau.",
+          "empty": "Ce document Word ne contient pas de texte lisible à importer.",
+          "legacyDoc": "Les fichiers .doc hérités ne sont pas pris en charge. Dans Word, choisissez Fichier → Enregistrer sous → .docx, puis importez ce fichier.",
+          "generic": "Impossible d’importer ce fichier Word."
+        }
       },
       "drafts": {
         "label": "Brouillons",
@@ -47,6 +56,7 @@
         "status": {
           "starting": "Démarrage…",
           "loadingKitten": "Chargement du modèle Kitten TTS…",
+          "downloadingKitten": "Téléchargement du modèle Kitten… {{percent}} %",
           "synthesizingKitten": "Synthèse avec Kitten…",
           "loadingEspeak": "Chargement d'eSpeak NG…",
           "synthesizingEspeak": "Synthèse avec eSpeak NG…",
@@ -59,7 +69,10 @@
         "errors": {
           "emptyText": "Rien à énoncer — saisissez d'abord du texte.",
           "textTooLong": "Le texte dépasse la limite de {{limit}} caractères pour l'export audio.",
-          "emptyAudio": "La synthèse vocale a produit un audio vide."
+          "emptyAudio": "La synthèse vocale a produit un audio vide.",
+          "modelDownloadFailed": "Impossible de télécharger le modèle vocal. Hugging Face ou le CDN est peut-être bloqué (fréquent sur les réseaux scolaires et d'entreprise). Essayez eSpeak NG, beaucoup plus léger, ou un réseau moins restreint.",
+          "storageQuota": "Le navigateur n'a pas pu stocker le modèle vocal. Cela arrive souvent en navigation privée ou lorsque le stockage est plein. Ouvrez une fenêtre normale, libérez de l'espace ou utilisez eSpeak NG.",
+          "runtimeFailed": "La synthèse vocale a échoué. Essayez eSpeak NG, ou rechargez puis exportez à nouveau."
         }
       },
       "print": {
@@ -300,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (par défaut)",
-      "size": "~25 MB",
-      "speed": "Vitesse d'export équilibrée",
-      "description": "Voix neuronale légère. Bon choix par défaut pour la plupart des documents."
+      "size": "~25–60 MB",
+      "speed": "Export neuronal le plus rapide (WebGPU si disponible)",
+      "description": "Voix neuronale légère. Utilise le processeur graphique lorsque le navigateur le permet, sinon WASM. Bon choix par défaut pour la plupart des documents."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1131,7 +1144,7 @@
       "title": "Exporter l'audio (MP3)",
       "lead": "Choisissez un moteur vocal. Les seules différences pratiques sont la vitesse d'export et la taille du modèle au premier usage — ensuite, les modèles restent en cache dans le navigateur.",
       "engineLegend": "Moteur vocal",
-      "note": "Tous les moteurs s'exécutent entièrement dans le navigateur. Aucune passerelle ni compte requis.",
+      "note": "Tous les moteurs s'exécutent entièrement dans le navigateur. Les voix neuronales se téléchargent depuis Hugging Face au premier usage — si c'est bloqué, choisissez eSpeak NG.",
       "exportButton": "Télécharger le MP3",
       "cancel": "Annuler",
       "closeAriaLabel": "Fermer l'export audio"

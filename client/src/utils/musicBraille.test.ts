@@ -820,3 +820,72 @@ describe('slash-L bar-over-bar Für Elise (>/l / >#l)', () => {
     expect(a4Hits.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('Sao Mai single-staff easy Für Elise', () => {
+  const fixturePath = join(
+    dirname(fileURLToPath(import.meta.url)),
+    'fixtures/fur-elise-easy.brf',
+  );
+
+  it('detects the easy-version fixture as music', () => {
+    const brf = readFileSync(fixturePath, 'utf8');
+    expect(isLikelyMusicBrailleBrf(brf)).toBe(true);
+  });
+
+  it('plays 3/4 melody with measure 2 E D# E B D C and no label/dynamic phantoms', () => {
+    const brf = readFileSync(fixturePath, 'utf8');
+    const score = parseBrailleMusic(brf);
+
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 4 });
+    expect(score.parseInfo?.pianoSystems ?? 0).toBe(0);
+    expect(score.parseInfo?.capacityBeats).toBeCloseTo(3, 5);
+    expect(score.totalMeasures).toBe(22);
+
+    const notes = score.events
+      .filter((e) => e.midiPitches.length > 0)
+      .sort(
+        (a, b) =>
+          a.timeOffsetBeats - b.timeOffsetBeats || a.charIndex - b.charIndex,
+      );
+
+    // Opening pickup of measure 1, then measure 2 motif.
+    expect(notes[0].midiPitches[0]).toBe(76); // E5
+    expect(notes[1].midiPitches[0]).toBe(75); // D#5
+    expect(notes[0].durationBeats).toBeCloseTo(0.5, 5);
+    expect(notes[1].durationBeats).toBeCloseTo(0.5, 5);
+
+    const m2 = notes.filter((e) => e.measure === 2);
+    expect(m2.map((e) => e.midiPitches[0])).toEqual([76, 75, 76, 71, 74, 72]);
+    expect(m2.every((e) => Math.abs(e.durationBeats - 0.5) < 1e-9)).toBe(true);
+
+    // No triplet 1/3 or 2/3 durations from measure-number `1` cells.
+    expect(
+      notes.every((e) => {
+        const d = e.durationBeats;
+        return Math.abs(d - 1 / 3) > 0.05 && Math.abs(d - 2 / 3) > 0.05;
+      }),
+    ).toBe(true);
+
+    // First 12 sounding pitches: pickup + bar 2 + A–C–E–A.
+    expect(notes.slice(0, 12).map((e) => e.midiPitches[0])).toEqual([
+      76, 75, 76, 75, 76, 71, 74, 72, 69, 60, 64, 69,
+    ]);
+
+    // Closing dotted-half A4 in measure 22 (not a phantom E from >mp).
+    const last = notes[notes.length - 1];
+    expect(last.measure).toBe(22);
+    expect(last.midiPitches[0]).toBe(69);
+    expect(last.durationBeats).toBeCloseTo(3, 5);
+  });
+
+  it('skips >mp in a single-staff bar so M and P are not a rest plus E half', () => {
+    const score = parseBrailleMusic('#C4\n#1"31A U>MP.F%E');
+    expect(score.timeSignature).toEqual({ beatsPerMeasure: 3, beatUnit: 4 });
+    const sounding = score.events.filter((e) => e.midiPitches.length > 0);
+    expect(sounding.map((e) => e.midiPitches[0])).toEqual([76, 75]);
+    expect(sounding.every((e) => e.durationBeats === 0.5)).toBe(true);
+    const rests = score.events.filter((e) => e.type === 'rest');
+    expect(rests).toHaveLength(1);
+    expect(rests[0].durationBeats).toBeCloseTo(2, 5);
+  });
+});

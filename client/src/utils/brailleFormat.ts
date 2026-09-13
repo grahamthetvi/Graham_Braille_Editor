@@ -31,10 +31,188 @@ export const SOFT_LINE_BREAK_CHAR = '\r';
 /** Previous soft-wrap character — still stripped when normalizing for translate/sync. */
 const LEGACY_SOFT_LINE_BREAK_CHAR = '\u2028';
 
-/** Courier half-points: \fs24 = 12pt = one braille cell at the print-layout base grid. */
+/** Courier half-points: \fs24 = 12pt. Used when no page metrics are supplied. */
 export const RTF_FS_BASE = 24;
-/** Readability floor: \fs16 = 8pt. Words that still overflow at this size may drift. */
+/** Absolute readability floor: \fs16 = 8pt. Words that still overflow at this size may drift. */
 export const RTF_FS_MIN = 16;
+
+/** Twips (1/20 pt) per inch — RTF paper, margin, and line-spacing unit. */
+export const TWIPS_PER_INCH = 1440;
+/**
+ * Courier New is 0.6em wide. `\fs` is half-points, so one character is 6 twips per `\fs` unit
+ * (12pt Courier = 10 CPI = 144 twips = `\fs24` × 6).
+ */
+export const COURIER_TWIPS_PER_FS = 6;
+
+export type PrintLayoutPaperFormat = 'us-letter' | 'wide' | 'custom';
+
+export type PrintLayoutPageSpec = {
+  cellsPerRow: number;
+  linesPerPage: number;
+  paperFormat?: PrintLayoutPaperFormat;
+};
+
+export type PrintLayoutPageMetrics = {
+  paperWidthTwips: number;
+  paperHeightTwips: number;
+  marginLeftTwips: number;
+  marginRightTwips: number;
+  marginTopTwips: number;
+  marginBottomTwips: number;
+  fsBase: number;
+  fsMin: number;
+  slTwips: number;
+  cellsPerRow: number;
+  linesPerPage: number;
+};
+
+export function inferPrintPaperFormat(cellsPerRow: number, linesPerPage: number): PrintLayoutPaperFormat {
+  if (cellsPerRow === 32 && linesPerPage === 25) return 'us-letter';
+  if (cellsPerRow === 40 && linesPerPage === 25) return 'wide';
+  return 'custom';
+}
+
+function inchesToTwips(inches: number): number {
+  return Math.round(inches * TWIPS_PER_INCH);
+}
+
+/** Shrink floor: 8pt, or 40% of the page's base size — whichever is larger. */
+export function rtfFontSizeMin(fsBase: number): number {
+  return Math.max(RTF_FS_MIN, Math.round(fsBase * 0.4));
+}
+
+/**
+ * Paper size, margins, Courier `\fs`, and exact line spacing so `linesPerPage`
+ * occupies the printable height (same pitch as the embossed page). Character
+ * pitch starts at one Courier column per braille cell; callers may shrink `\fs`
+ * so a longer print line still fits on one row without wrapping.
+ */
+export function printLayoutPageMetrics(spec: PrintLayoutPageSpec): PrintLayoutPageMetrics {
+  const cells = Math.max(1, spec.cellsPerRow);
+  const lines = Math.max(1, spec.linesPerPage);
+  const format = spec.paperFormat ?? inferPrintPaperFormat(cells, lines);
+
+  let widthIn: number;
+  let heightIn: number;
+  let marginLeftIn: number;
+  let marginRightIn: number;
+  let marginTopIn: number;
+  let marginBottomIn: number;
+
+  if (format === 'us-letter') {
+    widthIn = 8.5;
+    heightIn = 11;
+    marginLeftIn = 0.5;
+    marginRightIn = 0.5;
+    marginTopIn = 0.5;
+    marginBottomIn = 0.5;
+  } else if (format === 'wide') {
+    widthIn = 11.5;
+    heightIn = 11;
+    marginLeftIn = 0.75;
+    marginRightIn = 0.75;
+    marginTopIn = 0.5;
+    marginBottomIn = 0.5;
+  } else {
+    marginLeftIn = 0.5;
+    marginRightIn = 0.5;
+    marginTopIn = 0.5;
+    marginBottomIn = 0.5;
+    widthIn = marginLeftIn + cells * 0.25 + marginRightIn;
+    heightIn = marginTopIn + lines * 0.4 + marginBottomIn;
+  }
+
+  const paperWidthTwips = inchesToTwips(widthIn);
+  const paperHeightTwips = inchesToTwips(heightIn);
+  const marginLeftTwips = inchesToTwips(marginLeftIn);
+  const marginRightTwips = inchesToTwips(marginRightIn);
+  const marginTopTwips = inchesToTwips(marginTopIn);
+  const marginBottomTwips = inchesToTwips(marginBottomIn);
+
+  const printableWidth = Math.max(1, paperWidthTwips - marginLeftTwips - marginRightTwips);
+  const printableHeight = Math.max(1, paperHeightTwips - marginTopTwips - marginBottomTwips);
+  const cellWidthTwips = printableWidth / cells;
+  const slTwips = Math.max(1, Math.round(printableHeight / lines));
+  const fsBase = Math.max(RTF_FS_MIN, Math.round(cellWidthTwips / COURIER_TWIPS_PER_FS));
+
+  return {
+    paperWidthTwips,
+    paperHeightTwips,
+    marginLeftTwips,
+    marginRightTwips,
+    marginTopTwips,
+    marginBottomTwips,
+    fsBase,
+    fsMin: rtfFontSizeMin(fsBase),
+    slTwips,
+    cellsPerRow: cells,
+    linesPerPage: lines,
+  };
+}
+
+/**
+ * Visual character count of one inner print line. RTF `\\uN?` is one character;
+ * `\\\\` `\\{` `\\}` are one each. Mid-line `{\\fsN ...}` (legacy) counts the text only.
+ */
+export function rtfInnerVisualLength(line: string): number {
+  let n = 0;
+  let i = 0;
+  while (i < line.length) {
+    if (line.startsWith('{\\fs', i)) {
+      const m = line.slice(i).match(/^\{\\fs\d+ /);
+      if (m) {
+        const contentStart = i + m[0].length;
+        const end = line.indexOf('}', contentStart);
+        const text = end >= 0 ? line.slice(contentStart, end) : line.slice(contentStart);
+        n += rtfInnerVisualLength(text);
+        i = end >= 0 ? end + 1 : line.length;
+        continue;
+      }
+    }
+    if (line.startsWith('\\u', i)) {
+      const um = line.slice(i).match(/^\\u-?\d+\?/);
+      if (um) {
+        n += 1;
+        i += um[0].length;
+        continue;
+      }
+    }
+    if (line[i] === '\\' && i + 1 < line.length) {
+      n += 1;
+      i += 2;
+      continue;
+    }
+    n += 1;
+    i += 1;
+  }
+  return n;
+}
+
+export function maxPrintLineVisualLength(text: string): number {
+  let max = 0;
+  for (const page of text.split('\f')) {
+    for (const line of page.replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n')) {
+      max = Math.max(max, rtfInnerVisualLength(line));
+    }
+  }
+  return max;
+}
+
+/**
+ * One uniform Courier size for the document: never larger than the cell-pitch
+ * size, shrunk so the longest print line fits the printable width. Line spacing
+ * (`slTwips`) is unchanged so print rows stay on the braille line grid.
+ */
+export function fitPrintLayoutFontToLongestLine(
+  metrics: PrintLayoutPageMetrics,
+  maxChars: number,
+): PrintLayoutPageMetrics {
+  if (maxChars <= 0) return metrics;
+  const printable = Math.max(1, metrics.paperWidthTwips - metrics.marginLeftTwips - metrics.marginRightTwips);
+  const fsFit = Math.floor(printable / (maxChars * COURIER_TWIPS_PER_FS));
+  const fsBase = Math.max(12, Math.min(metrics.fsBase, fsFit));
+  return { ...metrics, fsBase };
+}
 
 /** Index into the non-empty braille word list for one logical (pre-wrap) line; char range for hard breaks. */
 export type BrailleWordSpan = {
@@ -717,6 +895,25 @@ function toBrailleNumber(num: number): string {
   return chars;
 }
 
+/** Count consecutive `\n` characters at the end of a string. */
+function countTrailingNewlines(text: string): number {
+  let count = 0;
+  for (let i = text.length - 1; i >= 0 && text[i] === '\n'; i--) count++;
+  return count;
+}
+
+/**
+ * Remove trailing blank lines beyond those implied by the source text ending.
+ * Keeps Enter-created blank lines while still trimming spurious padding.
+ */
+function trimTrailingBlankLines(lines: string[], sourceText: string): void {
+  const preserve = countTrailingNewlines(sourceText);
+  let trailingBlanks = 0;
+  for (let i = lines.length - 1; i >= 0 && lines[i] === ''; i--) trailingBlanks++;
+  const remove = Math.max(0, trailingBlanks - preserve);
+  for (let i = 0; i < remove; i++) lines.pop();
+}
+
 /**
  * One segment of Unicode braille (no form feeds). `firstPageNumber` is the 1-based
  * label for the first page of this segment when page numbers are shown.
@@ -770,10 +967,7 @@ function formatBrfPagesSegment(
     }
   }
 
-  // Trim trailing blank lines so the last page isn't mostly empty
-  while (wrappedLines.length > 0 && wrappedLines[wrappedLines.length - 1] === '') {
-    wrappedLines.pop();
-  }
+  trimTrailingBlankLines(wrappedLines, unicodeBraille);
 
   if (wrappedLines.length === 0) return [''];
 
@@ -942,7 +1136,31 @@ export type ConvertToRtfOptions = {
    * specials. Skip character escaping so mid-line size runs stay intact.
    */
   bodyIsRtf?: boolean;
+  /** When set, emit paper size, margins, Courier pitch, and line spacing that fill the sheet. */
+  page?: PrintLayoutPageMetrics;
 };
+
+function rtfParagraphReset(metrics: PrintLayoutPageMetrics): string {
+  return `\\pard\\sa0\\sb0\\sl${metrics.slTwips}\\slmult0\\nowidctlpar\\hyphpar0\\f0\\fs${metrics.fsBase}`;
+}
+
+function rtfDocumentOpen(metrics?: PrintLayoutPageMetrics): string {
+  const fonttbl = '{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Courier New;}}';
+  if (!metrics) {
+    return `{\\rtf1\\ansi\\deff0\r\n${fonttbl}\r\n\\viewkind4\\uc1\\pard\\f0\\fs24\r\n`;
+  }
+  return (
+    `{\\rtf1\\ansi\\deff0\r\n${fonttbl}\r\n` +
+    `\\paperw${metrics.paperWidthTwips}\\paperh${metrics.paperHeightTwips}` +
+    `\\margl${metrics.marginLeftTwips}\\margr${metrics.marginRightTwips}` +
+    `\\margt${metrics.marginTopTwips}\\margb${metrics.marginBottomTwips}` +
+    `\\viewkind4\\uc1\r\n` +
+    `\\sectd\\pgwsxn${metrics.paperWidthTwips}\\pghsxn${metrics.paperHeightTwips}` +
+    `\\marglsxn${metrics.marginLeftTwips}\\margrsxn${metrics.marginRightTwips}` +
+    `\\margtsxn${metrics.marginTopTwips}\\margbsxn${metrics.marginBottomTwips}\r\n` +
+    `${rtfParagraphReset(metrics)}\r\n`
+  );
+}
 
 /** True when `text` already has RTF runs we must not re-escape. */
 function rtfBodyHasControlWords(text: string): boolean {
@@ -998,16 +1216,20 @@ export function escapeRtfPlainText(text: string): string {
  * Converts a plain text string (or a pre-built RTF body with `\\fs` runs) to RTF
  * using Courier New. Escapes `\\ { }` and non-ASCII unless `bodyIsRtf` is set.
  * Newlines become `\par`; form feeds become `\page`.
+ * With `page` metrics, paper size / margins / character pitch / line spacing fill the sheet
+ * so each cell column and braille row maps onto the printable area.
  */
 export function convertToRtf(text: string, options?: ConvertToRtfOptions): string {
   const bodyIsRtf = options?.bodyIsRtf === true || rtfBodyHasControlWords(text);
   const prepared = bodyIsRtf ? text : escapeRtfPlainText(text);
+  const metrics = options?.page;
+  const pageBreak = metrics ? `\\page${rtfParagraphReset(metrics)}\r\n` : '\\page\r\n';
 
-  const formFeedsReplaced = prepared.replace(/\f/g, '\\page\r\n');
+  const formFeedsReplaced = prepared.replace(/\f/g, pageBreak);
   const lines = formFeedsReplaced.replace(/\r\n/g, '\n').split(/[\n\r]/);
   const rtfContent = lines.join('\\par\r\n');
 
-  return `{\\rtf1\\ansi\\deff0\r\n{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Courier New;}}\r\n\\viewkind4\\uc1\\pard\\f0\\fs24\r\n${rtfContent}\\par\r\n}`;
+  return `${rtfDocumentOpen(metrics)}${rtfContent}\\par\r\n}`;
 }
 
 
@@ -1023,83 +1245,28 @@ export function formatPlainTextForPrintDownload(editorContent: string): string {
     .replaceAll(SOFT_LINE_BREAK_CHAR, '\n');
 }
 
-type PrintWordSlot = {
-  text: string;
-  brailleStartCell: number;
-  slotCells: number;
-  printChars: number;
-};
-
-function fontSizeForSlot(slotCells: number, printChars: number): number {
-  if (printChars <= 0 || printChars <= slotCells) return RTF_FS_BASE;
-  const fs = Math.round(RTF_FS_BASE * (slotCells / printChars));
-  return Math.min(RTF_FS_BASE, Math.max(RTF_FS_MIN, fs));
-}
-
-function wordWidthCells(printChars: number, fs: number): number {
-  return (printChars * fs) / RTF_FS_BASE;
-}
-
-function slotsForPhysicalLine(
+function printLineFromPhysicalSpans(
   pl: PhysicalBrailleLineMeta,
   brfWords: string[],
   srcWords: string[],
   m: number,
   n: number,
   margin: number,
-  cellsPerRow: number,
-): PrintWordSlot[] {
-  const slots: PrintWordSlot[] = [];
-  let spanStartCell = margin;
-  for (let idx = 0; idx < pl.spans.length; idx++) {
-    const sp = pl.spans[idx];
+): string {
+  const parts: string[] = [];
+  for (const sp of pl.spans) {
     const printWord = sliceSrcForBrailleSpan(sp, brfWords, srcWords, m, n);
-    const wordCells = sp.charEnd - sp.charStart;
-    const isLast = idx === pl.spans.length - 1;
-    const slotCells = isLast
-      ? Math.max(wordCells, cellsPerRow - spanStartCell)
-      : wordCells + 1;
-    slots.push({
-      text: printWord,
-      brailleStartCell: spanStartCell,
-      slotCells,
-      printChars: printWord.length,
-    });
-    spanStartCell += wordCells + 1;
+    if (printWord.length > 0) parts.push(printWord);
   }
-  return slots;
+  return (' '.repeat(margin) + parts.join(' ')).replace(/\s+$/, '');
 }
 
-function emitScaledRtfLine(slots: PrintWordSlot[]): string {
-  let out = '';
-  let cursor = 0;
-  for (let idx = 0; idx < slots.length; idx++) {
-    const slot = slots[idx];
-    const fs = fontSizeForSlot(slot.slotCells, slot.printChars);
-    const width = wordWidthCells(slot.printChars, fs);
-    const overflowed = idx > 0 && cursor > slot.brailleStartCell;
-    const target = overflowed
-      ? Math.max(slot.brailleStartCell, cursor + 1)
-      : Math.max(slot.brailleStartCell, cursor);
-    const pad = Math.max(0, Math.round(target - cursor));
-    if (pad > 0) {
-      out += ' '.repeat(pad);
-      cursor += pad;
-    }
-    if (slot.text.length > 0) {
-      const escaped = escapeRtfPlainText(slot.text);
-      if (fs !== RTF_FS_BASE) {
-        out += `{\\fs${fs} ${escaped}}`;
-      } else {
-        out += escaped;
-      }
-      cursor += width;
-    }
-  }
-  return out.replace(/\s+$/, '');
-}
-
-function syncPlainLineToScaledRtfRows(
+/**
+ * One print row per visual braille row. Words on a print line are the literary
+ * words that belong to that braille line, joined with a single space at one font
+ * size (no per-word `\fs` scaling, no cell-column padding).
+ */
+function syncPlainLineToPrintRows(
   sourceLine: string,
   unicodeBrailleLine: string,
   cellsPerRow: number,
@@ -1120,7 +1287,7 @@ function syncPlainLineToScaledRtfRows(
   const m = brfWords.length;
   const n = srcWords.length;
 
-  if (m !== n || n === 0 || !unicodeBrailleLine.trim()) {
+  if (n === 0 || !unicodeBrailleLine.trim() || m !== n) {
     const plain = syncPlainLineToBrailleWrap(sourceLine, unicodeBrailleLine, cellsPerRow, paragraphStarts, hyphenateWord);
     const visual = formatPlainTextForPrintDownload(plain);
     return visual.split('\n').map(line => escapeRtfPlainText(line));
@@ -1144,19 +1311,18 @@ function syncPlainLineToScaledRtfRows(
     const margin = paragraphStarts
       ? clampParagraphCell(k === 0 ? paragraphStarts.firstLineStartCell : paragraphStarts.runoverStartCell, cellsPerRow) - 1
       : 0;
-    const slots = slotsForPhysicalLine(physical[k], brfWords, srcWords, m, n, margin, cellsPerRow);
-    let line = emitScaledRtfLine(slots);
-    if (k === 0 && leadingSpace) line = escapeRtfPlainText(leadingSpace) + line;
-    if (k === physical.length - 1 && trailingSpace) line += escapeRtfPlainText(trailingSpace);
-    rows.push(line);
+    let line = printLineFromPhysicalSpans(physical[k], brfWords, srcWords, m, n, margin);
+    if (k === 0 && leadingSpace) line = leadingSpace + line;
+    if (k === physical.length - 1 && trailingSpace) line += trailingSpace;
+    rows.push(escapeRtfPlainText(line));
   }
   return rows;
 }
 
 /**
  * Builds one RTF inner line per visual braille row (soft breaks become newlines).
- * Source form feeds stay as `\f`. On the m = n path, overflowing print words get a
- * smaller `\\fs` so they fit their braille cell slot; padding stays at the base grid.
+ * Source form feeds stay as `\f`. Each print line holds the same words as that
+ * braille line, at one font size, with ordinary spaces between words.
  */
 export function buildPrintLayoutRtfBody(
   sourceText: string,
@@ -1182,12 +1348,130 @@ export function buildPrintLayoutRtfBody(
       const s = srcLines[i] ?? '';
       const b = brfLines[i] ?? '';
       const unicode = asciiToUnicodeBraille(b);
-      outLines.push(...syncPlainLineToScaledRtfRows(s, unicode, cellsPerRow, paragraphStarts, hyphenateWord));
+      outLines.push(...syncPlainLineToPrintRows(s, unicode, cellsPerRow, paragraphStarts, hyphenateWord));
     }
     outSegs.push(outLines.join('\n'));
   }
 
   return outSegs.join('\f');
+}
+
+export type BuildPrintLayoutRtfOptions = {
+  cellsPerRow: number;
+  linesPerPage: number;
+  paperFormat?: PrintLayoutPaperFormat;
+  includePageNumbers?: boolean;
+  paragraphStarts?: ParagraphLineStarts;
+  hyphenateWord?: HyphenateAsciiWord;
+};
+
+/**
+ * Paginated RTF whose line spacing matches the embossed page. Each print row is
+ * one braille row (same words). Font is one size, shrunk if needed so Word cannot
+ * wrap a long print line onto a second row.
+ */
+export function buildPrintLayoutRtf(
+  sourceText: string,
+  asciiBrf: string,
+  options: BuildPrintLayoutRtfOptions,
+): string {
+  const metrics = printLayoutPageMetrics({
+    cellsPerRow: options.cellsPerRow,
+    linesPerPage: options.linesPerPage,
+    paperFormat: options.paperFormat,
+  });
+  const inner = buildPrintLayoutRtfBody(
+    sourceText,
+    asciiBrf,
+    options.cellsPerRow,
+    options.paragraphStarts,
+    options.hyphenateWord,
+  );
+  const paginated = paginatePrintLines(
+    inner,
+    options.linesPerPage,
+    options.includePageNumbers ?? false,
+    options.cellsPerRow,
+  );
+  const page = fitPrintLayoutFontToLongestLine(metrics, maxPrintLineVisualLength(paginated));
+  return convertToRtf(paginated, { bodyIsRtf: true, page });
+}
+
+function wrapPlainLineToCells(line: string, cellsPerRow: number): string[] {
+  const w = Math.max(1, cellsPerRow);
+  if (line.length <= w) return [line];
+  const words = line.split(' ');
+  const out: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const trial = current ? `${current} ${word}` : word;
+    if (trial.length <= w) {
+      current = trial;
+    } else {
+      if (current) out.push(current);
+      current = word.length > w ? word.slice(0, w) : word;
+    }
+  }
+  if (current) out.push(current);
+  return out.length > 0 ? out : [''];
+}
+
+/** Grading header wrapped to the braille cell width so it fits the print-over-braille grid. */
+export function formatGradingSheetHeader(
+  cellsPerRow: number,
+  wordCount: number,
+  charCount: number,
+): string {
+  const w = Math.max(1, cellsPerRow);
+  const sep = '='.repeat(w);
+  const lines: string[] = [sep, 'GRADING SHEET', sep];
+  lines.push(...wrapPlainLineToCells(`Word Count: ${wordCount}`, w));
+  lines.push(...wrapPlainLineToCells(`Character Count: ${charCount}`, w));
+  lines.push('');
+  lines.push(...wrapPlainLineToCells('Date: _________________', w));
+  lines.push(
+    ...wrapPlainLineToCells('WPM:  _________________ (number of words/total seconds*60)', w),
+  );
+  lines.push(
+    ...wrapPlainLineToCells('LPM:  _________________ (number of letters/total seconds*60)', w),
+  );
+  lines.push(...wrapPlainLineToCells('Accuracy: _____________ %', w));
+  lines.push(sep, '');
+  return lines.join('\n');
+}
+
+export function buildGradingPrintLayoutRtf(
+  sourceText: string,
+  asciiBrf: string,
+  wordCount: number,
+  charCount: number,
+  gradingSheetOnAllPages: boolean,
+  options: BuildPrintLayoutRtfOptions,
+): string {
+  const metrics = printLayoutPageMetrics({
+    cellsPerRow: options.cellsPerRow,
+    linesPerPage: options.linesPerPage,
+    paperFormat: options.paperFormat,
+  });
+  const inner = buildPrintLayoutRtfBody(
+    sourceText,
+    asciiBrf,
+    options.cellsPerRow,
+    options.paragraphStarts,
+    options.hyphenateWord,
+  );
+  const paginated = paginatePrintLines(
+    inner,
+    options.linesPerPage,
+    options.includePageNumbers ?? false,
+    options.cellsPerRow,
+  );
+  const header = formatGradingSheetHeader(options.cellsPerRow, wordCount, charCount);
+  const fullContent = gradingSheetOnAllPages
+    ? paginated.split('\f').map(page => header + page).join('\f')
+    : header + paginated;
+  const page = fitPrintLayoutFontToLongestLine(metrics, maxPrintLineVisualLength(fullContent));
+  return convertToRtf(fullContent, { bodyIsRtf: true, page });
 }
 
 function paginatePrintSegment(
@@ -1303,10 +1587,7 @@ function formatBrfForOutputSegment(
     }
   }
 
-  // Trim trailing blank lines
-  while (wrapped.length > 0 && wrapped[wrapped.length - 1] === '') {
-    wrapped.pop();
-  }
+  trimTrailingBlankLines(wrapped, rawBrf);
 
   const pageChunks: string[] = [];
   const contentLines = includePageNumbers ? Math.max(1, lines - 1) : lines;

@@ -47,8 +47,8 @@ import {
   synthesizeMp3InBrowser,
   TTS_ENGINE_STORAGE_KEY,
   DEFAULT_TTS_ENGINE,
-  TtsExportError,
   isTtsEngineId,
+  wrapTtsFailure,
   type TtsEngineId,
 } from './services/tts';
 import { useBraille, type MathCode } from './hooks/useBraille';
@@ -67,9 +67,8 @@ import {
   defaultPrintLayoutTextFilename,
   defaultGradingPrintLayoutFilename,
   defaultMp3DownloadFilename,
-  buildPrintLayoutRtfBody,
-  paginatePrintLines,
-  convertToRtf,
+  buildPrintLayoutRtf,
+  buildGradingPrintLayoutRtf,
 } from './utils/brailleFormat';
 import {
   classifyBrfContent,
@@ -83,6 +82,20 @@ import {
   hyphenDictionaryForTable,
   type HyphenateAsciiWord,
 } from './utils/hyphenation';
+import {
+  DOCX_MAX_BYTES,
+  DocxImportError,
+  importDocxToEditorText,
+  isDocxFile,
+  isLegacyDocFile,
+} from './utils/docxImport';
+import { tableSpecToEditorBlock } from './utils/tableBraille';
+import {
+  BBZ_MAX_BYTES,
+  BbzImportError,
+  importBbzToEditorText,
+  isBbzFile,
+} from './utils/bbzImport';
 import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
@@ -98,7 +111,11 @@ import './App.css';
  *   • Worker translates in chunks for large documents, streaming PROGRESS events.
  *   • Translated BRF is paginated by page layout settings and displayed as
  *     discrete page blocks (Word-like scrolling view).
- *   • Import file loads plain text (translate) or .brf (back-translate + BRF preview).
+ *   • Import file loads plain text, .docx (translate), .bbz (BrailleBlaster archive → text), or .brf (back-translate + BRF preview).
+ *     Word files are converted to editor text in the browser; they never leave the device.
+ *     Word tables become `:::table` blocks using the same Braille Formats layout as the Table tool.
+ *     .brf import back-translates as literary unless Music Player Mode is already on.
+ *     Import/paste does not auto-enable Music mode.
  *   • Pasted/typed Unicode braille in the left editor auto back-translates to plain text
  *     (skipped in Music Braille mode). After BRF/Unicode back-translate, the left pane is
  *     locked until the user chooses to edit print (regenerate braille) or edit braille
@@ -121,6 +138,16 @@ type Theme = 'dark' | 'light' | 'high-contrast';
  *   brailleEditing  — LHS is Unicode braille source with 6-key; RHS mirrors LHS
  */
 type LiterarySourceMode = 'none' | 'importedLocked' | 'printEditing' | 'brailleEditing';
+
+async function waitForFlag(get: () => boolean, timeoutMs: number): Promise<boolean> {
+  if (get()) return true;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (get()) return true;
+  }
+  return false;
+}
 
 const monacoThemeMap: Record<Theme, string> = {
   dark: 'vs-dark',
@@ -465,8 +492,10 @@ export default function App() {
   const [showAudioExport, setShowAudioExport] = useState(false);
   const [viewPlusPresetKey, setViewPlusPresetKey] = useState(0);
 
-  const { translate, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
+  const { translate, translateAsync, backTranslateBrf, translatedText, isLoading, progress, error, workerReady, wordMap } =
     useBraille();
+  const workerReadyRef = useRef(workerReady);
+  workerReadyRef.current = workerReady;
 
   // ── Track input stats for the status bar ────────────────────────────────
   const [inputText, setInputText] = useState('');
@@ -518,6 +547,51 @@ export default function App() {
   }, []);
 
   const [musicIntakeAnnouncement, setMusicIntakeAnnouncement] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const announceStatus = useCallback((message: string) => {
+    setMusicIntakeAnnouncement(message);
+  }, []);
+
+  const messageForDocxImportError = useCallback(
+    (err: unknown): string => {
+      const limitMb = Math.round(DOCX_MAX_BYTES / (1024 * 1024));
+      if (err instanceof DocxImportError) {
+        switch (err.code) {
+          case 'too-large':
+            return t('app.file.import.errors.tooLarge', { limitMb });
+          case 'not-docx':
+            return t('app.file.import.errors.notDocx');
+          case 'encrypted':
+            return t('app.file.import.errors.encrypted');
+          case 'empty':
+            return t('app.file.import.errors.empty');
+        }
+      }
+      return t('app.file.import.errors.generic');
+    },
+    [t],
+  );
+
+  const messageForBbzImportError = useCallback(
+    (err: unknown): string => {
+      const limitMb = Math.round(BBZ_MAX_BYTES / (1024 * 1024));
+      if (err instanceof BbzImportError) {
+        switch (err.code) {
+          case 'too-large':
+            return t('app.file.import.errors.bbzTooLarge', { limitMb });
+          case 'not-bbz':
+            return t('app.file.import.errors.notBbz');
+          case 'invalid-bbx':
+            return t('app.file.import.errors.invalidBbx');
+          case 'empty':
+            return t('app.file.import.errors.bbzEmpty');
+        }
+      }
+      return t('app.file.import.errors.bbzGeneric');
+    },
+    [t],
+  );
 
   const applyMusicBrfToEditor = useCallback((asciiBrf: string) => {
     setIsMusicBrailleMode(true);
@@ -717,11 +791,86 @@ export default function App() {
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+
+    if (isLegacyDocFile(file)) {
+      const msg = t('app.file.import.errors.legacyDoc');
+      setImportError(msg);
+      announceStatus(msg);
+      return;
+    }
+
+    if (isDocxFile(file)) {
+      void (async () => {
+        try {
+          if (file.size > DOCX_MAX_BYTES) {
+            throw new DocxImportError('too-large');
+          }
+          const buffer = await file.arrayBuffer();
+          await waitForFlag(() => workerReadyRef.current, 20000);
+          const { text } = await importDocxToEditorText(buffer, {
+            cellsPerRow: pageSettings.cellsPerRow,
+            formatTable: (spec) =>
+              tableSpecToEditorBlock(
+                spec,
+                workerReadyRef.current
+                  ? (s) => translateAsync(s, selectedTable, mathCode)
+                  : (s) => s,
+                pageSettings.cellsPerRow,
+              ),
+          });
+          setLiterarySourceMode('none');
+          importedBrailleRef.current = '';
+          setShowBackTranslatedEditModal(false);
+          setIsMusicBrailleMode(false);
+          setInputText(text);
+          setFileContent(text);
+          setImportError(null);
+          announceStatus(t('app.file.import.success'));
+          translate(text, selectedTable, mathCode);
+        } catch (err) {
+          console.error('[docx import]', err);
+          const msg = messageForDocxImportError(err);
+          setImportError(msg);
+          announceStatus(msg);
+        }
+      })();
+      return;
+    }
+
+    if (isBbzFile(file)) {
+      void (async () => {
+        try {
+          if (file.size > BBZ_MAX_BYTES) {
+            throw new BbzImportError('too-large');
+          }
+          const buffer = await file.arrayBuffer();
+          const { text } = await importBbzToEditorText(buffer);
+          setLiterarySourceMode('none');
+          importedBrailleRef.current = '';
+          setShowBackTranslatedEditModal(false);
+          setIsMusicBrailleMode(false);
+          setInputText(text);
+          setFileContent(text);
+          setImportError(null);
+          announceStatus(t('app.file.import.bbzSuccess'));
+          translate(text, selectedTable, mathCode);
+        } catch (err) {
+          console.error('[bbz import]', err);
+          const msg = messageForBbzImportError(err);
+          setImportError(msg);
+          announceStatus(msg);
+        }
+      })();
+      return;
+    }
+
     const isBrf = file.name.toLowerCase().endsWith('.brf');
     const reader = new FileReader();
     reader.onload = () => {
       const raw = typeof reader.result === 'string' ? reader.result : '';
+      setImportError(null);
       if (isBrf) {
         const { normalized, isContracted, cleaned } = classifyBrfContent(raw, { isBrfFile: true });
         // Music only if the user already opted into Music mode.
@@ -779,7 +928,6 @@ export default function App() {
       }
     };
     reader.readAsText(file, 'utf-8');
-    e.target.value = '';
   }
 
   const handleAttemptEditWhileLocked = useCallback(() => {
@@ -893,13 +1041,8 @@ export default function App() {
       setMp3ExportStatus(null);
       setShowAudioExport(false);
     } catch (err) {
-      const msg =
-        err instanceof TtsExportError
-          ? t(err.i18nKey, err.i18nParams)
-          : err instanceof Error
-            ? err.message
-            : String(err);
-      setMp3ExportError(msg);
+      const mapped = wrapTtsFailure(err);
+      setMp3ExportError(t(mapped.i18nKey, mapped.i18nParams));
       setMp3ExportStatus(null);
       console.error('MP3 export failed', err);
     } finally {
@@ -919,20 +1062,14 @@ export default function App() {
   function handleDownloadPrintLayoutText() {
     if (!inputText.trim() || !workerReady || !translatedText) return;
 
-    const inner = buildPrintLayoutRtfBody(
-      inputText,
-      translatedText,
-      pageSettings.cellsPerRow,
+    const rtfContent = buildPrintLayoutRtf(inputText, translatedText, {
+      cellsPerRow: pageSettings.cellsPerRow,
+      linesPerPage: pageSettings.linesPerPage,
+      paperFormat: pageSettings.paperFormat,
+      includePageNumbers: pageSettings.showPageNumbers ?? false,
       paragraphStarts,
       hyphenateWord,
-    );
-    const paginated = paginatePrintLines(
-      inner,
-      pageSettings.linesPerPage,
-      pageSettings.showPageNumbers ?? false,
-      pageSettings.cellsPerRow,
-    );
-    const rtfContent = convertToRtf(paginated, { bodyIsRtf: true });
+    });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -948,42 +1085,21 @@ export default function App() {
   function handleDownloadGradingPrintLayoutText() {
     if (!inputText.trim() || !workerReady || !translatedText) return;
 
-    const inner = buildPrintLayoutRtfBody(
+    const rtfContent = buildGradingPrintLayoutRtf(
       inputText,
       translatedText,
-      pageSettings.cellsPerRow,
-      paragraphStarts,
-      hyphenateWord,
+      wordCount,
+      charCount,
+      gradingSheetOnAllPages,
+      {
+        cellsPerRow: pageSettings.cellsPerRow,
+        linesPerPage: pageSettings.linesPerPage,
+        paperFormat: pageSettings.paperFormat,
+        includePageNumbers: pageSettings.showPageNumbers ?? false,
+        paragraphStarts,
+        hyphenateWord,
+      },
     );
-    const paginated = paginatePrintLines(
-      inner,
-      pageSettings.linesPerPage,
-      pageSettings.showPageNumbers ?? false,
-      pageSettings.cellsPerRow,
-    );
-    const gradingHeader = `================================================================
-GRADING SHEET
-================================================================
-Word Count: ${wordCount}
-Character Count: ${charCount}
-
-Date: _________________
-WPM:  _________________ (number of words/total seconds*60)
-LPM:  _________________ (number of letters/total seconds*60)
-Accuracy: _____________ %
-================================================================
-
-`;
-    
-    let fullContent = '';
-    if (gradingSheetOnAllPages) {
-      const pages = paginated.split('\f');
-      fullContent = pages.map(page => gradingHeader + page).join('\f');
-    } else {
-      fullContent = gradingHeader + paginated;
-    }
-
-    const rtfContent = convertToRtf(fullContent, { bodyIsRtf: true });
     const blob = new Blob([rtfContent], { type: 'application/rtf' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1042,7 +1158,7 @@ Accuracy: _____________ %
   );
 
   // The editor normally wraps purely visually (using Monaco's native wordWrapColumn).
-  // Wrap-matching and per-word RTF slot scaling stay download-only (print layout).
+  // Wrap-matching so print lines follow braille rows stays download-only (print layout).
 
   // Music mode: build lines that preserve source char indices for playback highlight.
   const musicPreviewLines = useMemo(() => {
@@ -1121,7 +1237,7 @@ Accuracy: _____________ %
   // ── Scroll & Highlight Sync ──────────────────────────────────────────────
   const brfPagesRef = useRef<BraillePreviewPagesHandle>(null);
   const musicPreviewRef = useRef<MusicBraillePreviewHandle>(null);
-  const { isSyncing, runSynced, schedule } = useScrollSync();
+  const { syncFrom } = useScrollSync();
   const [activeWordRange, setActiveWordRange] = useState<[number, number] | null>(null);
   const [syncHighlight, setSyncHighlight] = useState(true);
   const [currentPreviewPage, setCurrentPreviewPage] = useState(1);
@@ -1151,30 +1267,24 @@ Accuracy: _____________ %
 
   const handleEditorScroll = useCallback(
     (percentage: number) => {
-      if (isSyncing()) return;
-      schedule(() => {
-        runSynced(() => {
-          if (isMusicBrailleModeRef.current) {
-            musicPreviewRef.current?.setScrollPercentage(percentage);
-          } else {
-            brfPagesRef.current?.setScrollPercentage(percentage);
-          }
-        });
+      syncFrom('editor', () => {
+        if (isMusicBrailleModeRef.current) {
+          musicPreviewRef.current?.setScrollPercentage(percentage);
+        } else {
+          brfPagesRef.current?.setScrollPercentage(percentage);
+        }
       });
     },
-    [isSyncing, runSynced, schedule],
+    [syncFrom],
   );
 
   const handlePreviewScrollPercentage = useCallback(
     (percentage: number) => {
-      if (isSyncing()) return;
-      schedule(() => {
-        runSynced(() => {
-          editorRef.current?.setScrollPercentage(percentage);
-        });
+      syncFrom('preview', () => {
+        editorRef.current?.setScrollPercentage(percentage);
       });
     },
-    [isSyncing, runSynced, schedule],
+    [syncFrom],
   );
 
   const handleActivePageChange = useCallback((pageNumber1Based: number) => {
@@ -1277,11 +1387,12 @@ Accuracy: _____________ %
 
           <div className="tab-content" role="tabpanel">
             {activeTab === 'file' && (
+              <>
               <div className="toolbar">
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".txt,.text,.md,.rst,.adoc,.brf,text/plain"
+                  accept=".txt,.text,.md,.rst,.adoc,.brf,.bbz,.docx,.doc,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/zip"
                   aria-hidden="true"
                   tabIndex={-1}
                   style={{ display: 'none' }}
@@ -1338,6 +1449,12 @@ Accuracy: _____________ %
                   {t('app.file.print.label')}
                 </button>
               </div>
+              {importError ? (
+                <p className="translation-error import-error" role="alert">
+                  {importError}
+                </p>
+              ) : null}
+              </>
             )}
 
             {activeTab === 'view' && (
@@ -2141,6 +2258,7 @@ Accuracy: _____________ %
                   showEmptyDots={showEmptyDots}
                   cellVariant={brailleCellVariant}
                   linesPerPage={pageSettings.linesPerPage}
+                  cellsPerRow={pageSettings.cellsPerRow}
                   activeWordRange={activeBrfWordRange}
                   onScrollPercentage={handlePreviewScrollPercentage}
                   onActivePageChange={handleActivePageChange}

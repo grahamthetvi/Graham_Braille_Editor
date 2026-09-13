@@ -16,8 +16,17 @@
     "file": {
       "import": {
         "label": "Importar arquivo",
-        "ariaLabel": "Importar arquivo de texto ou BRF",
-        "title": "Texto simples: traduz para braille. .brf: retrotraduz para texto (tabela selecionada) e mostra o BRF à direita. A retrotradução do Grau 2 é aproximada; tente novamente após o carregamento do liblouis, se necessário."
+        "ariaLabel": "Importar arquivo de texto, Word (.docx) ou BRF",
+        "title": "Texto simples: traduz para braille. .docx: converte o texto do Word neste navegador (o arquivo permanece no seu dispositivo) e depois traduz. .brf: retrotraduz para texto (tabela selecionada) e mostra o BRF à direita. A retrotradução do Grau 2 é aproximada; tente novamente após o carregamento do liblouis, se necessário. Arquivos .doc antigos não são compatíveis — salve primeiro como .docx no Word.",
+        "success": "Documento Word importado como texto do editor.",
+        "errors": {
+          "tooLarge": "Este arquivo Word é maior que {{limitMb}} MB, o limite de importação.",
+          "notDocx": "Este arquivo não é um documento Word .docx válido.",
+          "encrypted": "Este arquivo Word está protegido por senha. Remova a senha no Word, salve como .docx e importe novamente.",
+          "empty": "Este documento Word não tem texto legível para importar.",
+          "legacyDoc": "Arquivos .doc antigos não são compatíveis. No Word, escolha Arquivo → Salvar como → .docx e importe esse arquivo.",
+          "generic": "Não foi possível importar este arquivo Word."
+        }
       },
       "drafts": {
         "label": "Rascunhos",
@@ -47,6 +56,7 @@
         "status": {
           "starting": "Iniciando…",
           "loadingKitten": "Carregando modelo Kitten TTS…",
+          "downloadingKitten": "Baixando o modelo Kitten… {{percent}}%",
           "synthesizingKitten": "Sintetizando com Kitten…",
           "loadingEspeak": "Carregando eSpeak NG…",
           "synthesizingEspeak": "Sintetizando com eSpeak NG…",
@@ -59,7 +69,10 @@
         "errors": {
           "emptyText": "Nada para falar — digite algum texto primeiro.",
           "textTooLong": "O texto excede o limite de {{limit}} caracteres para exportação de áudio.",
-          "emptyAudio": "O TTS produziu áudio vazio."
+          "emptyAudio": "O TTS produziu áudio vazio.",
+          "modelDownloadFailed": "Não foi possível baixar o modelo de voz. O Hugging Face ou a CDN podem estar bloqueados (comum em redes escolares e corporativas). Tente o eSpeak NG, bem menor, ou use uma rede menos restrita.",
+          "storageQuota": "O navegador não conseguiu armazenar o modelo de voz. Isso costuma ocorrer na navegação privada ou quando o armazenamento está cheio. Use uma janela normal, libere espaço ou escolha o eSpeak NG.",
+          "runtimeFailed": "A síntese de voz falhou. Tente o eSpeak NG ou recarregue e exporte novamente."
         }
       },
       "print": {
@@ -300,9 +313,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (padrão)",
-      "size": "~25 MB",
-      "speed": "Velocidade de exportação equilibrada",
-      "description": "Voz neural leve. Bom padrão para a maioria dos documentos."
+      "size": "~25–60 MB",
+      "speed": "Exportação neural mais rápida (WebGPU quando disponível)",
+      "description": "Voz neural leve. Usa o processador gráfico quando o navegador permite; caso contrário, WASM. Bom padrão para a maioria dos documentos."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -1131,7 +1144,7 @@
       "title": "Exportar áudio (MP3)",
       "lead": "Escolha um mecanismo de voz. As únicas diferenças práticas são a velocidade de exportação e o tamanho do modelo no primeiro uso — depois, os modelos ficam em cache no navegador.",
       "engineLegend": "Mecanismo de voz",
-      "note": "Todos os mecanismos rodam inteiramente no navegador. Não é necessário bridge nem conta.",
+      "note": "Todos os mecanismos rodam inteiramente no navegador. As vozes neurais são baixadas do Hugging Face no primeiro uso — se isso estiver bloqueado, escolha o eSpeak NG.",
       "exportButton": "Baixar MP3",
       "cancel": "Cancelar",
       "closeAriaLabel": "Fechar exportação de áudio"

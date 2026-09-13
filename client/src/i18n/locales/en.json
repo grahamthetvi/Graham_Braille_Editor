@@ -16,8 +16,23 @@
     "file": {
       "import": {
         "label": "Import file",
-        "ariaLabel": "Import text or BRF file",
-        "title": "Plain text: translate to braille. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed."
+        "ariaLabel": "Import text, Word (.docx), BrailleBlaster (.bbz), or BRF file",
+        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. .bbz: extract editable text from a BrailleBlaster archive (v3.x), then translate — formatting and graphics are not preserved. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
+        "success": "Imported Word document as editor text.",
+        "bbzSuccess": "Imported BrailleBlaster document as editor text.",
+        "errors": {
+          "tooLarge": "This Word file is larger than {{limitMb}} MB, which is the import limit.",
+          "notDocx": "This file is not a valid Word .docx document.",
+          "encrypted": "This Word file is password-protected. Remove the password in Word, save as .docx, and import again.",
+          "empty": "This Word document has no readable text to import.",
+          "legacyDoc": "Legacy .doc files are not supported. In Word, choose File → Save As → .docx, then import that file.",
+          "generic": "Could not import this Word file.",
+          "bbzTooLarge": "This BrailleBlaster file is larger than {{limitMb}} MB, which is the import limit.",
+          "notBbz": "This file is not a valid BrailleBlaster .bbz archive (missing bbx_location or BBX document).",
+          "invalidBbx": "This BrailleBlaster archive contains an unreadable BBX document.",
+          "bbzEmpty": "This BrailleBlaster document has no readable text to import.",
+          "bbzGeneric": "Could not import this BrailleBlaster file."
+        }
       },
       "drafts": {
         "label": "Drafts",
@@ -33,7 +48,7 @@
       "downloadPrintLayout": {
         "label": "Download print layout",
         "ariaLabel": "Download print layout RTF file",
-        "title": "Download print layout (.rtf). Lines and pages follow Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell. This is not a physical overlay of print on braille."
+        "title": "Download print-over-braille layout (.rtf). Paper size and line count follow your Layout settings. Each print line has the same words as that braille line. Line spacing matches the embossed page; the font is one size, shrunk if needed so a line does not wrap. Print this sheet, then emboss the matching BRF on the same paper."
       },
       "export": {
         "label": "Export",
@@ -52,6 +67,7 @@
         "status": {
           "starting": "Starting…",
           "loadingKitten": "Loading Kitten TTS model…",
+          "downloadingKitten": "Downloading Kitten model… {{percent}}%",
           "synthesizingKitten": "Synthesizing with Kitten…",
           "loadingEspeak": "Loading eSpeak NG…",
           "synthesizingEspeak": "Synthesizing with eSpeak NG…",
@@ -64,7 +80,10 @@
         "errors": {
           "emptyText": "Nothing to speak — enter some text first.",
           "textTooLong": "Text exceeds {{limit}} character limit for audio export.",
-          "emptyAudio": "TTS produced empty audio."
+          "emptyAudio": "TTS produced empty audio.",
+          "modelDownloadFailed": "Could not download the voice model. Hugging Face or the CDN may be blocked (common on school and workplace networks). Try eSpeak NG, which is much smaller, or use a less-restricted network.",
+          "storageQuota": "The browser could not store the voice model. This often happens in private browsing or when storage is full. Try a normal window, free some space, or use eSpeak NG.",
+          "runtimeFailed": "Speech synthesis failed. Try eSpeak NG, or reload and export again."
         }
       },
       "print": {
@@ -165,7 +184,7 @@
       },
       "grading": {
         "label": "Download Grading Print Layout",
-        "title": "Download print layout (.rtf) with grading metrics. Lines and pages follow Layout settings; choose whether the grading header appears on all pages. Contracted words may appear slightly smaller so they stay on the braille cell.",
+        "title": "Download print layout (.rtf) with grading metrics. Paper size and line count follow Layout settings; each print line has the same words as that braille line, in one font size. Choose whether the grading header appears on all pages.",
         "ariaLabel": "Download grading print layout text file"
       },
       "uebMathHint": "UEB Math is standard and $$math$$ is Nemeth.",
@@ -430,7 +449,7 @@
       "emailBrf": "Email BRF",
       "emailBrfHint": "Download, then open Gmail to attach",
       "printLayout": "Print layout",
-      "printLayoutHint": "Lines and pages match Layout; contracted words may be slightly smaller",
+      "printLayoutHint": "Same words per line as the braille; one font size",
       "audio": "Audio (MP3)",
       "audioHint": "Choose a voice, then download"
     },
@@ -447,7 +466,7 @@
       "title": "Export audio (MP3)",
       "lead": "Pick a voice engine. The only practical differences are export speed and how large the model is on first use—after that, models stay cached in your browser.",
       "engineLegend": "Voice engine",
-      "note": "All engines run entirely in your browser. No bridge or account is required.",
+      "note": "All engines run entirely in your browser. Neural voices download from Hugging Face on first use — if that is blocked, choose eSpeak NG.",
       "exportButton": "Download MP3",
       "cancel": "Cancel",
       "closeAriaLabel": "Close audio export"
@@ -457,9 +476,9 @@
   "tts": {
     "kitten": {
       "label": "Kitten (default)",
-      "size": "~25 MB",
-      "speed": "Balanced export speed",
-      "description": "Lightweight neural voice. Good default for most documents."
+      "size": "~25–60 MB",
+      "speed": "Fastest neural export (WebGPU when available)",
+      "description": "Lightweight neural voice. Uses the graphics processor when the browser allows it, otherwise WASM. Good default for most documents."
     },
     "espeak": {
       "label": "eSpeak NG",
@@ -542,7 +561,7 @@
       },
       "downloading": {
         "heading": "Downloading & Autosave",
-        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For a visual twin of that layout, click Download print layout to get an .rtf whose lines and pages follow the same Layout settings. Contracted words may appear slightly smaller so they stay on the braille cell; this is not a physical overlay of print on braille.",
+        "body": "When your translation is ready, click Download BRF under the File tab to output standard .brf files formatted directly to your selected page layout settings. For print-over-braille, click Download print layout to get an .rtf sized to your paper: each print line has the same words as that braille line, in one font size. Print the sheet, then emboss the BRF on the same paper.",
         "autosave": "Your work is automatically saved as you type. Click Drafts under the File tab to view and restore unsaved work from the last 30 days."
       },
       "perkins": {
@@ -555,7 +574,7 @@
       },
       "music": {
         "heading": "Music Braille",
-        "body": "Graham does not yet convert sheet music into Music Braille automatically. For Music Braille, open Music Player Mode under Teaching Tools or Music Braille Guide under Help & Support. We recommend creating or exporting MusicXML in MuseScore, converting it with Sao Mai Braille (SMB desktop or online), then optionally importing the .brf here to preview or emboss. You can also Add to translation page so the instructions themselves can be embossed as braille."
+        "body": "Graham does not yet convert sheet music into Music Braille automatically. For Music Braille, turn on Music Player Mode under Teaching Tools before you paste or import a Music BRF, or open Music Braille Guide under Help & Support. We recommend creating or exporting MusicXML in MuseScore, converting it with Sao Mai Braille (SMB desktop or online), then importing the .brf here with Music Player Mode on to preview or emboss. You can also Add to translation page so the instructions themselves can be embossed as braille."
       },
       "graphics": {
         "heading": "Tactile Graphics & 3D Printing",
@@ -899,7 +918,7 @@
     "closeAriaLabel": "Close grading print layout options",
     "title": "Grading Print Layout",
     "close": "Close",
-    "description": "Download print layout (.rtf). Lines and pages follow Layout settings, with grading metrics prepended. Contracted words may appear slightly smaller so they stay on the braille cell.",
+    "description": "Download print-over-braille layout (.rtf). Paper size and line count follow Layout settings, with grading metrics prepended. Each print line has the same words as that braille line, in one font size.",
     "onAllPages": {
       "label": "On all pages",
       "hint": "When enabled, the grading header is repeated at the top of every page. Otherwise it appears only on the first page."

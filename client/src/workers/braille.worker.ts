@@ -656,6 +656,9 @@ function backTranslateTextPreservingNewlines(brf: string, table: string): string
       if (result?.typeform?.length) {
         plain = serializeTypeformMarkup(plain, result.typeform);
       }
+      // In UEB, dots 2-3-6 (`8`) followed by space is an open quote followed by a space,
+      // but liblouis's legacy fallback translates standalone 2-3-6 as `his`.
+      // If a line starts with `his ` and ends with `"`, restore the opening quote.
       plain = restoreUebOpenQuoteFromHis(plain);
     }
     return hasCR ? plain + '\r' : plain;

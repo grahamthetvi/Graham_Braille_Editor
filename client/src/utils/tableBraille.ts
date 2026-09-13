@@ -10,6 +10,7 @@ import {
   DEFAULT_TN_LISTED,
   DEFAULT_TN_STAIRSTEP,
   TN_INDICATOR_ASCII,
+  tableHasBlankCells,
   type TableFormat,
   type TableSpec,
 } from '../types/table';
@@ -658,4 +659,99 @@ export function defaultBlankTnForFormat(format: ResolvedTableFormat | 'auto'): s
 export function formatTableInsertBlock(brf: string): string {
   const body = brf.replace(/^\n+/, '').replace(/\n+$/, '');
   return `:::table\n${body}\n:::\n`;
+}
+
+export type TableTranslateFn = (text: string) => Promise<string> | string;
+
+async function translateOne(text: string, translateText: TableTranslateFn): Promise<string> {
+  if (!text.trim()) return '';
+  try {
+    return await Promise.resolve(translateText(text));
+  } catch {
+    return text;
+  }
+}
+
+async function translateGrid(cells: string[][], translateText: TableTranslateFn): Promise<string[][]> {
+  const out: string[][] = [];
+  for (const row of cells) {
+    const next: string[] = [];
+    for (const cell of row) {
+      next.push(await translateOne(cell, translateText));
+    }
+    out.push(next);
+  }
+  return out;
+}
+
+function tnPrintForSpec(spec: TableSpec): string {
+  if (spec.format === 'simple') return '';
+  return spec.transcriberNote?.trim() || defaultTnForFormat(spec.format);
+}
+
+function blankTnPrintForSpec(spec: TableSpec): string {
+  if (!tableHasBlankCells(spec)) return '';
+  if (spec.blankCellNote?.trim()) return spec.blankCellNote.trim();
+  return defaultBlankTnForFormat(spec.format);
+}
+
+/** Flatten a print grid when Braille Formats layout cannot run. */
+export function flattenPrintTable(cells: string[][]): string {
+  return cells
+    .map((row) => row.join('  ').trimEnd())
+    .filter((line) => line.length > 0)
+    .join('\n');
+}
+
+/**
+ * Translate print cells/notes and lay out a Braille Formats table.
+ * Matches the Table editor insert path (including Auto → listed/stairstep TN).
+ */
+export async function formatTableSpecToBrf(
+  spec: TableSpec,
+  translateText: TableTranslateFn,
+  cellsPerRow: number
+): Promise<TableLayoutResult> {
+  const translatedCells = await translateGrid(spec.cells, translateText);
+  const titleBrf = spec.title?.trim() ? await translateOne(spec.title.trim(), translateText) : '';
+  let tnBrf = '';
+  const tnPrint = tnPrintForSpec(spec);
+  if (tnPrint) tnBrf = await translateOne(tnPrint, translateText);
+
+  let blankTnBrf = '';
+  const blankPrint = blankTnPrintForSpec(spec);
+  if (blankPrint) blankTnBrf = await translateOne(blankPrint, translateText);
+
+  let result = generateTableBrf(
+    spec,
+    { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
+    cellsPerRow
+  );
+
+  if (spec.format === 'auto' && !spec.transcriberNote?.trim() && result.format !== 'simple') {
+    tnBrf = await translateOne(defaultTnForFormat(result.format), translateText);
+    result = generateTableBrf(
+      { ...spec, format: result.format },
+      { cells: translatedCells, titleBrf, tnBrf, blankTnBrf },
+      cellsPerRow
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Produce a `:::table` editor fence, or flattened print rows if layout fails.
+ * Used by Word import; the Table editor still refuses insert when layout fails.
+ */
+export async function tableSpecToEditorBlock(
+  spec: TableSpec,
+  translateText: TableTranslateFn,
+  cellsPerRow: number
+): Promise<string> {
+  const result = await formatTableSpecToBrf(spec, translateText, cellsPerRow);
+  if (!result.ok || !result.brf.trim()) {
+    return flattenPrintTable(spec.cells);
+  }
+  return formatTableInsertBlock(result.brf);
 }

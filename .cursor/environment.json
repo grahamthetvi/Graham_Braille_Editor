@@ -1,0 +1,16 @@
+{
+  "name": "Graham Braille Editor",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "Vite dev server",
+      "command": "npm run dev"
+    }
+  ],
+  "ports": [
+    {
+      "name": "Vite dev server",
+      "port": 5173
+    }
+  ]
+}

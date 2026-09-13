@@ -67,7 +67,7 @@ function isMusicUtilityChar(ch: string): boolean {
   );
 }
 
-function looksLikeMusicCellAt(line: string, i: number): boolean {
+export function looksLikeMusicCellAt(line: string, i: number): boolean {
   if (i >= line.length) return false;
   const ch = line[i];
   const c = ch >= 'A' && ch <= 'Z' ? ch.toLowerCase() : ch;
@@ -75,6 +75,74 @@ function looksLikeMusicCellAt(line: string, i: number): boolean {
   if (OCTAVE_CHARS.includes(ch) || ch === '.') return true;
   if ('<%*'.includes(ch)) return true;
   return false;
+}
+
+const SECTION_LETTER = /[a-jA-J]/;
+
+/** Glued dynamics / nuances after `>`: mp, mf, p/f/s runs, c/d, finger-like 1–5. */
+const GLUED_WORD_SIGN =
+  /^(mp|mf|sfz?|[pfs]{1,3}|[cd]|[1-5])(?=[.@^_"';,\s><\n\r]|$)/i;
+
+/**
+ * Skip a word / dynamic / instrument indicator starting at `>` (`>mp`, `>pno'`,
+ * `>poco moto>`, `>c`, `>4`). Returns the index after the sign, or null.
+ * Does not consume piano hand signs (`>/l`, `>#l`).
+ */
+export function skipWordSignAt(text: string, i: number): number | null {
+  if (i >= text.length || text[i] !== '>') return null;
+  if (matchHandSignAt(text, i)) return null;
+
+  const start = i;
+  i += 1;
+  const glued = text.slice(i).match(GLUED_WORD_SIGN);
+  if (glued) return i + glued[1].length;
+
+  while (i < text.length && text[i] !== '>') {
+    if (text[i] === "'" && looksLikeMusicCellAt(text, i + 1)) {
+      return i + 1;
+    }
+    // Stop before octave/accidental so `>mp.f` does not swallow notes.
+    // Do not stop on note letters — they appear in instrument words (`>pno'`).
+    if (i > start + 1) {
+      const ch = text[i];
+      if (OCTAVE_CHARS.includes(ch) || ch === '.' || '<%*'.includes(ch)) {
+        return i;
+      }
+    }
+    i += 1;
+  }
+  if (i < text.length && text[i] === '>') i += 1;
+  return i;
+}
+
+/**
+ * Sao Mai single-staff measure label (`#1"31A`, `#12"31AB`).
+ * Consumes trailing spaces/tabs so the following notes stay in the same bar.
+ */
+export function skipSaoMaiMeasureLabelAt(text: string, i: number): number | null {
+  if (text[i] !== '#') return null;
+  let j = i + 1;
+  if (j >= text.length || text[j] < '0' || text[j] > '9') return null;
+  while (j < text.length && text[j] >= '0' && text[j] <= '9') j += 1;
+  if (text[j] !== '"' || text[j + 1] !== '3') return null;
+  j += 2;
+  if (text[j] === '1') j += 1;
+  if (j >= text.length || !SECTION_LETTER.test(text[j])) return null;
+  while (j < text.length && SECTION_LETTER.test(text[j])) j += 1;
+  while (j < text.length && (text[j] === ' ' || text[j] === '\t')) j += 1;
+  return j;
+}
+
+/** Sao Mai line number (`,L#A` … `,L#E`) — not an octave-7 mark. */
+export function skipSaoMaiLineNumberAt(text: string, i: number): number | null {
+  if (text[i] !== ',') return null;
+  const el = text[i + 1];
+  if (el !== 'L' && el !== 'l') return null;
+  if (text[i + 2] !== '#') return null;
+  let j = i + 3;
+  if (j >= text.length || !SECTION_LETTER.test(text[j])) return null;
+  while (j < text.length && SECTION_LETTER.test(text[j])) j += 1;
+  return j;
 }
 
 /**
@@ -382,25 +450,9 @@ export function extractHandChunks(line: string, lineStart: number): {
       continue;
     }
 
-    // Word / dynamic indicator: >word> / >word' or glued >PP / >P / >FF
-    if (line[i] === '>') {
-      i += 1;
-      const rest = line.slice(i);
-      const dyn = rest.match(/^([PpFfSs]{1,3})(?=[.@^_"';,\s>]|$)/);
-      if (dyn) {
-        i += dyn[1].length;
-        continue;
-      }
-      // Literary word phrase until closing '>', or "'" just before music cells
-      // (slash-L dialect: `>poco moto'.&%Z`).
-      while (i < line.length && line[i] !== '>') {
-        if (line[i] === "'" && looksLikeMusicCellAt(line, i + 1)) {
-          i += 1;
-          break;
-        }
-        i += 1;
-      }
-      if (i < line.length && line[i] === '>') i += 1;
+    const wordEnd = skipWordSignAt(line, i);
+    if (wordEnd != null) {
+      i = wordEnd;
       continue;
     }
 

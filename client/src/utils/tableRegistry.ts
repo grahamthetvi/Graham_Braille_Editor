@@ -381,4 +381,3 @@ export function getGrade2TableFor(file: string): string {
   if (isGrade2Table(migrated)) return migrated;
   return 'en-ueb-g2.ctb';
 }
-

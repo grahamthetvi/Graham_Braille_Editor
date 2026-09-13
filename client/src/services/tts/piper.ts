@@ -1,13 +1,9 @@
 import { TtsSession } from '@mintplex-labs/piper-tts-web';
+import { wrapTtsFailure } from './errors';
 import { ensureOnnxWasmConfigured, getOnnxWasmBaseUrl } from './onnxWasm';
+import { getPiperWasmPaths, PIPER_VOICE } from './piperAssets';
 import { wavBytesToPcm } from './wav';
 import type { PcmAudio, TtsProgressCallback } from './types';
-
-/** Solid English voice; downloaded once into OPFS. */
-const PIPER_VOICE = 'en_US-lessac-medium' as const;
-
-const PIPER_PHONEMIZE_BASE =
-  'https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize';
 
 export async function synthesizePiperPcm(
   text: string,
@@ -16,7 +12,7 @@ export async function synthesizePiperPcm(
   onProgress?.({ phase: 'loading', messageKey: 'app.file.downloadMp3.status.loadingPiper' });
   await ensureOnnxWasmConfigured();
 
-  // Drop a failed singleton so retries pick up local onnxWasm paths.
+  // Drop a failed singleton so retries pick up local onnxWasm / phonemize paths.
   const existing = TtsSession._instance;
   if (existing) {
     try {
@@ -29,13 +25,7 @@ export async function synthesizePiperPcm(
   try {
     const session = await TtsSession.create({
       voiceId: PIPER_VOICE,
-      wasmPaths: {
-        // Serve onnxruntime-web from the app origin (public/ort via postinstall).
-        // Piper's default CDN (1.18.0 on cdnjs) is stale / often fails to load.
-        onnxWasm: getOnnxWasmBaseUrl(),
-        piperData: `${PIPER_PHONEMIZE_BASE}.data`,
-        piperWasm: `${PIPER_PHONEMIZE_BASE}.wasm`,
-      },
+      wasmPaths: getPiperWasmPaths(getOnnxWasmBaseUrl()),
       progress: progress => {
         if (progress.total > 0) {
           onProgress?.({
@@ -54,6 +44,6 @@ export async function synthesizePiperPcm(
     return wavBytesToPcm(bytes);
   } catch (err) {
     TtsSession._instance = null;
-    throw err;
+    throw wrapTtsFailure(err);
   }
 }

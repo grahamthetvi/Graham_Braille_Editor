@@ -2,11 +2,29 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/**
+ * COEP `credentialless` enables SharedArrayBuffer / multi-threaded WASM in
+ * Chromium and Firefox 119+ without requiring CORP on every CDN subresource
+ * (pdf.js from cdnjs, Hugging Face model fetches). `require-corp` would block
+ * those. Safari still needs `require-corp` for isolation; GitHub Pages cannot
+ * set these headers at all.
+ */
+export const crossOriginIsolationHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'credentialless',
+};
+
 // https://vite.dev/config/
 export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+  },
+  server: {
+    headers: crossOriginIsolationHeaders,
+  },
+  preview: {
+    headers: crossOriginIsolationHeaders,
   },
   plugins: [
     react(),
@@ -16,7 +34,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,ctb,txt}'],
         // Large on-demand TTS runtimes — fetched only when exporting MP3.
-        globIgnores: ['**/ort-*.wasm', '**/espeak-ng-*.wasm'],
+        globIgnores: ['**/ort-*.wasm', '**/espeak-ng-*.wasm', '**/piper_phonemize*'],
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
       manifest: {
@@ -44,6 +62,8 @@ export default defineConfig({
     // Exclude monaco-editor from pre-bundling — it manages its own workers.
     // ONNX / TTS packages are large and load on demand for MP3 export.
     exclude: ['monaco-editor', 'onnxruntime-web', 'kitten-tts-js', 'espeak-ng'],
+    // Mammoth is CommonJS; Vite must pre-bundle it or the browser hits `require is not defined`.
+    include: ['mammoth'],
   },
   assetsInclude: ['**/*.wasm'],
   build: {
