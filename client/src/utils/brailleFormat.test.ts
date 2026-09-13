@@ -116,6 +116,14 @@ describe('formatBrfForOutput', () => {
     const result = formatBrfForOutput(rawBrf, 40, 25, false);
     expect(result).toBe('j\\rney\r\n\f\\r way\r\n');
   });
+
+  it('hyphenates an overflowing word instead of only hard-breaking', () => {
+    const hyphenate = (word: string) => (word === 'abcdefghij' ? [4] : []);
+    const hard = formatBrfForOutput('abcdefghij', 6, 25, false);
+    const hyph = formatBrfForOutput('abcdefghij', 6, 25, false, undefined, hyphenate);
+    expect(hard).toBe('abcdef\r\nghij\r\n');
+    expect(hyph).toBe('abcd-\r\nefghij\r\n');
+  });
 });
 
 describe('defaultPrintLayoutTextFilename', () => {

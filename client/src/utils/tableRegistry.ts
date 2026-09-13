@@ -9,7 +9,8 @@
  *
  * Sources:
  *   • liblouis documentation: https://liblouis.io/documentation/
- *   • Math tables (nemeth/marburg/ukmaths/wiskunde) from liblouisutdml
+ *   • Math tables (nemeth/marburg/ukmaths/wiskunde) from liblouisutdml are
+ *     selectable as literary tables; live $$…$$ math uses SRE (MATH_STRATEGY.md).
  */
 
 export interface BrailleTableEntry {

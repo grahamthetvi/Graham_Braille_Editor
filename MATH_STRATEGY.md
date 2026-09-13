@@ -1,16 +1,14 @@
 # Math Translation Strategy
 
-## Problem
-LibLouis requires MathML to translate math into Nemeth Code. Our user inputs LaTeX.
+Forward math in Graham is **not** liblouis MathML tables. The worker path is:
 
-## Solution
-We will use `mathjax-full` (specifically `input-tex` and `output-mathml`).
+1. **Input:** LaTeX in `$$…$$` (display) or `\(…\)` (inline).
+2. **KaTeX** renders that LaTeX to MathML (`output: 'mathml'`).
+3. **Speech Rule Engine** produces Nemeth or UEB math braille (`modality: 'braille'`).
+4. Nemeth output is wrapped with UEB Nemeth passage indicators for literary context.
 
-## Implementation Details
-1. **Input:** `x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`
-2. **MathJax Config:**
-   ```javascript
-   const mathDocument = MathJax.mathjax.document('', {
-     InputJax: new TeX({ packages: AllPackages }),
-     OutputJax: new MathML({ compileError: (doc, math, err) => doc.compileError(math, err) })
-   });
+`nemeth.ctb` (and the other liblouisutdml math tables in the registry) are **not** used for this forward path. They expect liblouisutdml semantic actions on MathML, not raw KaTeX MathML via `lou_translate`. `nemeth.ctb` **is** used to **back-translate** SRE Nemeth passages.
+
+This is an explicit product decision: SRE is the live math engine; switching to liblouis MathML would be a correctness change, not a drop-in.
+
+Constants and wrappers live in `client/src/utils/mathBraille.ts`. The worker comments must stay consistent with this file.

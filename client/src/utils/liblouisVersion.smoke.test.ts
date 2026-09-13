@@ -66,7 +66,7 @@ describe('liblouis WASM smoke', () => {
     }
   }, 60_000);
 
-  function translate(table: string, text: string): string | null {
+  function translate(table: string, text: string, mode = 0): string | null {
     const L = text.length;
     const maxOut = Math.max(100, L * 10);
     const inPtr = capi._malloc((L + 1) * 2);
@@ -80,7 +80,7 @@ describe('liblouis WASM smoke', () => {
       'lou_translateString',
       'number',
       ['string', 'number', 'number', 'number', 'number', 'number', 'number'],
-      [table, inPtr, inLen, outPtr, outLen, 0, 0, 0]
+      [table, inPtr, inLen, outPtr, outLen, 0, 0, mode]
     ) as number;
     if (!ok) {
       for (const p of [inPtr, outPtr, inLen, outLen]) capi._free(p);
@@ -90,6 +90,36 @@ describe('liblouis WASM smoke', () => {
     const chars = capi.HEAP16.subarray(outPtr >> 1, (outPtr >> 1) + n);
     const s = String.fromCharCode(...Array.from(chars));
     for (const p of [inPtr, outPtr, inLen, outLen]) capi._free(p);
+    return s;
+  }
+
+  function translateWithTypeform(table: string, text: string, bits: number): string | null {
+    const L = text.length;
+    const maxOut = Math.max(100, L * 10);
+    const inPtr = capi._malloc((L + 1) * 2);
+    const outPtr = capi._malloc(maxOut * 2);
+    const typeformPtr = capi._malloc(maxOut * 2);
+    capi.stringToUTF16(text, inPtr, (L + 1) * 2);
+    for (let i = 0; i < maxOut; i++) capi.setValue(typeformPtr + i * 2, 0, 'i16');
+    for (let i = 0; i < L; i++) capi.setValue(typeformPtr + i * 2, bits, 'i16');
+    const inLen = capi._malloc(4);
+    const outLen = capi._malloc(4);
+    capi.setValue(inLen, L, 'i32');
+    capi.setValue(outLen, maxOut, 'i32');
+    const ok = capi.ccall(
+      'lou_translateString',
+      'number',
+      ['string', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [table, inPtr, inLen, outPtr, outLen, typeformPtr, 0, 128]
+    ) as number;
+    if (!ok) {
+      for (const p of [inPtr, outPtr, inLen, outLen, typeformPtr]) capi._free(p);
+      return null;
+    }
+    const n = capi.getValue(outLen, 'i32');
+    const chars = capi.HEAP16.subarray(outPtr >> 1, (outPtr >> 1) + n);
+    const s = String.fromCharCode(...Array.from(chars));
+    for (const p of [inPtr, outPtr, inLen, outLen, typeformPtr]) capi._free(p);
     return s;
   }
 
@@ -170,5 +200,43 @@ describe('liblouis WASM smoke', () => {
     const res = translateWithPos('en-ueb-g1.ctb', 'Hi');
     expect(res).toBeTruthy();
     expect(res!.outputPos.length).toBe(2);
+  });
+
+  it('UEB italic typeform adds emphasis indicators', () => {
+    const plain = translate('en-ueb-g1.ctb', 'Hello', 128);
+    const italic = translateWithTypeform('en-ueb-g1.ctb', 'Hello', 0x0001);
+    expect(plain).toBeTruthy();
+    expect(italic).toBeTruthy();
+    expect(italic).not.toBe(plain);
+    expect(italic!.length).toBeGreaterThan(plain!.length);
+  });
+
+  it('noUndefined mode still translates defined text', () => {
+    const out = translate('en-ueb-g1.ctb', 'Hello', 128);
+    expect(out).toBeTruthy();
+    expect(out).not.toMatch(/\\x[0-9a-f]{4}/i);
+    expect(out).not.toMatch(/\\\d+\//);
+  });
+
+  it('hyphenate export is optional until WASM is rebuilt', () => {
+    const hyphenate = (capi as { _lou_hyphenate?: unknown })._lou_hyphenate;
+    if (typeof hyphenate !== 'function') {
+      expect(hyphenate).toBeUndefined();
+      return;
+    }
+    const word = 'international';
+    const L = word.length;
+    const inPtr = capi._malloc((L + 1) * 2);
+    const hyphPtr = capi._malloc(L + 1);
+    capi.stringToUTF16(word, inPtr, (L + 1) * 2);
+    const ok = capi.ccall(
+      'lou_hyphenate',
+      'number',
+      ['string', 'number', 'number', 'number', 'number'],
+      ['en-ueb-g1.ctb,hyph_en_US.dic', inPtr, L, hyphPtr, 0]
+    ) as number;
+    expect(ok).toBeTruthy();
+    capi._free(inPtr);
+    capi._free(hyphPtr);
   });
 });

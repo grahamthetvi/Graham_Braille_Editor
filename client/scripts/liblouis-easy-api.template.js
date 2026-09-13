@@ -6,6 +6,8 @@
  *  - UTF8ToString (no Pointer_stringify)
  *  - patched translateString buffer sizing / free-on-failure
  *  - injected translate() with outputPos for highlight mapping
+ *  - typeform buffer sized to *outlen; mode includes noUndefined (128)
+ *  - optional lou_hyphenate / lou_translatePrehyphenated when WASM exports them
  *
  * Loaded in the braille Web Worker after the WASM factory resolves.
  */
@@ -134,18 +136,160 @@
     return !!success;
   };
 
-  liblouis.translateString = function (table, inbuf, backtranslate) {
+  /**
+   * liblouis translationModes.noUndefined — suppress \xhhhh / \ddd/ for unknown
+   * cells. dotsIO|ucBrl is intentionally not set: embosser/download stay ASCII BRF.
+   */
+  liblouis.MODE = {
+    noUndefined: 128,
+  };
+
+  function translationMode() {
+    return liblouis.MODE.noUndefined;
+  }
+
+  /**
+   * Allocate a typeform buffer of *outlen* unsigned shorts (liblouis writes
+   * output typeforms into the same array). Fill the first inLen slots from
+   * `typeformArr` when provided; remaining slots stay 0 (plain_text).
+   */
+  function allocTypeform(maxOutLen, inLen, typeformArr) {
+    var nbytes = maxOutLen * 2;
+    var ptr = capi._malloc(nbytes);
+    var i;
+    for (i = 0; i < maxOutLen; i++) {
+      capi.setValue(ptr + i * 2, 0, 'i16');
+    }
+    if (typeformArr && typeformArr.length) {
+      var n = Math.min(typeformArr.length, inLen, maxOutLen);
+      for (i = 0; i < n; i++) {
+        capi.setValue(ptr + i * 2, typeformArr[i] & 0xffff, 'i16');
+      }
+    }
+    return ptr;
+  }
+
+  function hasHyphenateExport() {
+    return typeof capi._lou_hyphenate === 'function';
+  }
+
+  function hasTranslatePrehyphenatedExport() {
+    return typeof capi._lou_translatePrehyphenated === 'function';
+  }
+
+  liblouis.hyphenate = function (table, inbuf) {
+    if (typeof inbuf !== 'string' || inbuf.length === 0) {
+      return '';
+    }
+    if (!hasHyphenateExport()) {
+      return null;
+    }
+
+    var char_size = liblouis.charSize() || 2;
+    var L = inbuf.length;
+    var inbuff_ptr = capi._malloc((L + 1) * char_size);
+    var hyphens_ptr = capi._malloc(L + 1);
+    capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
+    var i;
+    for (i = 0; i < L + 1; i++) {
+      capi.setValue(hyphens_ptr + i, 0, 'i8');
+    }
+
+    var success = capi.ccall(
+      'lou_hyphenate',
+      'number',
+      ['string', 'number', 'number', 'number', 'number'],
+      [table, inbuff_ptr, L, hyphens_ptr, 0]
+    );
+
+    if (!success) {
+      capi._free(inbuff_ptr);
+      capi._free(hyphens_ptr);
+      return null;
+    }
+
+    var chars = [];
+    for (i = 0; i < L; i++) {
+      chars.push(String.fromCharCode(capi.getValue(hyphens_ptr + i, 'i8')));
+    }
+
+    capi._free(inbuff_ptr);
+    capi._free(hyphens_ptr);
+    return chars.join('');
+  };
+
+  liblouis.translatePrehyphenated = function (table, inbuf, hyphens) {
+    if (typeof inbuf !== 'string' || inbuf.length === 0) {
+      return '';
+    }
+    if (!hasTranslatePrehyphenatedExport()) {
+      return null;
+    }
+    var hyphenStr = hyphens || '';
+    if (hyphenStr.length !== inbuf.length) {
+      return null;
+    }
+
+    var char_size = liblouis.charSize() || 2;
+    var L = inbuf.length;
+    var max_out_len = Math.max(100, L * 10);
+    var inbuff_ptr = capi._malloc((L + 1) * char_size);
+    var outbuff_ptr = capi._malloc(max_out_len * char_size);
+    var hyphens_ptr = capi._malloc(L + 1);
+    var inlen_ptr = capi._malloc(4);
+    var outlen_ptr = capi._malloc(4);
+
+    capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
+    var i;
+    for (i = 0; i < L; i++) {
+      capi.setValue(hyphens_ptr + i, hyphenStr.charCodeAt(i) & 0xff, 'i8');
+    }
+    capi.setValue(hyphens_ptr + L, 0, 'i8');
+    capi.setValue(inlen_ptr, L, 'i32');
+    capi.setValue(outlen_ptr, max_out_len, 'i32');
+
+    var success = capi.ccall(
+      'lou_translatePrehyphenated',
+      'number',
+      ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [table, inbuff_ptr, inlen_ptr, outbuff_ptr, outlen_ptr, 0, 0, hyphens_ptr]
+    );
+
+    if (!success) {
+      capi._free(inbuff_ptr);
+      capi._free(outbuff_ptr);
+      capi._free(hyphens_ptr);
+      capi._free(inlen_ptr);
+      capi._free(outlen_ptr);
+      return null;
+    }
+
+    var actualOutLen = capi.getValue(outlen_ptr, 'i32');
+    var start_index = outbuff_ptr >> 1;
+    var outstr_buff = capi.HEAP16.slice(start_index, start_index + actualOutLen);
+
+    capi._free(inbuff_ptr);
+    capi._free(outbuff_ptr);
+    capi._free(hyphens_ptr);
+    capi._free(inlen_ptr);
+    capi._free(outlen_ptr);
+
+    return String.fromCharCode.apply(null, outstr_buff);
+  };
+
+  liblouis.translateString = function (table, inbuf, backtranslate, typeform) {
     if (typeof inbuf !== 'string' || inbuf.length === 0) {
       return '';
     }
 
-    var mode = 0;
+    var mode = translationMode();
     var char_size = liblouis.charSize() || 2;
     var L = inbuf.length;
     var max_out_len = Math.max(100, L * 10);
 
     var inbuff_ptr = capi._malloc((L + 1) * char_size);
     var outbuff_ptr = capi._malloc(max_out_len * char_size);
+    var typeform_ptr = allocTypeform(max_out_len, L, backtranslate ? null : typeform);
 
     capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
 
@@ -159,7 +303,7 @@
       backtranslate ? 'lou_backTranslateString' : 'lou_translateString',
       'number',
       ['string', 'number', 'number', 'number', 'number', 'number', 'number'],
-      [table, inbuff_ptr, strlen_ptr, outbuff_ptr, bufflen_ptr, null, null, mode]
+      [table, inbuff_ptr, strlen_ptr, outbuff_ptr, bufflen_ptr, typeform_ptr, 0, mode]
     );
 
     if (!success) {
@@ -167,6 +311,7 @@
       capi._free(inbuff_ptr);
       capi._free(bufflen_ptr);
       capi._free(strlen_ptr);
+      capi._free(typeform_ptr);
       return null;
     }
 
@@ -178,22 +323,24 @@
     capi._free(inbuff_ptr);
     capi._free(bufflen_ptr);
     capi._free(strlen_ptr);
+    capi._free(typeform_ptr);
 
     return String.fromCharCode.apply(null, outstr_buff);
   };
 
-  liblouis.translate = function (table, inbuf) {
+  liblouis.translate = function (table, inbuf, typeform) {
     if (typeof inbuf !== 'string' || inbuf.length === 0) {
       return { output: '', outputPos: [] };
     }
 
-    var mode = 0;
+    var mode = translationMode();
     var char_size = liblouis.charSize() || 2;
     var L = inbuf.length;
     var max_out_len = Math.max(100, L * 10);
 
     var inbuff_ptr = capi._malloc((L + 1) * char_size);
     var outbuff_ptr = capi._malloc(max_out_len * char_size);
+    var typeform_ptr = allocTypeform(max_out_len, L, typeform);
 
     capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
 
@@ -229,7 +376,7 @@
           inlen_ptr,
           outbuff_ptr,
           outlen_ptr,
-          0,
+          typeform_ptr,
           0,
           outputPos_ptr,
           0,
@@ -243,6 +390,7 @@
       capi._free(inlen_ptr);
       capi._free(outlen_ptr);
       capi._free(outputPos_ptr);
+      capi._free(typeform_ptr);
       return null;
     }
 
@@ -252,6 +400,7 @@
       capi._free(inlen_ptr);
       capi._free(outlen_ptr);
       capi._free(outputPos_ptr);
+      capi._free(typeform_ptr);
       return null;
     }
 
@@ -273,6 +422,7 @@
     capi._free(inlen_ptr);
     capi._free(outlen_ptr);
     capi._free(outputPos_ptr);
+    capi._free(typeform_ptr);
 
     return {
       output: String.fromCharCode.apply(null, outstr_buff),

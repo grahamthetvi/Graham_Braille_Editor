@@ -78,6 +78,11 @@ import {
 } from './utils/brfIntake';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable, getGrade2TableFor } from './utils/tableRegistry';
 import { canUseWebUSB } from './utils/os';
+import {
+  createHyphenator,
+  hyphenDictionaryForTable,
+  type HyphenateAsciiWord,
+} from './utils/hyphenation';
 import { startUsbHolder } from './services/webusb-client';
 import { VIEW_PLUS_DEFAULT_LEFT_PAD_CELLS, VIEW_PLUS_LEFT_PAD_PRESETS } from './services/embossers/ViewPlusEmbosser';
 import { defaultBanaBrailleDimensionsMm } from './utils/banaBrailleDimensions';
@@ -270,6 +275,28 @@ export default function App() {
     } catch {
       /* ignore */
     }
+  }, [selectedTable]);
+
+  const [hyphenateWord, setHyphenateWord] = useState<HyphenateAsciiWord | undefined>();
+
+  useEffect(() => {
+    const dict = hyphenDictionaryForTable(selectedTable);
+    const base = (import.meta.env.BASE_URL as string).replace(/\/$/, '');
+    let cancelled = false;
+    fetch(`${base}/tables/${dict}`)
+      .then((resp) => {
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return resp.text();
+      })
+      .then((text) => {
+        if (!cancelled) setHyphenateWord(() => createHyphenator(text));
+      })
+      .catch(() => {
+        if (!cancelled) setHyphenateWord(undefined);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [selectedTable]);
 
   // ── UI locale & table auto-pairing ───────────────────────────────────────
@@ -806,6 +833,7 @@ export default function App() {
         firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
         runoverStartCell: pageSettings.paragraphRunoverStartCell,
       },
+      hyphenateWord,
     );
   }
 
@@ -896,6 +924,7 @@ export default function App() {
       translatedText,
       pageSettings.cellsPerRow,
       paragraphStarts,
+      hyphenateWord,
     );
     const paginated = paginatePrintLines(
       inner,
@@ -924,6 +953,7 @@ export default function App() {
       translatedText,
       pageSettings.cellsPerRow,
       paragraphStarts,
+      hyphenateWord,
     );
     const paginated = paginatePrintLines(
       inner,
@@ -1046,6 +1076,7 @@ Accuracy: _____________ %
             pageSettings.linesPerPage,
             pageSettings.showPageNumbers,
             paragraphStarts,
+            hyphenateWord,
           )
         : [],
     [
@@ -1055,6 +1086,7 @@ Accuracy: _____________ %
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
+      hyphenateWord,
     ],
   );
   const formattedBrfForPrint = useMemo(() => {
@@ -1065,6 +1097,7 @@ Accuracy: _____________ %
       pageSettings.linesPerPage,
       pageSettings.showPageNumbers,
       paragraphStarts,
+      hyphenateWord,
     );
   }, [
     canonicalBrfAscii,
@@ -1072,6 +1105,7 @@ Accuracy: _____________ %
     pageSettings.linesPerPage,
     pageSettings.showPageNumbers,
     paragraphStarts,
+    hyphenateWord,
   ]);
 
   const stlBuildBase = useMemo(

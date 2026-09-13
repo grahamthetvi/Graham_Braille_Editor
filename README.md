@@ -194,7 +194,19 @@ Braille translation uses a **real WebAssembly** build of liblouis (pinned in
 [`client/scripts/build-liblouis/VERSION`](client/scripts/build-liblouis/VERSION);
 currently **3.38.0**). Artifacts live in `client/public/wasm/` and tables in
 `client/public/tables/` (math tables `nemeth`/`marburg`/`ukmaths`/`wiskunde`
-are pulled from [liblouisutdml](https://github.com/liblouis/liblouisutdml)).
+are pulled from [liblouisutdml](https://github.com/liblouis/liblouisutdml) for
+back-translate / literary selection; live `$$…$$` math is KaTeX + Speech Rule
+Engine — see [`MATH_STRATEGY.md`](MATH_STRATEGY.md)).
+
+### Emphasis markup
+
+The editor is still plain text. Literary emphasis is marked with spans that
+liblouis typeform understands:
+
+- `{i:italic}` `{b:bold}` `{u:underline}` `{c:computer braille}`
+- Combine flags: `{bi:bold italic}`
+
+Markers are stripped before translation; UEB tables emit emphasis indicators.
 
 To bump the engine:
 

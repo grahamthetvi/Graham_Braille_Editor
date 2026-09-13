@@ -18,10 +18,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
+import type { MathCode } from '../utils/mathBraille';
 import type { WordMapData } from '../workers/braille.worker';
 
+export type { MathCode };
 export type BrailleTable = string;
-export type MathCode = 'nemeth' | 'ueb';
 
 export type BackTranslateBrfResult = { plainText: string; brf: string };
 

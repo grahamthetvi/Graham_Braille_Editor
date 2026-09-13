@@ -26,7 +26,7 @@ emmake make install
 
 mkdir -p /src/out
 
-EXPORTED_FUNCTIONS='_lou_version,_lou_translateString,_lou_translate,_lou_backTranslateString,_lou_backTranslate,_lou_compileString,_lou_getTable,_lou_checkTable,_lou_free,_lou_charSize,_lou_setLogLevel,_lou_registerLogCallback,_lou_setDataPath,_lou_getDataPath,_malloc,_free'
+EXPORTED_FUNCTIONS='_lou_version,_lou_translateString,_lou_translate,_lou_backTranslateString,_lou_backTranslate,_lou_compileString,_lou_getTable,_lou_checkTable,_lou_free,_lou_charSize,_lou_setLogLevel,_lou_registerLogCallback,_lou_setDataPath,_lou_getDataPath,_lou_hyphenate,_lou_translatePrehyphenated,_malloc,_free'
 
 EXPORTED_RUNTIME_METHODS='FS,ccall,cwrap,stringToUTF16,UTF16ToString,UTF8ToString,getValue,setValue,addFunction,removeFunction,lengthBytesUTF16,HEAP16,HEAP32,HEAPU8'
 

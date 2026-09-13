@@ -1,4 +1,7 @@
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
+import type { HyphenateAsciiWord } from './hyphenation';
+
+export type { HyphenateAsciiWord };
 
 /**
  * Word-wraps a single braille line to at most `cells` characters.
@@ -8,8 +11,8 @@ import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
  *   - ' '  (0x20) for raw ASCII BRF strings
  *
  * Words that fit on the current line are appended with a leading space.
- * Words longer than `cells` are hard-broken at the character limit (the only
- * case where a word is split mid-character, matching the user's requirement).
+ * Words longer than `cells` are hyphenated when a hyphenator is supplied,
+ * otherwise hard-broken at the character limit.
  */
 /** 1-based Braille cell index (cell 1 = leftmost). */
 export type ParagraphLineStarts = {
@@ -41,6 +44,44 @@ export type BrailleWordSpan = {
 };
 
 export type PhysicalBrailleLineMeta = { spans: BrailleWordSpan[] };
+
+function hyphenCellForSpace(space: string): string {
+  return space === ' ' ? '-' : asciiToUnicodeBraille('-');
+}
+
+function hyphenPointsForWord(
+  word: string,
+  space: string,
+  hyphenateWord?: HyphenateAsciiWord,
+): number[] {
+  if (!hyphenateWord) return [];
+  const ascii = space === ' ' ? word : unicodeBrailleToAscii(word);
+  return hyphenateWord(ascii);
+}
+
+/**
+ * Next split index for an overflowing word, or -1 to hard-break at `cap`.
+ * A successful hyphen break is before `word[breakAt]`.
+ */
+function bestHyphenBreak(
+  pos: number,
+  wordLen: number,
+  cap: number,
+  points: number[],
+  hyphenLen: number,
+): number {
+  const remaining = wordLen - pos;
+  if (remaining <= cap) return wordLen;
+  const room = cap - hyphenLen;
+  if (room <= 0) return -1;
+  let breakAt = -1;
+  for (const p of points) {
+    if (p > pos && p < wordLen && p - pos <= room) {
+      breakAt = p;
+    }
+  }
+  return breakAt > pos ? breakAt : -1;
+}
 
 function lineLenFromSpans(spans: BrailleWordSpan[], spaceLen: number): number {
   if (spans.length === 0) return 0;
@@ -174,12 +215,18 @@ function sliceSrcForBrailleSpan(
 /**
  * Mirrors `wrapBrailleLine` and records which braille word spans appear on each physical line.
  */
-function wrapBrailleLineMeta(line: string, cells: number, space: string): PhysicalBrailleLineMeta[] {
+function wrapBrailleLineMeta(
+  line: string,
+  cells: number,
+  space: string,
+  hyphenateWord?: HyphenateAsciiWord,
+): PhysicalBrailleLineMeta[] {
   const words = line.split(space);
 
   const result: PhysicalBrailleLineMeta[] = [];
   let spans: BrailleWordSpan[] = [];
   const spaceLen = space.length;
+  const hyphen = hyphenCellForSpace(space);
 
   let wordIdx = 0;
   for (const word of words) {
@@ -192,14 +239,25 @@ function wrapBrailleLineMeta(line: string, cells: number, space: string): Physic
         result.push({ spans: [...spans] });
         spans = [];
       }
-      for (let i = 0; i < word.length; i += cells) {
-        const chunk = word.slice(i, i + cells);
-        if (chunk.length === cells) {
+      const points = hyphenPointsForWord(word, space, hyphenateWord);
+      let pos = 0;
+      while (pos < word.length) {
+        const remaining = word.length - pos;
+        if (remaining <= cells) {
+          spans = [{ wordIndex: wi, charStart: pos, charEnd: word.length }];
+          break;
+        }
+        const breakAt = bestHyphenBreak(pos, word.length, cells, points, hyphen.length);
+        if (breakAt > pos) {
           result.push({
-            spans: [{ wordIndex: wi, charStart: i, charEnd: i + cells }],
+            spans: [{ wordIndex: wi, charStart: pos, charEnd: breakAt }],
           });
+          pos = breakAt;
         } else {
-          spans = [{ wordIndex: wi, charStart: i, charEnd: word.length }];
+          result.push({
+            spans: [{ wordIndex: wi, charStart: pos, charEnd: pos + cells }],
+          });
+          pos += cells;
         }
       }
     } else {
@@ -227,6 +285,7 @@ function wrapBrailleLineWithParagraphStartsMeta(
   firstLineStartCell: number,
   runoverStartCell: number,
   space: string,
+  hyphenateWord?: HyphenateAsciiWord,
 ): PhysicalBrailleLineMeta[] {
   const cells = Math.max(1, cellsPerRow);
   const firstCell = clampParagraphCell(firstLineStartCell, cells);
@@ -242,6 +301,7 @@ function wrapBrailleLineWithParagraphStartsMeta(
   let spans: BrailleWordSpan[] = [];
   let onFirstLine = true;
   const spaceLen = space.length;
+  const hyphen = hyphenCellForSpace(space);
 
   const cap = () => (onFirstLine ? capFirst : capRun);
 
@@ -260,17 +320,31 @@ function wrapBrailleLineWithParagraphStartsMeta(
 
     if (word.length > cap()) {
       if (spans.length > 0) pushCurrent();
-      let remaining = word;
+      const points = hyphenPointsForWord(word, space, hyphenateWord);
       let pos = 0;
-      while (remaining.length > 0) {
+      while (pos < word.length) {
         const c = cap();
-        const chunk = remaining.slice(0, c);
-        remaining = remaining.slice(c);
-        const chunkLen = chunk.length;
-        result.push({
-          spans: [{ wordIndex: wi, charStart: pos, charEnd: pos + chunkLen }],
-        });
-        pos += chunkLen;
+        const remaining = word.length - pos;
+        if (remaining <= c) {
+          result.push({
+            spans: [{ wordIndex: wi, charStart: pos, charEnd: word.length }],
+          });
+          pos = word.length;
+          onFirstLine = false;
+          break;
+        }
+        const breakAt = bestHyphenBreak(pos, word.length, c, points, hyphen.length);
+        if (breakAt > pos) {
+          result.push({
+            spans: [{ wordIndex: wi, charStart: pos, charEnd: breakAt }],
+          });
+          pos = breakAt;
+        } else {
+          result.push({
+            spans: [{ wordIndex: wi, charStart: pos, charEnd: pos + c }],
+          });
+          pos += c;
+        }
         onFirstLine = false;
       }
       continue;
@@ -294,6 +368,7 @@ function physicalLinesMetaForUnicodeLine(
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
   brailleSpace: string,
+  hyphenateWord?: HyphenateAsciiWord,
 ): PhysicalBrailleLineMeta[] {
   // Jumbo / large-print lines hold literal text, not braille words — one physical line, no spans.
   if (unicodeLine.startsWith('\u0002')) {
@@ -326,6 +401,7 @@ function physicalLinesMetaForUnicodeLine(
       firstStart,
       runStart,
       brailleSpace,
+      hyphenateWord,
     );
   }
   if (unicodeLine.length <= cells) {
@@ -338,7 +414,7 @@ function physicalLinesMetaForUnicodeLine(
     }));
     return [{ spans }];
   }
-  return wrapBrailleLineMeta(unicodeLine, cells, brailleSpace);
+  return wrapBrailleLineMeta(unicodeLine, cells, brailleSpace, hyphenateWord);
 }
 
 /**
@@ -349,6 +425,7 @@ function syncPlainLineToBrailleWrap(
   unicodeBrailleLine: string,
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string {
   // Jumbo / large-print lines are literal text; leave the source row untouched.
   if (unicodeBrailleLine.startsWith('\u0002')) {
@@ -376,6 +453,7 @@ function syncPlainLineToBrailleWrap(
     cellsPerRow,
     paragraphStarts,
     BRAILLE_SPACE,
+    hyphenateWord,
   );
 
   if (physical.length === 0) return canonicalSrc;
@@ -458,6 +536,7 @@ export function buildPlainTextToMatchBrailleWrap(
   asciiBrf: string,
   cellsPerRow: number,
   paragraphStarts?: ParagraphLineStarts,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string {
   const srcSegs = sourceText.split('\f');
   const brfSegs = asciiBrf.split('\f');
@@ -477,7 +556,7 @@ export function buildPlainTextToMatchBrailleWrap(
       const s = srcLines[i] ?? '';
       const b = brfLines[i] ?? '';
       const unicode = asciiToUnicodeBraille(b);
-      outLines.push(syncPlainLineToBrailleWrap(s, unicode, cellsPerRow, paragraphStarts));
+      outLines.push(syncPlainLineToBrailleWrap(s, unicode, cellsPerRow, paragraphStarts, hyphenateWord));
     }
     outSegs.push(outLines.join('\n'));
   }
@@ -501,6 +580,7 @@ export function wrapBrailleLineWithParagraphStarts(
   firstLineStartCell: number,
   runoverStartCell: number,
   space: string,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const firstCell = clampParagraphCell(firstLineStartCell, cells);
@@ -514,6 +594,7 @@ export function wrapBrailleLineWithParagraphStarts(
   const result: string[] = [];
   let current = '';
   let onFirstLine = true;
+  const hyphen = hyphenCellForSpace(space);
 
   const margin = () => (onFirstLine ? marginFirst : marginRun);
   const cap = () => (onFirstLine ? capFirst : capRun);
@@ -531,13 +612,25 @@ export function wrapBrailleLineWithParagraphStarts(
 
     if (word.length > cap()) {
       if (current.length > 0) pushCurrent();
-      let remaining = word;
-      while (remaining.length > 0) {
+      const points = hyphenPointsForWord(word, space, hyphenateWord);
+      let pos = 0;
+      while (pos < word.length) {
         const c = cap();
-        const chunk = remaining.slice(0, c);
-        remaining = remaining.slice(c);
-        const m = margin();
-        result.push(space.repeat(m) + chunk);
+        const remaining = word.length - pos;
+        if (remaining <= c) {
+          result.push(space.repeat(margin()) + word.slice(pos));
+          pos = word.length;
+          onFirstLine = false;
+          break;
+        }
+        const breakAt = bestHyphenBreak(pos, word.length, c, points, hyphen.length);
+        if (breakAt > pos) {
+          result.push(space.repeat(margin()) + word.slice(pos, breakAt) + hyphen);
+          pos = breakAt;
+        } else {
+          result.push(space.repeat(margin()) + word.slice(pos, pos + c));
+          pos += c;
+        }
         onFirstLine = false;
       }
       continue;
@@ -556,26 +649,40 @@ export function wrapBrailleLineWithParagraphStarts(
   return result;
 }
 
-function wrapBrailleLine(line: string, cells: number, space: string): string[] {
+function wrapBrailleLine(
+  line: string,
+  cells: number,
+  space: string,
+  hyphenateWord?: HyphenateAsciiWord,
+): string[] {
   const words = line.split(space);
   const result: string[] = [];
   let current = '';
+  const hyphen = hyphenCellForSpace(space);
 
   for (const word of words) {
     if (word.length === 0) continue; // skip empty segments (consecutive spaces)
 
     if (word.length > cells) {
-      // Single word exceeds a full row — hard-break at the character limit
       if (current.length > 0) {
         result.push(current);
         current = '';
       }
-      for (let i = 0; i < word.length; i += cells) {
-        const chunk = word.slice(i, i + cells);
-        if (chunk.length === cells) {
-          result.push(chunk);
+      const points = hyphenPointsForWord(word, space, hyphenateWord);
+      let pos = 0;
+      while (pos < word.length) {
+        const remaining = word.length - pos;
+        if (remaining <= cells) {
+          current = word.slice(pos);
+          break;
+        }
+        const breakAt = bestHyphenBreak(pos, word.length, cells, points, hyphen.length);
+        if (breakAt > pos) {
+          result.push(word.slice(pos, breakAt) + hyphen);
+          pos = breakAt;
         } else {
-          current = chunk; // final partial chunk continues on next line
+          result.push(word.slice(pos, pos + cells));
+          pos += cells;
         }
       }
     } else {
@@ -621,6 +728,7 @@ function formatBrfPagesSegment(
   includePageNumbers: boolean,
   paragraphStarts: ParagraphLineStarts | undefined,
   firstPageNumber: number,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -653,12 +761,12 @@ function formatBrfPagesSegment(
       wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
     } else if (useParagraphStarts) {
       wrappedLines.push(
-        ...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, BRAILLE_SPACE),
+        ...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, BRAILLE_SPACE, hyphenateWord),
       );
     } else if (line.length <= cells) {
       wrappedLines.push(line); // fits — no wrapping needed
     } else {
-      wrappedLines.push(...wrapBrailleLine(line, cells, BRAILLE_SPACE));
+      wrappedLines.push(...wrapBrailleLine(line, cells, BRAILLE_SPACE, hyphenateWord));
     }
   }
 
@@ -692,7 +800,8 @@ function formatBrfPagesSegment(
  * Formats a Unicode braille string into an array of page strings for display.
  * Each page contains at most linesPerPage lines; each line is at most cellsPerRow
  * characters wide. Lines that exceed cellsPerRow are word-wrapped — whole braille
- * words move to the next line. Only words longer than cellsPerRow are hard-broken.
+ * words move to the next line. Words longer than cellsPerRow are hyphenated when
+ * a hyphenator is supplied, otherwise hard-broken.
  *
  * Form feed (`\f`) starts a new pagination block: content after each `\f` begins on a
  * new page sequence (e.g. chart after summary).
@@ -703,6 +812,7 @@ export function formatBrfPages(
   linesPerPage: number,
   includePageNumbers: boolean = false,
   paragraphStarts?: ParagraphLineStarts,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
   if (!unicodeBraille.includes('\f')) {
     return formatBrfPagesSegment(
@@ -712,6 +822,7 @@ export function formatBrfPages(
       includePageNumbers,
       paragraphStarts,
       1,
+      hyphenateWord,
     );
   }
 
@@ -726,6 +837,7 @@ export function formatBrfPages(
       includePageNumbers,
       paragraphStarts,
       nextPageNum,
+      hyphenateWord,
     );
     nextPageNum += pages.length;
     allPages.push(...pages);
@@ -765,6 +877,7 @@ export function buildBrfDownloadPayload(
   linesPerPage: number,
   includePageNumbers: boolean = false,
   paragraphStarts?: ParagraphLineStarts,
+  hyphenateWord?: HyphenateAsciiWord,
 ): BrfDownloadPayload {
   const formatted = formatBrfForOutput(
     rawBrf,
@@ -772,6 +885,7 @@ export function buildBrfDownloadPayload(
     linesPerPage,
     includePageNumbers,
     paragraphStarts,
+    hyphenateWord,
   );
   const blob = new Blob([formatted], { type: 'text/plain;charset=us-ascii' });
   return { filename: defaultBrfDownloadFilename(), blob, formatted };
@@ -990,6 +1104,7 @@ function syncPlainLineToScaledRtfRows(
   unicodeBrailleLine: string,
   cellsPerRow: number,
   paragraphStarts: ParagraphLineStarts | undefined,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
   if (unicodeBrailleLine.startsWith('\u0002')) {
     const visual = formatPlainTextForPrintDownload(sourceLine);
@@ -1006,7 +1121,7 @@ function syncPlainLineToScaledRtfRows(
   const n = srcWords.length;
 
   if (m !== n || n === 0 || !unicodeBrailleLine.trim()) {
-    const plain = syncPlainLineToBrailleWrap(sourceLine, unicodeBrailleLine, cellsPerRow, paragraphStarts);
+    const plain = syncPlainLineToBrailleWrap(sourceLine, unicodeBrailleLine, cellsPerRow, paragraphStarts, hyphenateWord);
     const visual = formatPlainTextForPrintDownload(plain);
     return visual.split('\n').map(line => escapeRtfPlainText(line));
   }
@@ -1016,6 +1131,7 @@ function syncPlainLineToScaledRtfRows(
     cellsPerRow,
     paragraphStarts,
     BRAILLE_SPACE,
+    hyphenateWord,
   );
   if (physical.length === 0) {
     return [escapeRtfPlainText(canonicalSrc)];
@@ -1047,6 +1163,7 @@ export function buildPrintLayoutRtfBody(
   asciiBrf: string,
   cellsPerRow: number,
   paragraphStarts?: ParagraphLineStarts,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string {
   const srcSegs = sourceText.split('\f');
   const brfSegs = asciiBrf.split('\f');
@@ -1065,7 +1182,7 @@ export function buildPrintLayoutRtfBody(
       const s = srcLines[i] ?? '';
       const b = brfLines[i] ?? '';
       const unicode = asciiToUnicodeBraille(b);
-      outLines.push(...syncPlainLineToScaledRtfRows(s, unicode, cellsPerRow, paragraphStarts));
+      outLines.push(...syncPlainLineToScaledRtfRows(s, unicode, cellsPerRow, paragraphStarts, hyphenateWord));
     }
     outSegs.push(outLines.join('\n'));
   }
@@ -1145,6 +1262,7 @@ function formatBrfForOutputSegment(
   includePageNumbers: boolean,
   paragraphStarts: ParagraphLineStarts | undefined,
   firstPageNumber: number,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
   const cells = Math.max(1, cellsPerRow);
   const lines = Math.max(1, linesPerPage);
@@ -1177,11 +1295,11 @@ function formatBrfForOutputSegment(
       continue;
     }
     if (useParagraphStarts) {
-      wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, ' '));
+      wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, ' ', hyphenateWord));
     } else if (line.length <= cells) {
       wrapped.push(line);
     } else {
-      wrapped.push(...wrapBrailleLine(line, cells, ' '));
+      wrapped.push(...wrapBrailleLine(line, cells, ' ', hyphenateWord));
     }
   }
 
@@ -1219,6 +1337,7 @@ export function formatBrfForOutput(
   linesPerPage: number,
   includePageNumbers: boolean = false,
   paragraphStarts?: ParagraphLineStarts,
+  hyphenateWord?: HyphenateAsciiWord,
 ): string {
   if (!rawBrf.includes('\f')) {
     const one = formatBrfForOutputSegment(
@@ -1228,6 +1347,7 @@ export function formatBrfForOutput(
       includePageNumbers,
       paragraphStarts,
       1,
+      hyphenateWord,
     );
     return (one.join('\r\n\f') + '\r\n').replace(/\|/g, '\\');
   }
@@ -1243,6 +1363,7 @@ export function formatBrfForOutput(
       includePageNumbers,
       paragraphStarts,
       nextPageNum,
+      hyphenateWord,
     );
     nextPageNum += pageChunks.length;
     allChunks.push(...pageChunks);
