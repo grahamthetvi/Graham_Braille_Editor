@@ -3,7 +3,15 @@
  *
  * Documents are parsed locally (mammoth.js, dynamic import). Nothing is uploaded.
  * Headings become plain paragraphs (no markdown `#`, which would pollute Grade 2).
+ * Word tables become `:::table` Braille Formats blocks (same fence as the Table editor).
  */
+
+import {
+  TABLE_LIMITS,
+  validateTableSpec,
+  type TableSpec,
+} from '../types/table';
+import { flattenPrintTable, tableSpecToEditorBlock } from './tableBraille';
 
 export const DOCX_MAX_BYTES = 10 * 1024 * 1024;
 export const DOCX_OOXML_MIME =
@@ -29,6 +37,25 @@ export type DocxImportResult = {
   text: string;
   warnings: string[];
 };
+
+export type FormatImportedTableFn = (spec: TableSpec) => string | Promise<string>;
+
+export type DocxHtmlToEditorOptions = {
+  /** Override table layout (App supplies translated Braille Formats output). */
+  formatTable?: FormatImportedTableFn;
+  /** Page width in cells; used when laying out imported tables. */
+  cellsPerRow?: number;
+};
+
+export const DOCX_IMPORT_CELLS_PER_ROW = 40;
+
+/** Private-use placeholder for a collected TableSpec, replaced after HTML conversion. */
+const TABLE_PLACEHOLDER_PREFIX = '\uE000GBE_TBL_';
+const TABLE_PLACEHOLDER_SUFFIX = '\uE001';
+
+function tablePlaceholder(index: number): string {
+  return `${TABLE_PLACEHOLDER_PREFIX}${index}${TABLE_PLACEHOLDER_SUFFIX}`;
+}
 
 const ZIP_LOCAL = [0x50, 0x4b, 0x03, 0x04];
 const ZIP_EOCD = [0x50, 0x4b, 0x05, 0x06];
@@ -155,12 +182,47 @@ function collectWarnings(messages: Array<{ type: string; message: string }>): st
 
 /**
  * Convert mammoth HTML (and a few other block tags) into Graham editor source text.
- * Exported for unit tests of the post-processor (images, links, lists, headings).
+ * Exported for unit tests of the post-processor (images, links, lists, headings, tables).
  */
-export function docxHtmlToEditorText(html: string): string {
+export async function docxHtmlToEditorText(
+  html: string,
+  options?: DocxHtmlToEditorOptions,
+): Promise<string> {
+  const { text, tables } = convertDocxHtml(html);
+  const cellsPerRow = options?.cellsPerRow ?? DOCX_IMPORT_CELLS_PER_ROW;
+  const formatTable =
+    options?.formatTable ??
+    ((spec: TableSpec) => tableSpecToEditorBlock(spec, (s) => s, cellsPerRow));
+  return materializeImportedTables(text, tables, formatTable);
+}
+
+function convertDocxHtml(html: string): { text: string; tables: TableSpec[] } {
+  const ctx: HtmlRenderCtx = { tables: [] };
   const nodes = parseHtmlFragment(html);
-  const blocks = renderNodesAsBlocks(nodes);
-  return finalizeEditorText(blocks.join('\n\n'));
+  const blocks = renderNodesAsBlocks(nodes, ctx);
+  return { text: finalizeEditorText(blocks.join('\n\n')), tables: ctx.tables };
+}
+
+async function materializeImportedTables(
+  text: string,
+  tables: TableSpec[],
+  formatTable: FormatImportedTableFn,
+): Promise<string> {
+  if (tables.length === 0) return text;
+  let out = text;
+  for (let i = 0; i < tables.length; i++) {
+    const token = tablePlaceholder(i);
+    const spec = tables[i];
+    let block: string;
+    try {
+      block = (await Promise.resolve(formatTable(spec))).trim();
+    } catch {
+      block = '';
+    }
+    if (!block) block = flattenPrintTable(spec.cells);
+    out = out.split(token).join(block);
+  }
+  return out.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function finalizeEditorText(text: string): string {
@@ -353,28 +415,131 @@ function renderListItem(children: HtmlNode[], prefix: string, depth: number): st
   return lines;
 }
 
-function renderTable(node: HtmlNode & { type: 'element' }): string {
-  const rows: string[] = [];
-  const walk = (n: HtmlNode) => {
-    if (n.type !== 'element') return;
-    if (n.name === 'tr') {
-      const cells: string[] = [];
-      for (const cell of n.children) {
-        if (cell.type === 'element' && (cell.name === 'td' || cell.name === 'th')) {
-          cells.push(collapseInlineWs(renderInline(cell.children)));
-        }
-      }
-      const line = cells.filter(Boolean).join('  ');
-      if (line) rows.push(line);
-      return;
-    }
-    for (const c of n.children) walk(c);
-  };
-  walk(node);
-  return rows.join('\n');
+type HtmlRenderCtx = { tables: TableSpec[] };
+
+function parsePositiveInt(raw: string | undefined, fallback = 1): number {
+  const n = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
+function renderCellContents(children: HtmlNode[]): string {
+  const parts: string[] = [];
+  for (const child of children) {
+    if (child.type === 'text') {
+      parts.push(child.value);
+      continue;
+    }
+    if (child.name === 'br') {
+      parts.push(' ');
+      continue;
+    }
+    if (child.name === 'img') {
+      const alt = (child.attrs.alt || '').trim();
+      if (alt) parts.push(`[Image: ${alt}]`);
+      continue;
+    }
+    if (child.name === 'table') {
+      const nested = extractTableGrid(child);
+      parts.push(nested.cells.map((row) => row.filter((c) => c.trim()).join(' ')).join(' '));
+      continue;
+    }
+    if (child.name === 'ul' || child.name === 'ol') {
+      parts.push(renderList(child, 0).join(' '));
+      continue;
+    }
+    parts.push(renderCellContents(child.children));
+  }
+  return collapseInlineWs(parts.join(' '));
+}
+
+function extractCaption(table: HtmlNode & { type: 'element' }): string | undefined {
+  for (const child of table.children) {
+    if (child.type === 'element' && child.name === 'caption') {
+      const text = collapseInlineWs(renderInline(child.children));
+      return text || undefined;
+    }
+  }
+  return undefined;
+}
+
+function extractTableGrid(node: HtmlNode & { type: 'element' }): {
+  cells: string[][];
+  hasColumnHeadings: boolean;
+} {
+  const rows: string[][] = [];
+
+  const readRow = (tr: HtmlNode & { type: 'element' }) => {
+    const cells: string[] = [];
+    for (const cell of tr.children) {
+      if (cell.type !== 'element') continue;
+      if (cell.name !== 'td' && cell.name !== 'th') continue;
+      const text = renderCellContents(cell.children);
+      const span = Math.min(parsePositiveInt(cell.attrs.colspan, 1), TABLE_LIMITS.maxCols);
+      cells.push(text);
+      for (let i = 1; i < span; i++) cells.push('');
+    }
+    if (cells.length) rows.push(cells);
+  };
+
+  const walk = (n: HtmlNode) => {
+    if (n.type !== 'element') return;
+    if (n.name === 'table' && n !== node) return;
+    if (n.name === 'tr') {
+      readRow(n);
+      return;
+    }
+    if (n.name === 'colgroup') return;
+    for (const c of n.children) walk(c);
+  };
+
+  walk(node);
+
+  const colCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+  const cells = rows.map((row) => {
+    const padded = row.slice();
+    while (padded.length < colCount) padded.push('');
+    return padded.slice(0, colCount);
+  });
+
+  return {
+    cells,
+    hasColumnHeadings: cells.length >= 2,
+  };
+}
+
+function specFromGrid(
+  grid: { cells: string[][]; hasColumnHeadings: boolean },
+  title?: string,
+): TableSpec | null {
+  const { cells } = grid;
+  if (cells.length === 0 || cells.every((row) => row.every((c) => !c.trim()))) return null;
+  const colCount = Math.max(...cells.map((r) => r.length), 0);
+  if (colCount > TABLE_LIMITS.maxCols || cells.length > TABLE_LIMITS.maxRows) return null;
+
+  const spec: TableSpec = {
+    cells,
+    hasColumnHeadings: grid.hasColumnHeadings,
+    format: 'auto',
+    columnGap: 2,
+    guideDots: true,
+    ...(title ? { title } : {}),
+  };
+  if (validateTableSpec(spec).ok) return spec;
+  spec.hasColumnHeadings = false;
+  if (validateTableSpec(spec).ok) return spec;
+  return null;
+}
+
+function renderTable(node: HtmlNode & { type: 'element' }, ctx: HtmlRenderCtx): string {
+  const grid = extractTableGrid(node);
+  const spec = specFromGrid(grid, extractCaption(node));
+  if (!spec) return flattenPrintTable(grid.cells);
+  const index = ctx.tables.length;
+  ctx.tables.push(spec);
+  return tablePlaceholder(index);
+}
+
+function renderNodesAsBlocks(nodes: HtmlNode[], ctx: HtmlRenderCtx): string[] {
   const blocks: string[] = [];
   const pendingText: string[] = [];
 
@@ -407,13 +572,13 @@ function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
     }
     if (node.name === 'table') {
       flushText();
-      const table = renderTable(node);
+      const table = renderTable(node, ctx);
       if (table) blocks.push(table);
       continue;
     }
     if (node.name === 'thead' || node.name === 'tbody' || node.name === 'tfoot') {
       flushText();
-      blocks.push(...renderNodesAsBlocks(node.children));
+      blocks.push(...renderNodesAsBlocks(node.children, ctx));
       continue;
     }
     if (node.name === 'li') {
@@ -438,7 +603,7 @@ function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
       }
       const inline = collapseInlineWs(renderInline(inlineKids));
       if (inline) blocks.push(inline);
-      if (nested.length) blocks.push(...renderNodesAsBlocks(nested));
+      if (nested.length) blocks.push(...renderNodesAsBlocks(nested, ctx));
       continue;
     }
     if (node.name === 'style' || node.name === 'script') continue;
@@ -448,7 +613,10 @@ function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
   return blocks.filter((b) => b.length > 0);
 }
 
-export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxImportResult> {
+export async function importDocxToEditorText(
+  buffer: ArrayBuffer,
+  options?: DocxHtmlToEditorOptions,
+): Promise<DocxImportResult> {
   if (buffer.byteLength > DOCX_MAX_BYTES) {
     throw new DocxImportError('too-large');
   }
@@ -521,7 +689,7 @@ export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxI
     throw new DocxImportError('not-docx');
   }
 
-  const text = docxHtmlToEditorText(html);
+  const text = await docxHtmlToEditorText(html, options);
   if (!text) {
     throw new DocxImportError('empty');
   }
