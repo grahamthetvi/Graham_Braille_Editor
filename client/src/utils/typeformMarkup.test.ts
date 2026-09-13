@@ -3,6 +3,7 @@ import {
   hasTypeformMarkup,
   LOU_TYPEFORM,
   parseTypeformMarkup,
+  serializeTypeformMarkup,
   typeformBitsFromFlags,
 } from './typeformMarkup';
 
@@ -47,5 +48,30 @@ describe('parseTypeformMarkup', () => {
     const parsed = parseTypeformMarkup('{z:nope} ok');
     expect(parsed.plain).toBe('{z:nope} ok');
     expect(hasTypeformMarkup('{z:nope} ok')).toBe(false);
+  });
+});
+
+describe('serializeTypeformMarkup', () => {
+  it('round-trips italic, bold, combined, and computer-braille spans', () => {
+    const sources = [
+      '{i:hello}',
+      '{b:Bold}',
+      '{ib:both}',
+      '{c:code()}',
+      'say {i:hello} now',
+    ];
+    for (const source of sources) {
+      const parsed = parseTypeformMarkup(source);
+      const serialized = serializeTypeformMarkup(parsed.plain, parsed.typeform);
+      const again = parseTypeformMarkup(serialized);
+      expect(again.plain).toBe(parsed.plain);
+      expect(again.typeform).toEqual(parsed.typeform);
+    }
+  });
+
+  it('leaves unmarked text unmarked and uses ibuc flag order', () => {
+    expect(serializeTypeformMarkup('Hello', [0, 0, 0, 0, 0])).toBe('Hello');
+    const bits = LOU_TYPEFORM.bold | LOU_TYPEFORM.italic;
+    expect(serializeTypeformMarkup('ab', [bits, bits])).toBe('{ib:ab}');
   });
 });

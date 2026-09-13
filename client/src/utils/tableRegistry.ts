@@ -79,6 +79,8 @@ export const TABLE_GROUPS: BrailleTableGroup[] = [
       { name: 'English — GB Grade 1', file: 'en-gb-g1.utb' },
       { name: 'English — GB Computer (8-dot)', file: 'en-gb-comp8.ctb' },
       { name: 'English — India Grade 1', file: 'en-in-g1.ctb' },
+      { name: 'English — New Zealand Grade 1', file: 'en-nz-g1.utb' },
+      { name: 'English — New Zealand Grade 2', file: 'en-nz-g2.ctb' },
       { name: 'English — UEB Math', file: 'en-ueb-math.ctb' },
       { name: 'English — Chess Notation', file: 'en-chess.ctb' },
     ],
@@ -311,6 +313,7 @@ export const TABLE_GROUPS: BrailleTableGroup[] = [
       { name: 'Swahili (Kenya) — Grade 2', file: 'sw-ke-g2.ctb' },
       { name: 'Luganda — Grade 1', file: 'lg-ug-g1.utb' },
       { name: 'Ethiopic — Grade 1', file: 'ethio-g1.ctb' },
+      { name: 'Haitian Creole — Grade 1', file: 'ht-g1.utb' },
     ],
   },
   {
@@ -359,6 +362,7 @@ export function getGrade2TableFor(file: string): string {
   const migrated = migrateTableFilename(file);
   const mappings: Record<string, string> = {
     'en-ueb-g1.ctb': 'en-ueb-g2.ctb',
+    'en-nz-g1.utb': 'en-nz-g2.ctb',
     'en-us-g1.ctb': 'en-us-g2.ctb',
     'en-gb-g1.utb': 'en-GB-g2.ctb',
     'es-g1.ctb': 'es-g2.ctb',

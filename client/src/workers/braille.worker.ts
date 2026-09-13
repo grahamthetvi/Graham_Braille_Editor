@@ -42,6 +42,11 @@ interface TranslateResult {
   outputPos: number[];
 }
 
+interface BackTranslateResult {
+  output: string;
+  typeform: number[];
+}
+
 interface LiblouisEasyApi {
   setLiblouisBuild(capi: object): void;
   translateString(
@@ -51,6 +56,7 @@ interface LiblouisEasyApi {
     typeform?: number[],
   ): string | null;
   translate(table: string, text: string, typeform?: number[]): TranslateResult | null;
+  backTranslate(table: string, brf: string): BackTranslateResult | null;
   backTranslateString(table: string, brf: string): string | null;
   hyphenate?(table: string, text: string): string | null;
   enableOnDemandTableLoading(url: string): void;
@@ -228,7 +234,7 @@ async function init(): Promise<void> {
   if (
     !liblouis ||
     typeof liblouis.translateString !== 'function' ||
-    typeof liblouis.backTranslateString !== 'function'
+    typeof liblouis.backTranslate !== 'function'
   ) {
     throw new Error('easy-api.js did not expose a full liblouis instance on self');
   }
@@ -261,7 +267,8 @@ import {
   type MathCode,
 } from '../utils/mathBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
-import { parseTypeformMarkup } from '../utils/typeformMarkup';
+import { parseTypeformMarkup, serializeTypeformMarkup } from '../utils/typeformMarkup';
+import { restoreUebOpenQuoteFromHis } from '../utils/uebBackTranslate';
 
 // Initialize SRE for Nemeth or UEB Braille output (not liblouis MathML tables).
 let currentMathCode: MathCode | '' = '';
@@ -641,14 +648,15 @@ function backTranslateTextPreservingNewlines(brf: string, table: string): string
     const hasCR = line.endsWith('\r');
     const cleanLine = hasCR ? line.slice(0, -1) : line;
     if (!cleanLine) return hasCR ? '\r' : '';
-    let plain = liblouis!.backTranslateString(resolvedTable, cleanLine) || '';
+    const result = liblouis!.backTranslate(resolvedTable, cleanLine);
+    let plain = result?.output || '';
     if (table === NEMETH_BACK_TRANSLATE_TABLE) {
       plain = cleanNemethBackTranslation(plain);
     } else {
-      // In UEB, dots 2-3-6 (`8`) followed by space is an open quote followed by a space,
-      // but liblouis's legacy fallback translates standalone 2-3-6 as `his`.
-      // If a line starts with `his ` and ends with `"`, restore the opening quote.
-      plain = plain.replace(/^(\s*)his\s+(.*?"\s*)$/i, '$1"$2');
+      if (result?.typeform?.length) {
+        plain = serializeTypeformMarkup(plain, result.typeform);
+      }
+      plain = restoreUebOpenQuoteFromHis(plain);
     }
     return hasCR ? plain + '\r' : plain;
   }).join('\n');

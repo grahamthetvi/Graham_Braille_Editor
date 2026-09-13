@@ -5,7 +5,7 @@
  * Emphasis is marked with `{i:…}`, `{b:…}`, `{u:…}`, `{c:…}` spans. Flags may
  * combine (`{bi:bold italic}`). Markers are stripped before `lou_translate`.
  *
- * Bits match liblouis 3.38 `typeforms` in liblouis.h.
+ * Bits match liblouis 3.38+ `typeforms` in liblouis.h. Canonical flag order is `ibuc`.
  */
 
 export const LOU_TYPEFORM = {
@@ -116,4 +116,51 @@ export function hasTypeformMarkup(source: string): boolean {
   const found = MARKUP_RE.test(source);
   MARKUP_RE.lastIndex = 0;
   return found;
+}
+
+const TYPEFORM_MASK =
+  LOU_TYPEFORM.italic |
+  LOU_TYPEFORM.underline |
+  LOU_TYPEFORM.bold |
+  LOU_TYPEFORM.computer_braille;
+
+/** Canonical `i`/`b`/`u`/`c` letters for a masked typeform bitset. */
+export function flagsFromTypeformBits(bits: number): string {
+  const masked = bits & TYPEFORM_MASK;
+  let flags = '';
+  if (masked & LOU_TYPEFORM.italic) flags += 'i';
+  if (masked & LOU_TYPEFORM.bold) flags += 'b';
+  if (masked & LOU_TYPEFORM.underline) flags += 'u';
+  if (masked & LOU_TYPEFORM.computer_braille) flags += 'c';
+  return flags;
+}
+
+/**
+ * Wrap runs of non-zero typeform bits as `{i:…}` / `{bi:…}` (etc.).
+ * `typeform[i]` is aligned with `plain[i]`. Extra typeform slots are ignored;
+ * extra plain characters after the array are appended unmarked.
+ */
+export function serializeTypeformMarkup(plain: string, typeform: number[]): string {
+  if (!plain) return '';
+  const n = Math.min(plain.length, typeform.length);
+  let out = '';
+  let i = 0;
+  while (i < n) {
+    const bits = typeform[i] & TYPEFORM_MASK;
+    let j = i + 1;
+    while (j < n && (typeform[j] & TYPEFORM_MASK) === bits) {
+      j++;
+    }
+    const chunk = plain.slice(i, j);
+    if (bits === 0) {
+      out += chunk;
+    } else {
+      out += `{${flagsFromTypeformBits(bits)}:${chunk}}`;
+    }
+    i = j;
+  }
+  if (n < plain.length) {
+    out += plain.slice(n);
+  }
+  return out;
 }

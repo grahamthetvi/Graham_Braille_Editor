@@ -124,8 +124,68 @@
     ]);
   };
 
+  liblouis.backTranslate = function (table, inbuf) {
+    if (typeof inbuf !== 'string' || inbuf.length === 0) {
+      return { output: '', typeform: [] };
+    }
+
+    var mode = translationMode();
+    var char_size = liblouis.charSize() || 2;
+    var L = inbuf.length;
+    var max_out_len = Math.max(100, L * 10);
+
+    var inbuff_ptr = capi._malloc((L + 1) * char_size);
+    var outbuff_ptr = capi._malloc(max_out_len * char_size);
+    var typeform_ptr = allocTypeform(max_out_len, L, null);
+
+    capi.stringToUTF16(inbuf, inbuff_ptr, (L + 1) * char_size);
+
+    var bufflen_ptr = capi._malloc(4);
+    var strlen_ptr = capi._malloc(4);
+
+    capi.setValue(bufflen_ptr, max_out_len, 'i32');
+    capi.setValue(strlen_ptr, L, 'i32');
+
+    var success = capi.ccall(
+      'lou_backTranslateString',
+      'number',
+      ['string', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [table, inbuff_ptr, strlen_ptr, outbuff_ptr, bufflen_ptr, typeform_ptr, 0, mode]
+    );
+
+    if (!success) {
+      capi._free(outbuff_ptr);
+      capi._free(inbuff_ptr);
+      capi._free(bufflen_ptr);
+      capi._free(strlen_ptr);
+      capi._free(typeform_ptr);
+      return null;
+    }
+
+    var outLen = capi.getValue(bufflen_ptr, 'i32');
+    var start_index = outbuff_ptr >> 1;
+    var outstr_buff = capi.HEAP16.slice(start_index, start_index + outLen);
+    var typeformArr = new Array(outLen);
+    var i;
+    for (i = 0; i < outLen; i++) {
+      typeformArr[i] = capi.getValue(typeform_ptr + i * 2, 'i16') & 0xffff;
+    }
+
+    capi._free(outbuff_ptr);
+    capi._free(inbuff_ptr);
+    capi._free(bufflen_ptr);
+    capi._free(strlen_ptr);
+    capi._free(typeform_ptr);
+
+    return {
+      output: String.fromCharCode.apply(null, outstr_buff),
+      typeform: typeformArr,
+    };
+  };
+
   liblouis.backTranslateString = function (table, inbuf) {
-    return liblouis.translateString(table, inbuf, true);
+    var result = liblouis.backTranslate(table, inbuf);
+    return result ? result.output : null;
   };
 
   liblouis.compileString = function (table, str) {

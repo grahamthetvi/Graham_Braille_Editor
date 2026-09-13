@@ -56,4 +56,11 @@ describe('TeX hyphenation', () => {
     expect(pieces.join('')).toBe('international');
     expect(pieces.length).toBeGreaterThan(1);
   });
+
+  it('does not treat Grade-2 contraction cell strings as English syllables', () => {
+    const text = readFileSync(join(tablesDir, 'hyph_en_US.dic'), 'utf8');
+    const hyphenate = createHyphenator(text);
+    expect(hyphenate('&!?(+$]')).toEqual([]);
+    expect(hyphenate('&')).toEqual([]);
+  });
 });

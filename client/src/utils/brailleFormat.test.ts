@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import {
   buildPlainTextToMatchBrailleWrap,
   SOFT_LINE_BREAK_CHAR,
@@ -14,6 +17,7 @@ import {
   RTF_FS_BASE,
   RTF_FS_MIN,
 } from './brailleFormat';
+import { createHyphenator } from './hyphenation';
 
 /** Reconstruct word start cells from a print-layout RTF inner line (base grid = \fs24). */
 function rtfLineWordStarts(line: string): { word: string; fs: number; startCell: number }[] {
@@ -123,6 +127,22 @@ describe('formatBrfForOutput', () => {
     const hyph = formatBrfForOutput('abcdefghij', 6, 25, false, undefined, hyphenate);
     expect(hard).toBe('abcdef\r\nghij\r\n');
     expect(hyph).toBe('abcd-\r\nefghij\r\n');
+  });
+
+  it('hyphenates a long Grade-1 letter word and hard-breaks Grade-2 cell junk', () => {
+    const text = readFileSync(
+      resolve(dirname(fileURLToPath(import.meta.url)), '../../public/tables/hyph_en_US.dic'),
+      'utf8',
+    );
+    const hyphenate = createHyphenator(text);
+    const g1 = formatBrfForOutput('international', 8, 25, false, undefined, hyphenate);
+    expect(g1).toContain('-');
+    expect(g1.replace(/[\r\n-]/g, '')).toBe('international');
+
+    const g2cells = '&!?(+$]&!?(+$]';
+    const g2 = formatBrfForOutput(g2cells, 6, 25, false, undefined, hyphenate);
+    expect(g2).not.toContain('-');
+    expect(g2.replace(/[\r\n]/g, '')).toBe(g2cells);
   });
 });
 
