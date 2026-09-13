@@ -10,7 +10,9 @@ import {
   DEFAULT_TN_LISTED,
   DEFAULT_TN_STAIRSTEP,
   TN_INDICATOR_ASCII,
+  formatPrintTableInsertBlock,
   tableHasBlankCells,
+  validateTableSpec,
   type TableFormat,
   type TableSpec,
 } from '../types/table';
@@ -655,7 +657,7 @@ export function defaultBlankTnForFormat(format: ResolvedTableFormat | 'auto'): s
   return DEFAULT_TN_BLANK_OTHER;
 }
 
-/** Fence the BRF for insertion into the editor. */
+/** Fence already-translated BRF (legacy documents / tests). Prefer print fences. */
 export function formatTableInsertBlock(brf: string): string {
   const body = brf.replace(/^\n+/, '').replace(/\n+$/, '');
   return `:::table\n${body}\n:::\n`;
@@ -741,17 +743,13 @@ export async function formatTableSpecToBrf(
 }
 
 /**
- * Produce a `:::table` editor fence, or flattened print rows if layout fails.
- * Used by Word import; the Table editor still refuses insert when layout fails.
+ * Produce a print-source `:::table` editor fence (readable cell text).
+ * The braille worker translates and lays out Braille Formats on preview.
+ * Falls back to flattened print rows when the spec cannot be stored as a table.
  */
-export async function tableSpecToEditorBlock(
-  spec: TableSpec,
-  translateText: TableTranslateFn,
-  cellsPerRow: number
-): Promise<string> {
-  const result = await formatTableSpecToBrf(spec, translateText, cellsPerRow);
-  if (!result.ok || !result.brf.trim()) {
+export function tableSpecToEditorBlock(spec: TableSpec): string {
+  if (!validateTableSpec(spec).ok) {
     return flattenPrintTable(spec.cells);
   }
-  return formatTableInsertBlock(result.brf);
+  return formatPrintTableInsertBlock(spec);
 }

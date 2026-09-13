@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
+import { formatPrintTableInsertBlock, parsePrintTableFence } from '../types/table';
 import {
   generateTableBrf,
   layoutBrailleTable,
   resolveAutoFormat,
   formatTableInsertBlock,
+  formatTableSpecToBrf,
   tableSpecToEditorBlock,
   wrapTnAscii,
   GUIDE_DOT,
@@ -210,33 +212,76 @@ describe('generateTableBrf + insert block', () => {
 });
 
 describe('tableSpecToEditorBlock', () => {
-  it('fences a simple identity-translated table', async () => {
-    const block = await tableSpecToEditorBlock(
-      {
-        cells: [
-          ['Animal', 'Size'],
-          ['cat', 'small'],
-        ],
-        hasColumnHeadings: true,
-        format: 'auto',
-        columnGap: 2,
-        guideDots: true,
-      },
-      (s) => s,
-      40
-    );
-    expect(block.startsWith(':::table\n')).toBe(true);
-    expect(block).toContain('Animal');
-    expect(block).toContain('cat');
+  it('fences print cells, not translated BRF', async () => {
+    const block = tableSpecToEditorBlock({
+      cells: [
+        ['Animal', 'Size'],
+        ['cat', 'small'],
+      ],
+      hasColumnHeadings: true,
+      format: 'auto',
+      columnGap: 2,
+      guideDots: true,
+    });
+    expect(block.startsWith(':::table print ')).toBe(true);
+    expect(block).toContain('Animal\tSize');
+    expect(block).toContain('cat\tsmall');
+    expect(block).toContain('format=auto');
     expect(block.trimEnd().endsWith(':::')).toBe(true);
+    expect(block.includes('"3')).toBe(false);
   });
 
-  it('uses the provided translator for cell text', async () => {
-    const block = await tableSpecToEditorBlock(
+  it('keeps print cell text instead of a translator mapping', () => {
+    const block = tableSpecToEditorBlock({
+      cells: [
+        ['A', 'B'],
+        ['one', 'two'],
+      ],
+      hasColumnHeadings: true,
+      format: 'simple',
+      columnGap: 2,
+      guideDots: false,
+    });
+    expect(block).toContain('one\ttwo');
+    expect(block.includes('ONE')).toBe(false);
+  });
+
+  it('round-trips print fence metadata and TSV', () => {
+    const spec = {
+      cells: [
+        ['Quarter', 'Event', 'Day', 'Date'],
+        ['First Quarter', 'End of Quarter', 'Thursday', 'October 15, 2026'],
+      ],
+      hasColumnHeadings: true,
+      format: 'listed' as const,
+      columnGap: 2 as const,
+      guideDots: true,
+      title: 'Moon phases',
+      transcriberNote: 'Print format is changed.',
+    };
+    const block = formatPrintTableInsertBlock(spec);
+    const openEnd = block.indexOf('\n');
+    const close = block.lastIndexOf('\n:::');
+    const params = block.slice(':::table'.length, openEnd);
+    const body = block.slice(openEnd + 1, close);
+    const parsed = parsePrintTableFence(params, body);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.cells[0][0]).toBe('Quarter');
+    expect(parsed!.cells[1][3]).toBe('October 15, 2026');
+    expect(parsed!.format).toBe('listed');
+    expect(parsed!.title).toBe('Moon phases');
+    expect(parsed!.transcriberNote).toBe('Print format is changed.');
+    expect(parsed!.hasColumnHeadings).toBe(true);
+  });
+});
+
+describe('formatTableSpecToBrf', () => {
+  it('translates print cells for braille layout', async () => {
+    const result = await formatTableSpecToBrf(
       {
         cells: [
-          ['A', 'B'],
-          ['one', 'two'],
+          ['Quarter', 'Event'],
+          ['First Quarter', 'End of Quarter'],
         ],
         hasColumnHeadings: true,
         format: 'simple',
@@ -244,10 +289,11 @@ describe('tableSpecToEditorBlock', () => {
         guideDots: false,
       },
       (s) => s.toUpperCase(),
-      40
+      40,
     );
-    expect(block).toContain('ONE');
-    expect(block).toContain('TWO');
-    expect(block.includes('one')).toBe(false);
+    expect(result.ok).toBe(true);
+    expect(result.brf).toContain('QUARTER');
+    expect(result.brf).toContain('FIRST QUARTER');
+    expect(result.brf.includes('First Quarter')).toBe(false);
   });
 });

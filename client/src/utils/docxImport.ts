@@ -3,15 +3,17 @@
  *
  * Documents are parsed locally (mammoth.js, dynamic import). Nothing is uploaded.
  * Headings become plain paragraphs (no markdown `#`, which would pollute Grade 2).
- * Word tables become `:::table` Braille Formats blocks (same fence as the Table editor).
+ * Word tables become print-source `:::table` blocks (readable cell text).
+ * The braille preview translates those cells with Braille Formats layout.
  */
 
 import {
   TABLE_LIMITS,
+  tableGridToTsv,
   validateTableSpec,
   type TableSpec,
 } from '../types/table';
-import { flattenPrintTable, tableSpecToEditorBlock } from './tableBraille';
+import { tableSpecToEditorBlock } from './tableBraille';
 
 export const DOCX_MAX_BYTES = 10 * 1024 * 1024;
 export const DOCX_OOXML_MIME =
@@ -35,6 +37,14 @@ export class DocxImportError extends Error {
 
 export type DocxImportResult = {
   text: string;
+  warnings: string[];
+};
+
+export type DocxTablesResult = {
+  /** Every top-level Word table, in document order. */
+  tables: string[][][];
+  /** Best single grid for the table editor (merged same-width page splits). */
+  primary: string[][];
   warnings: string[];
 };
 
@@ -189,10 +199,7 @@ export async function docxHtmlToEditorText(
   options?: DocxHtmlToEditorOptions,
 ): Promise<string> {
   const { text, tables } = convertDocxHtml(html);
-  const cellsPerRow = options?.cellsPerRow ?? DOCX_IMPORT_CELLS_PER_ROW;
-  const formatTable =
-    options?.formatTable ??
-    ((spec: TableSpec) => tableSpecToEditorBlock(spec, (s) => s, cellsPerRow));
+  const formatTable = options?.formatTable ?? ((spec: TableSpec) => tableSpecToEditorBlock(spec));
   return materializeImportedTables(text, tables, formatTable);
 }
 
@@ -209,20 +216,69 @@ async function materializeImportedTables(
   formatTable: FormatImportedTableFn,
 ): Promise<string> {
   if (tables.length === 0) return text;
+  const skip = new Set<number>();
+  const merged = tables.map((t) => ({
+    ...t,
+    cells: t.cells.map((row) => row.slice()),
+  }));
+  for (let i = 0; i < merged.length; i++) {
+    if (skip.has(i)) continue;
+    let j = i + 1;
+    while (
+      j < merged.length &&
+      placeholdersAreAdjacent(text, i, j) &&
+      isPageSplitContinuation(merged[i], merged[j])
+    ) {
+      merged[i].cells.push(...merged[j].cells.slice(1));
+      skip.add(j);
+      j += 1;
+    }
+  }
+
   let out = text;
   for (let i = 0; i < tables.length; i++) {
     const token = tablePlaceholder(i);
-    const spec = tables[i];
+    if (skip.has(i)) {
+      out = out.split(token).join('');
+      continue;
+    }
+    const spec = merged[i];
     let block: string;
     try {
       block = (await Promise.resolve(formatTable(spec))).trim();
     } catch {
       block = '';
     }
-    if (!block) block = flattenPrintTable(spec.cells);
+    if (!block) block = tableGridToTsv(spec.cells);
     out = out.split(token).join(block);
   }
   return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function tablePlaceholderToken(index: number): string {
+  return tablePlaceholder(index);
+}
+
+function placeholdersAreAdjacent(text: string, i: number, j: number): boolean {
+  const a = tablePlaceholderToken(i);
+  const b = tablePlaceholderToken(j);
+  const ia = text.indexOf(a);
+  const ib = text.indexOf(b);
+  if (ia < 0 || ib < 0 || ib <= ia) return false;
+  return text.slice(ia + a.length, ib).trim() === '';
+}
+
+function rowsEqualPrint(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((cell, i) => cell.trim().toLowerCase() === (b[i] ?? '').trim().toLowerCase());
+}
+
+function isPageSplitContinuation(prev: TableSpec, next: TableSpec): boolean {
+  const prevCols = prev.cells[0]?.length ?? 0;
+  const nextCols = next.cells[0]?.length ?? 0;
+  if (prevCols === 0 || prevCols !== nextCols) return false;
+  if (!prev.cells[0] || !next.cells[0]) return false;
+  return rowsEqualPrint(prev.cells[0], next.cells[0]);
 }
 
 function finalizeEditorText(text: string): string {
@@ -466,33 +522,57 @@ function extractTableGrid(node: HtmlNode & { type: 'element' }): {
   cells: string[][];
   hasColumnHeadings: boolean;
 } {
+  const occupancy: number[] = [];
   const rows: string[][] = [];
 
-  const readRow = (tr: HtmlNode & { type: 'element' }) => {
-    const cells: string[] = [];
-    for (const cell of tr.children) {
-      if (cell.type !== 'element') continue;
-      if (cell.name !== 'td' && cell.name !== 'th') continue;
-      const text = renderCellContents(cell.children);
-      const span = Math.min(parsePositiveInt(cell.attrs.colspan, 1), TABLE_LIMITS.maxCols);
-      cells.push(text);
-      for (let i = 1; i < span; i++) cells.push('');
-    }
-    if (cells.length) rows.push(cells);
-  };
-
-  const walk = (n: HtmlNode) => {
+  const trs: Array<HtmlNode & { type: 'element' }> = [];
+  const collectRows = (n: HtmlNode) => {
     if (n.type !== 'element') return;
     if (n.name === 'table' && n !== node) return;
     if (n.name === 'tr') {
-      readRow(n);
+      trs.push(n);
       return;
     }
     if (n.name === 'colgroup') return;
-    for (const c of n.children) walk(c);
+    for (const c of n.children) collectRows(c);
   };
+  collectRows(node);
 
-  walk(node);
+  for (const tr of trs) {
+    const cells: string[] = [];
+    let col = 0;
+    const tdList = tr.children.filter(
+      (c): c is HtmlNode & { type: 'element' } =>
+        c.type === 'element' && (c.name === 'td' || c.name === 'th'),
+    );
+    let ci = 0;
+    while (ci < tdList.length || occupancy[col] > 0) {
+      while (occupancy[col] > 0) {
+        cells[col] = '';
+        occupancy[col] -= 1;
+        col += 1;
+      }
+      if (ci >= tdList.length) break;
+      const cell = tdList[ci++];
+      const text = renderCellContents(cell.children);
+      const colspan = Math.min(parsePositiveInt(cell.attrs.colspan, 1), TABLE_LIMITS.maxCols);
+      const rowspan = parsePositiveInt(cell.attrs.rowspan, 1);
+      cells[col] = text;
+      for (let k = 1; k < colspan; k++) cells[col + k] = '';
+      if (rowspan > 1) {
+        for (let k = 0; k < colspan; k++) {
+          occupancy[col + k] = Math.max(occupancy[col + k] ?? 0, rowspan - 1);
+        }
+      }
+      col += colspan;
+    }
+    while (occupancy[col] > 0) {
+      cells[col] = '';
+      occupancy[col] -= 1;
+      col += 1;
+    }
+    if (cells.length) rows.push(cells);
+  }
 
   const colCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
   const cells = rows.map((row) => {
@@ -533,7 +613,7 @@ function specFromGrid(
 function renderTable(node: HtmlNode & { type: 'element' }, ctx: HtmlRenderCtx): string {
   const grid = extractTableGrid(node);
   const spec = specFromGrid(grid, extractCaption(node));
-  if (!spec) return flattenPrintTable(grid.cells);
+  if (!spec) return tableGridToTsv(grid.cells);
   const index = ctx.tables.length;
   ctx.tables.push(spec);
   return tablePlaceholder(index);
@@ -617,6 +697,69 @@ export async function importDocxToEditorText(
   buffer: ArrayBuffer,
   options?: DocxHtmlToEditorOptions,
 ): Promise<DocxImportResult> {
+  const { html, warnings } = await convertDocxToHtml(buffer);
+  const text = await docxHtmlToEditorText(html, options);
+  if (!text) {
+    throw new DocxImportError('empty');
+  }
+  return { text, warnings };
+}
+
+function collectTopLevelTables(nodes: HtmlNode[], into: Array<HtmlNode & { type: 'element' }>): void {
+  for (const node of nodes) {
+    if (node.type !== 'element') continue;
+    if (node.name === 'table') {
+      into.push(node);
+      continue;
+    }
+    collectTopLevelTables(node.children, into);
+  }
+}
+
+/** All top-level HTML tables as print grids (nested tables stay inside their cell). */
+export function htmlToTableGrids(html: string): string[][][] {
+  const tables: Array<HtmlNode & { type: 'element' }> = [];
+  collectTopLevelTables(parseHtmlFragment(html), tables);
+  return tables.map((node) => extractTableGrid(node).cells).filter((grid) => grid.length > 0);
+}
+
+/**
+ * Join page-split Word tables that share a column count. Repeated header rows
+ * (typical when a heading row repeats on each printed page) are dropped.
+ * Prefers the widest table when several widths are present.
+ */
+export function mergeImportedTableGrids(tables: string[][][]): string[][] {
+  const nonempty = tables.filter((t) => t.length > 0);
+  if (nonempty.length === 0) return [];
+  if (nonempty.length === 1) return nonempty[0].map((r) => r.slice());
+
+  const maxCols = nonempty.reduce((m, t) => Math.max(m, t[0]?.length ?? 0), 0);
+  const same = nonempty.filter((t) => (t[0]?.length ?? 0) === maxCols);
+  const header = same[0][0];
+  const out = same[0].map((r) => r.slice());
+  for (let i = 1; i < same.length; i++) {
+    let extra = same[i];
+    if (extra.length && rowsEqualPrint(extra[0], header)) extra = extra.slice(1);
+    for (const row of extra) out.push(row.slice());
+  }
+  return out;
+}
+
+/**
+ * Extract Word tables as print grids for the Braille Formats table editor.
+ * Page-split tables with the same column count are merged (repeated headers dropped).
+ */
+export async function importDocxTables(buffer: ArrayBuffer): Promise<DocxTablesResult> {
+  const { html, warnings } = await convertDocxToHtml(buffer);
+  const tables = htmlToTableGrids(html);
+  const primary = mergeImportedTableGrids(tables);
+  if (primary.length === 0) {
+    throw new DocxImportError('empty');
+  }
+  return { tables, primary, warnings };
+}
+
+async function convertDocxToHtml(buffer: ArrayBuffer): Promise<{ html: string; warnings: string[] }> {
   if (buffer.byteLength > DOCX_MAX_BYTES) {
     throw new DocxImportError('too-large');
   }
@@ -689,9 +832,5 @@ export async function importDocxToEditorText(
     throw new DocxImportError('not-docx');
   }
 
-  const text = await docxHtmlToEditorText(html, options);
-  if (!text) {
-    throw new DocxImportError('empty');
-  }
-  return { text, warnings: collectWarnings(messages) };
+  return { html, warnings: collectWarnings(messages) };
 }

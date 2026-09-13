@@ -1175,11 +1175,18 @@
     "blankCellNote": "Blank-cell note",
     "cellAria": "Row {{row}}, column {{col}}",
     "csv": {
-      "pasteHint": "Paste CSV (comma, semicolon, or tab)",
+      "pasteHint": "Paste CSV (comma, semicolon, or tab), or load a Word .docx table",
       "pastePlaceholder": "Animal,Size\ncat,small\ndog,large",
       "loadFromPaste": "Load from pasted text",
-      "loadFile": "Load CSV file…",
-      "readError": "Could not read that file."
+      "loadFile": "Load CSV or Word…",
+      "readError": "Could not read that file.",
+      "noTables": "That Word file has no tables to import.",
+      "legacyDoc": "Legacy .doc files are not supported. In Word, choose File → Save As → .docx, then load that file.",
+      "tooLarge": "This Word file is larger than the import limit.",
+      "encrypted": "This Word file is password-protected. Remove the password in Word, save as .docx, and try again.",
+      "notDocx": "This file is not a valid Word .docx document.",
+      "tooManyColumns": "Too many columns (maximum {{max}}).",
+      "tooManyRows": "Too many rows (maximum {{max}})."
     },
     "preview": "Braille preview",
     "previewEmpty": "Enter cell text to preview the table.",
