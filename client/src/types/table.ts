@@ -186,6 +186,32 @@ export function parseCsvLine(line: string, delimiter: ',' | ';' | '\t'): string[
   return cells;
 }
 
+/**
+ * Merge TSV continuation lines produced when Word wraps a cell onto the next
+ * visual line. A line is a continuation when it has no first-column text and
+ * a previous row exists — typical of indented wrapped columns.
+ */
+export function mergeTabContinuationRows(rows: string[][]): string[][] {
+  const out: string[][] = [];
+  for (const row of rows) {
+    const first = (row[0] ?? '').trim();
+    const hasLater = row.slice(1).some((c) => (c ?? '').trim() !== '');
+    if (out.length > 0 && first === '' && (hasLater || row.length === 1)) {
+      const prev = out[out.length - 1];
+      const width = Math.max(prev.length, row.length);
+      while (prev.length < width) prev.push('');
+      for (let i = 0; i < row.length; i++) {
+        const piece = (row[i] ?? '').trim();
+        if (!piece) continue;
+        prev[i] = prev[i].trim() ? `${prev[i].trim()} ${piece}` : piece;
+      }
+      continue;
+    }
+    out.push(row.slice());
+  }
+  return out;
+}
+
 export interface ParseTableCsvResult {
   cells: string[][];
   rowCount: number;
@@ -206,7 +232,12 @@ export function parseTableCsv(csv: string): ParseTableCsvResult {
   }
 
   const delimiter = detectDelimiter(lines[0]);
-  const parsed = lines.map((line) => parseCsvLine(line, delimiter));
+  let parsed = lines.map((line) => parseCsvLine(line, delimiter));
+  // Word/PDF "copy as text" wraps cells onto following lines, often with leading
+  // tabs (empty leading columns). Fold those continuation lines into the prior row.
+  if (delimiter === '\t') {
+    parsed = mergeTabContinuationRows(parsed);
+  }
   const columnCount = Math.max(...parsed.map((r) => r.length));
 
   if (columnCount > TABLE_LIMITS.maxCols) {

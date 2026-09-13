@@ -24,6 +24,13 @@ import {
   type ResolvedTableFormat,
 } from '../utils/tableBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
+import {
+  DOCX_MAX_BYTES,
+  DocxImportError,
+  importDocxTables,
+  isDocxFile,
+  isLegacyDocFile,
+} from '../utils/docxImport';
 
 export interface TableEditorModalProps {
   onInsert: (text: string) => void;
@@ -150,10 +157,61 @@ export function TableEditorModal({
 
   const handleLoadPaste = () => applyCsvText(csvPaste);
 
+  const applyGrid = (cells: string[][]) => {
+    if (cells.length === 0) {
+      setCsvError(t('tableEditor.csv.noTables'));
+      return;
+    }
+    const columnCount = Math.max(...cells.map((r) => r.length), 0);
+    if (columnCount > TABLE_LIMITS.maxCols) {
+      setCsvError(t('tableEditor.csv.tooManyColumns', { max: TABLE_LIMITS.maxCols }));
+      return;
+    }
+    if (cells.length > TABLE_LIMITS.maxRows) {
+      setCsvError(t('tableEditor.csv.tooManyRows', { max: TABLE_LIMITS.maxRows }));
+      return;
+    }
+    setCsvError(null);
+    setSpec((prev) => ({
+      ...prev,
+      cells,
+      hasColumnHeadings: true,
+    }));
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+
+    if (isLegacyDocFile(file)) {
+      setCsvError(t('tableEditor.csv.legacyDoc'));
+      return;
+    }
+
+    if (isDocxFile(file)) {
+      void (async () => {
+        try {
+          if (file.size > DOCX_MAX_BYTES) {
+            throw new DocxImportError('too-large');
+          }
+          const buffer = await file.arrayBuffer();
+          const { primary } = await importDocxTables(buffer);
+          applyGrid(primary);
+        } catch (err) {
+          if (err instanceof DocxImportError) {
+            if (err.code === 'empty') setCsvError(t('tableEditor.csv.noTables'));
+            else if (err.code === 'too-large') setCsvError(t('tableEditor.csv.tooLarge'));
+            else if (err.code === 'encrypted') setCsvError(t('tableEditor.csv.encrypted'));
+            else setCsvError(t('tableEditor.csv.notDocx'));
+            return;
+          }
+          setCsvError(t('tableEditor.csv.readError'));
+        }
+      })();
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const text = typeof reader.result === 'string' ? reader.result : '';
@@ -616,7 +674,7 @@ export function TableEditorModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,text/csv,text/plain"
+                  accept=".csv,.tsv,.txt,.docx,text/csv,text/plain,text/tab-separated-values,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   style={{ display: 'none' }}
                   onChange={handleFileChange}
                 />

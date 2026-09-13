@@ -17,7 +17,7 @@
       "import": {
         "label": "Import file",
         "ariaLabel": "Import text, Word (.docx), BrailleBlaster (.bbz), or BRF file",
-        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. .bbz: extract editable text from a BrailleBlaster archive (v3.x), then translate — formatting and graphics are not preserved. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
+        "title": "Plain text: translate to braille. .docx: convert Word text in this browser (the file stays on your device), then translate. Word tables become tab-separated rows you can edit or load in Table Editor. .bbz: extract editable text from a BrailleBlaster archive (v3.x), then translate — formatting and graphics are not preserved. .brf: back-translate to text (selected table) and show BRF on the right. Pasting Unicode braille into the editor also auto back-translates. Grade 2 back-translation is approximate; retry after liblouis loads if needed. Legacy .doc is not supported — save as .docx in Word first.",
         "success": "Imported Word document as editor text.",
         "bbzSuccess": "Imported BrailleBlaster document as editor text.",
         "errors": {
@@ -149,7 +149,7 @@
       },
       "table": {
         "label": "Table",
-        "title": "Insert a Braille Formats table (Simple, Listed, Stairstep, or Linear), with optional CSV import",
+        "title": "Insert a Braille Formats table (Simple, Listed, Stairstep, or Linear), with optional CSV or Word (.docx) table import",
         "ariaLabel": "Open Table Editor"
       },
       "musicMode": {
@@ -832,11 +832,18 @@
     "blankCellNote": "Blank-cell note",
     "cellAria": "Row {{row}}, column {{col}}",
     "csv": {
-      "pasteHint": "Paste CSV (comma, semicolon, or tab)",
+      "pasteHint": "Paste CSV (comma, semicolon, or tab), or load a Word .docx table",
       "pastePlaceholder": "Animal,Size\ncat,small\ndog,large",
       "loadFromPaste": "Load from pasted text",
-      "loadFile": "Load CSV file…",
-      "readError": "Could not read that file."
+      "loadFile": "Load CSV or Word…",
+      "readError": "Could not read that file.",
+      "noTables": "That Word file has no tables to import.",
+      "legacyDoc": "Legacy .doc files are not supported. In Word, choose File → Save As → .docx, then load that file.",
+      "tooLarge": "This Word file is larger than the import limit.",
+      "encrypted": "This Word file is password-protected. Remove the password in Word, save as .docx, and try again.",
+      "notDocx": "This file is not a valid Word .docx document.",
+      "tooManyColumns": "Too many columns (maximum {{max}}).",
+      "tooManyRows": "Too many rows (maximum {{max}})."
     },
     "preview": "Braille preview",
     "previewEmpty": "Enter cell text to preview the table.",

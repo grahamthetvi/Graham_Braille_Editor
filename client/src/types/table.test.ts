@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseTableCsv,
   parseCsvLine,
+  mergeTabContinuationRows,
   validateTableSpec,
   defaultTableSpec,
   resizeGrid,
@@ -86,6 +87,37 @@ describe('parseTableCsv', () => {
     const rows = Array.from({ length: TABLE_LIMITS.maxRows + 1 }, (_, i) => `r${i}`).join('\n');
     const r = parseTableCsv(rows);
     expect(r.error).toMatch(/Too many rows/);
+  });
+
+  it('folds Word-style wrapped TSV continuation lines into the previous row', () => {
+    const pasted = [
+      'Word\tPart(s) of Speech\tDefinition\tSynonyms\tAntonyms',
+      'antics\tn. pl.\tRidiculous and\tpranks,\tN/A',
+      '\t\tunpredictable behavior\tshenanigans\t',
+      '\t\tor actions\t\t',
+      'avowed\tadj., part.\tDeclared openly and without shame, acknowledged\tadmitted, sworn\tunacknowledged, undisclosed',
+    ].join('\n');
+    const r = parseTableCsv(pasted);
+    expect(r.error).toBeUndefined();
+    expect(r.rowCount).toBe(3);
+    expect(r.cells[1]).toEqual([
+      'antics',
+      'n. pl.',
+      'Ridiculous and unpredictable behavior or actions',
+      'pranks, shenanigans',
+      'N/A',
+    ]);
+    expect(r.cells[2][0]).toBe('avowed');
+  });
+});
+
+describe('mergeTabContinuationRows', () => {
+  it('appends later-column fragments onto the previous row', () => {
+    const merged = mergeTabContinuationRows([
+      ['antics', 'n. pl.', 'Ridiculous and', 'pranks,'],
+      ['', '', 'unpredictable behavior', 'shenanigans'],
+    ]);
+    expect(merged).toEqual([['antics', 'n. pl.', 'Ridiculous and unpredictable behavior', 'pranks, shenanigans']]);
   });
 });
 

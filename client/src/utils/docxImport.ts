@@ -30,6 +30,14 @@ export type DocxImportResult = {
   warnings: string[];
 };
 
+export type DocxTablesResult = {
+  /** Every top-level Word table, in document order. */
+  tables: string[][][];
+  /** Best single grid for the table editor (merged same-width page splits). */
+  primary: string[][];
+  warnings: string[];
+};
+
 const ZIP_LOCAL = [0x50, 0x4b, 0x03, 0x04];
 const ZIP_EOCD = [0x50, 0x4b, 0x05, 0x06];
 const ZIP_SPAN = [0x50, 0x4b, 0x07, 0x08];
@@ -353,25 +361,178 @@ function renderListItem(children: HtmlNode[], prefix: string, depth: number): st
   return lines;
 }
 
-function renderTable(node: HtmlNode & { type: 'element' }): string {
-  const rows: string[] = [];
-  const walk = (n: HtmlNode) => {
-    if (n.type !== 'element') return;
-    if (n.name === 'tr') {
-      const cells: string[] = [];
-      for (const cell of n.children) {
-        if (cell.type === 'element' && (cell.name === 'td' || cell.name === 'th')) {
-          cells.push(collapseInlineWs(renderInline(cell.children)));
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  const n = Number.parseInt(raw ?? '', 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+function collectCellBlocks(nodes: HtmlNode[]): string[] {
+  const blocks: string[] = [];
+  const leading: string[] = [];
+  const flushLeading = () => {
+    const text = collapseInlineWs(leading.join('').replace(/\s+/g, ' '));
+    leading.length = 0;
+    if (text) blocks.push(text);
+  };
+  for (const node of nodes) {
+    if (node.type === 'text') {
+      leading.push(node.value);
+      continue;
+    }
+    if (node.name === 'br') {
+      leading.push(' ');
+      continue;
+    }
+    if (node.name === 'p' || node.name === 'div' || node.name === 'li' || node.name === 'h1' || node.name === 'h2' || node.name === 'h3' || node.name === 'h4' || node.name === 'h5' || node.name === 'h6') {
+      flushLeading();
+      const text = collapseInlineWs(renderInline(node.children).replace(/\s+/g, ' '));
+      if (text) blocks.push(text);
+      continue;
+    }
+    if (node.name === 'ul' || node.name === 'ol') {
+      flushLeading();
+      const lines = renderList(node, 0).map((l) => l.trim()).filter(Boolean);
+      if (lines.length) blocks.push(lines.join('; '));
+      continue;
+    }
+    if (node.name === 'table') {
+      flushLeading();
+      const nested = tableElementToGrid(node);
+      const flat = nested
+        .map((row) => row.map((c) => c.trim()).filter(Boolean).join(', '))
+        .filter(Boolean)
+        .join('; ');
+      if (flat) blocks.push(flat);
+      continue;
+    }
+    leading.push(renderInline([node]));
+  }
+  flushLeading();
+  return blocks;
+}
+
+function renderCellText(cell: HtmlNode & { type: 'element' }): string {
+  return collectCellBlocks(cell.children).join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function collectTableRows(node: HtmlNode, into: Array<HtmlNode & { type: 'element' }>): void {
+  if (node.type !== 'element') return;
+  if (node.name === 'tr') {
+    into.push(node);
+    return;
+  }
+  if (node.name === 'table' && into.length > 0) {
+    // Nested tables stay inside their parent cell; do not hoist their rows.
+    return;
+  }
+  for (const child of node.children) collectTableRows(child, into);
+}
+
+/** Convert one HTML table to a rectangular print grid, preserving empty cells. */
+function tableElementToGrid(node: HtmlNode & { type: 'element' }): string[][] {
+  const trs: Array<HtmlNode & { type: 'element' }> = [];
+  collectTableRows(node, trs);
+  const occupancy: number[] = [];
+  const rows: string[][] = [];
+
+  for (const tr of trs) {
+    const cells = tr.children.filter(
+      (c): c is HtmlNode & { type: 'element' } =>
+        c.type === 'element' && (c.name === 'td' || c.name === 'th'),
+    );
+    const row: string[] = [];
+    let col = 0;
+    let ci = 0;
+    while (ci < cells.length || occupancy[col] > 0) {
+      while (occupancy[col] > 0) {
+        row[col] = '';
+        occupancy[col] -= 1;
+        col += 1;
+      }
+      if (ci >= cells.length) break;
+      const cell = cells[ci++];
+      const colspan = parsePositiveInt(cell.attrs.colspan, 1);
+      const rowspan = parsePositiveInt(cell.attrs.rowspan, 1);
+      const text = renderCellText(cell);
+      row[col] = text;
+      for (let k = 1; k < colspan; k++) {
+        row[col + k] = '';
+      }
+      if (rowspan > 1) {
+        for (let k = 0; k < colspan; k++) {
+          occupancy[col + k] = Math.max(occupancy[col + k] ?? 0, rowspan - 1);
         }
       }
-      const line = cells.filter(Boolean).join('  ');
-      if (line) rows.push(line);
-      return;
+      col += colspan;
     }
-    for (const c of n.children) walk(c);
-  };
-  walk(node);
-  return rows.join('\n');
+    while (occupancy[col] > 0) {
+      row[col] = '';
+      occupancy[col] -= 1;
+      col += 1;
+    }
+    if (row.some((c) => c.length > 0)) rows.push(row);
+  }
+
+  const colCount = rows.reduce((max, r) => Math.max(max, r.length), 0);
+  return rows.map((r) => {
+    const padded = r.slice();
+    while (padded.length < colCount) padded.push('');
+    return padded;
+  });
+}
+
+function collectTopLevelTables(nodes: HtmlNode[], into: Array<HtmlNode & { type: 'element' }>): void {
+  for (const node of nodes) {
+    if (node.type !== 'element') continue;
+    if (node.name === 'table') {
+      into.push(node);
+      continue;
+    }
+    collectTopLevelTables(node.children, into);
+  }
+}
+
+/** All top-level HTML tables as print grids (nested tables stay inside their cell). */
+export function htmlToTableGrids(html: string): string[][][] {
+  const tables: Array<HtmlNode & { type: 'element' }> = [];
+  collectTopLevelTables(parseHtmlFragment(html), tables);
+  return tables.map(tableElementToGrid).filter((grid) => grid.length > 0);
+}
+
+function rowsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((cell, i) => cell.trim().toLowerCase() === (b[i] ?? '').trim().toLowerCase());
+}
+
+/**
+ * Join page-split Word tables that share a column count. Repeated header rows
+ * (typical when a heading row repeats on each printed page) are dropped.
+ */
+export function mergeImportedTableGrids(tables: string[][][]): string[][] {
+  const nonempty = tables.filter((t) => t.length > 0);
+  if (nonempty.length === 0) return [];
+  if (nonempty.length === 1) return nonempty[0].map((r) => r.slice());
+
+  const maxCols = nonempty.reduce((m, t) => Math.max(m, t[0]?.length ?? 0), 0);
+  const same = nonempty.filter((t) => (t[0]?.length ?? 0) === maxCols);
+  const header = same[0][0];
+  const out = same[0].map((r) => r.slice());
+  for (let i = 1; i < same.length; i++) {
+    let extra = same[i];
+    if (extra.length && rowsEqual(extra[0], header)) extra = extra.slice(1);
+    for (const row of extra) out.push(row.slice());
+  }
+  return out;
+}
+
+export function tableGridToTsv(grid: string[][]): string {
+  return grid
+    .map((row) => row.map((cell) => cell.replace(/\t/g, ' ').trim()).join('\t'))
+    .join('\n');
+}
+
+function renderTable(node: HtmlNode & { type: 'element' }): string {
+  return tableGridToTsv(tableElementToGrid(node));
 }
 
 function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
@@ -448,7 +609,7 @@ function renderNodesAsBlocks(nodes: HtmlNode[]): string[] {
   return blocks.filter((b) => b.length > 0);
 }
 
-export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxImportResult> {
+async function convertDocxToHtml(buffer: ArrayBuffer): Promise<{ html: string; warnings: string[] }> {
   if (buffer.byteLength > DOCX_MAX_BYTES) {
     throw new DocxImportError('too-large');
   }
@@ -501,8 +662,6 @@ export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxI
   }
 
   const mammoth = await loadMammoth();
-  let html: string;
-  let messages: Array<{ type: string; message: string }> = [];
   try {
     const result = await mammoth.convertToHtml(mammothInput(mammothBuffer), {
       convertImage: mammoth.images.imgElement(async (image) => ({
@@ -511,8 +670,7 @@ export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxI
       transformDocument: replaceBreakNodes,
       styleMap: ['comment-reference =>'],
     });
-    html = result.value;
-    messages = result.messages;
+    return { html: result.value, warnings: collectWarnings(result.messages) };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (/encrypt/i.test(msg) || /password/i.test(msg)) {
@@ -520,10 +678,27 @@ export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxI
     }
     throw new DocxImportError('not-docx');
   }
+}
 
+export async function importDocxToEditorText(buffer: ArrayBuffer): Promise<DocxImportResult> {
+  const { html, warnings } = await convertDocxToHtml(buffer);
   const text = docxHtmlToEditorText(html);
   if (!text) {
     throw new DocxImportError('empty');
   }
-  return { text, warnings: collectWarnings(messages) };
+  return { text, warnings };
+}
+
+/**
+ * Extract Word tables as print grids for the Braille Formats table editor.
+ * Page-split tables with the same column count are merged (repeated headers dropped).
+ */
+export async function importDocxTables(buffer: ArrayBuffer): Promise<DocxTablesResult> {
+  const { html, warnings } = await convertDocxToHtml(buffer);
+  const tables = htmlToTableGrids(html);
+  const primary = mergeImportedTableGrids(tables);
+  if (primary.length === 0) {
+    throw new DocxImportError('empty');
+  }
+  return { tables, primary, warnings };
 }
