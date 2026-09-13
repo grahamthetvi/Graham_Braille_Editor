@@ -123,6 +123,30 @@ function fakeFile(name: string, type = ''): File {
   return new File([new Uint8Array([0])], name, type ? { type } : undefined);
 }
 
+/** Unit 2 vocabulary list recovered from the uploaded PDF (Sadlier-style 5-column table). */
+const UNIT2_VOCAB: string[][] = [
+  ['antics', 'n. pl.', 'Ridiculous and unpredictable behavior or actions', 'pranks, shenanigans', 'N/A'],
+  ['avowed', 'adj., part.', 'Declared openly and without shame, acknowledged', 'admitted, sworn', 'unacknowledged, undisclosed'],
+  ['banter', 'v., n.', '(v.) To exchange playful remarks, tease; (n.) talk that is playful and teasing', 'joking, raillery', 'serious talk'],
+  ['bountiful', 'adj.', 'Giving freely, generous; plentiful, given abundantly', 'liberal, abundant, copious', 'scarce, scanty, in short supply'],
+  ['congested', 'adj., part.', 'Overcrowded, filled or occupied to excess', 'jammed, packed, choked', 'uncluttered, unimpeded'],
+  ['detriment', 'n.', 'Harm or loss; injury, damage; a disadvantage; a cause of harm, injury, loss, or damage', 'hindrance, liability', 'advantage, help, plus'],
+  ['durable', 'adj., n. pl.', '(adj.) Sturdy, long-lasting; (n. pl.) consumer goods used repeatedly over a series of years', 'long-lasting, enduring', 'fragile, perishable, fleeting, ephemeral'],
+  ['enterprising', 'adj.', 'Energetic, willing and able to start something new, showing boldness and imagination', 'vigorous, ambitious, aggressive, audacious', 'lazy, indolent, timid, diffident'],
+  ['frugal', 'adj.', 'Economical, avoiding waste and luxury; scanty, poor, meager', 'thrifty, skimpy', 'wasteful, improvident, lavish, extravagant'],
+  ['gingerly', 'adj., adv.', 'With extreme care or caution', 'cautiously, warily, circumspectly', 'firmly, confidently, aggressively'],
+  ['glut', 'v., n.', '(v.) To provide more than is needed or wanted; to feed or fill to the point of overstuffing; (n.) an oversupply', '(v.) flood, inundate; (n.) surplus, plethora', '(n.) shortage, scarcity, dearth, paucity'],
+  ['incognito', 'adj., adv., n.', '(adj., adv.) In a disguised state, under an assumed name or identity; (n.) the state of being disguised; a person in disguise', 'disguised', 'undisguised'],
+  ['invalidate', 'v.', 'To make valueless, take away all force or effect', 'cancel, annul, disapprove, discredit', 'support, confirm, back up, legalize'],
+  ['legendary', 'adj.', 'Described in well-known stories; existing in old stories (legends) rather than in real life', 'mythical, fabulous, famous, celebrated', 'N/A'],
+  ['maim', 'v.', 'To cripple, disable, injure, mar, disfigure, mutilate', 'cripple, disable, injure, mutilate', 'N/A'],
+  ['minimize', 'v.', 'To make as small as possible, make the least of; to make smaller than before', 'belittle, downplay, underrate', 'magnify, enlarge, exaggerate'],
+  ['oblique', 'adj.', 'Slanting or sloping; not straightforward or direct', 'diagonal, indirect', 'direct, straight to the point'],
+  ['veer', 'v.', 'To change direction or course suddenly, turn aside, shift, swerve', 'swerve, turn aside, shift', 'N/A'],
+  ['venerate', 'v.', 'To regard with reverence, look up to with great respect', 'worship, revere, idolize', 'despise, detest, ridicule, deride'],
+  ['wanton', 'adj., n.', '(adj.) Reckless; heartless, unjustifiable; loose in morals; (n.) a spoiled, pampered person; one with low morals', 'rash, malicious, spiteful, unprovoked', 'justified, morally strict, responsible'],
+];
+
 describe('isDocxFile / isLegacyDocFile', () => {
   it('detects .docx by name even without a MIME type', () => {
     expect(isDocxFile(fakeFile('Lesson.docx'))).toBe(true);
@@ -265,6 +289,22 @@ describe('htmlToTableGrids / mergeImportedTableGrids', () => {
   it('serializes grids to TSV for the print editor', () => {
     expect(tableGridToTsv([['a', 'b'], ['1', '2']])).toBe('a\tb\n1\t2');
   });
+
+  it('recovers every Unit 2 vocabulary row from a Word-like HTML table', () => {
+    const rows = UNIT2_VOCAB.map(
+      ([word, pos, def, syn, ant]) =>
+        `<tr><td>${word}</td><td>${pos}</td><td>${def}</td><td>${syn}</td><td>${ant}</td></tr>`,
+    ).join('');
+    const html = `<table><tr><th>Word</th><th>Part(s) of Speech</th><th>Definition</th><th>Synonyms</th><th>Antonyms</th></tr>${rows}</table>`;
+    const [grid] = htmlToTableGrids(html);
+    expect(grid).toHaveLength(UNIT2_VOCAB.length + 1);
+    expect(grid[0]).toEqual(['Word', 'Part(s) of Speech', 'Definition', 'Synonyms', 'Antonyms']);
+    for (let i = 0; i < UNIT2_VOCAB.length; i++) {
+      expect(grid[i + 1][0]).toBe(UNIT2_VOCAB[i][0]);
+      expect(grid[i + 1][2]).toContain(UNIT2_VOCAB[i][2].slice(0, 20));
+    }
+    expect(grid.map((r) => r[0]).slice(1)).toEqual(UNIT2_VOCAB.map((r) => r[0]));
+  });
 });
 
 describe('importDocxToEditorText', () => {
@@ -377,15 +417,21 @@ describe('importDocxToEditorText', () => {
     const xml = wrapDocument(
       p('Unit 2 Vocabulary List') +
         wTbl([
-          [[['Word']], [['Part(s) of'], ['Speech']], [['Definition']], [['Synonyms']], [['Antonyms']]],
+          [['Word'], ['Part(s) of', 'Speech'], ['Definition'], ['Synonyms'], ['Antonyms']],
           [
-            [['antics']],
-            [['n. pl.']],
-            [['Ridiculous and'], ['unpredictable behavior or actions']],
-            [['pranks,'], ['shenanigans']],
-            [['N/A']],
+            ['antics'],
+            ['n. pl.'],
+            ['Ridiculous and', 'unpredictable behavior or actions'],
+            ['pranks,', 'shenanigans'],
+            ['N/A'],
           ],
-          [[['avowed']], [['adj., part.']], [['Declared openly and without shame, acknowledged']], [['admitted, sworn']], [['unacknowledged,'], ['undisclosed']]],
+          [
+            ['avowed'],
+            ['adj., part.'],
+            ['Declared openly and without shame, acknowledged'],
+            ['admitted, sworn'],
+            ['unacknowledged,', 'undisclosed'],
+          ],
         ]),
     );
     const buffer = await buildDocx(xml);
@@ -407,9 +453,9 @@ describe('importDocxToEditorText', () => {
   });
 
   it('merges two OOXML tables that repeat the same header (page split)', async () => {
-    const header = [[['Word']], [['Definition']]];
+    const header = [['Word'], ['Definition']];
     const xml = wrapDocument(
-      wTbl([header, [[['antics']], [['pranks']]]]) + wTbl([header, [[['invalidate']], [['cancel']]]]),
+      wTbl([header, [['antics'], ['pranks']]]) + wTbl([header, [['invalidate'], ['cancel']]]),
     );
     const buffer = await buildDocx(xml);
     const { primary, tables } = await importDocxTables(buffer);
