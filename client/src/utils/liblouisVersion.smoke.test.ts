@@ -8,6 +8,7 @@ import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'fs';
 import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import { serializeTypeformMarkup } from './typeformMarkup';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const wasmDir = resolve(root, 'public/wasm');
@@ -194,6 +195,43 @@ describe('liblouis WASM smoke', () => {
     return s;
   }
 
+  function backTranslateWithTypeform(
+    table: string,
+    brf: string,
+    mode = 128,
+  ): { output: string; typeform: number[] } | null {
+    const L = brf.length;
+    const maxOut = Math.max(100, L * 10);
+    const inPtr = capi._malloc((L + 1) * 2);
+    const outPtr = capi._malloc(maxOut * 2);
+    const typeformPtr = capi._malloc(maxOut * 2);
+    capi.stringToUTF16(brf, inPtr, (L + 1) * 2);
+    for (let i = 0; i < maxOut; i++) capi.setValue(typeformPtr + i * 2, 0, 'i16');
+    const inLen = capi._malloc(4);
+    const outLen = capi._malloc(4);
+    capi.setValue(inLen, L, 'i32');
+    capi.setValue(outLen, maxOut, 'i32');
+    const ok = capi.ccall(
+      'lou_backTranslateString',
+      'number',
+      ['string', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [table, inPtr, inLen, outPtr, outLen, typeformPtr, 0, mode]
+    ) as number;
+    if (!ok) {
+      for (const p of [inPtr, outPtr, inLen, outLen, typeformPtr]) capi._free(p);
+      return null;
+    }
+    const n = capi.getValue(outLen, 'i32');
+    const chars = capi.HEAP16.subarray(outPtr >> 1, (outPtr >> 1) + n);
+    const output = String.fromCharCode(...Array.from(chars));
+    const typeform: number[] = [];
+    for (let i = 0; i < n; i++) {
+      typeform.push(capi.getValue(typeformPtr + i * 2, 'i16') & 0xffff);
+    }
+    for (const p of [inPtr, outPtr, inLen, outLen, typeformPtr]) capi._free(p);
+    return { output, typeform };
+  }
+
   it(`reports lou_version matching pin ${versionPin}`, () => {
     const v = capi.ccall('lou_version', 'string', [], []) as string;
     expect(v.startsWith(versionPin.split('.').slice(0, 2).join('.'))).toBe(true);
@@ -236,6 +274,16 @@ describe('liblouis WASM smoke', () => {
     expect(italic).toBeTruthy();
     expect(italic).not.toBe(plain);
     expect(italic!.length).toBeGreaterThan(plain!.length);
+  });
+
+  it('reverse typeform on italic Hello serializes to {i:}', () => {
+    const brf = translateWithTypeform('en-ueb-g1.ctb', 'Hello', 0x0001);
+    expect(brf).toBeTruthy();
+    const rev = backTranslateWithTypeform('en-us-brf.dis,en-ueb-g1.ctb', brf!);
+    expect(rev).toBeTruthy();
+    const marked = serializeTypeformMarkup(rev!.output, rev!.typeform);
+    expect(marked).toMatch(/\{i:/);
+    expect(marked.toLowerCase()).toContain('hello');
   });
 
   it('noUndefined mode still translates defined text', () => {
