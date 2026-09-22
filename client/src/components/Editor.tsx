@@ -43,6 +43,10 @@ export interface EditorHandle {
   setCursorOffset: (offset: number) => void;
   /** Focus the Monaco editor. */
   focus: () => void;
+  /** Current selection as UTF-16 offsets (collapsed caret → equal start/end). */
+  getSelectionOffsets: () => { start: number; end: number } | null;
+  /** Replace the full document and optionally restore a selection. */
+  setValuePreservingUndo: (text: string, select?: { start: number; end: number }) => void;
 }
 
 function editorLineProgress(editor: monaco.editor.IStandaloneCodeEditor): number {
@@ -237,6 +241,45 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
     },
     focus: () => {
       editorRef.current?.focus();
+    },
+    getSelectionOffsets: () => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      const sel = editor?.getSelection();
+      if (!editor || !model || !sel) return null;
+      return {
+        start: model.getOffsetAt(sel.getStartPosition()),
+        end: model.getOffsetAt(sel.getEndPosition()),
+      };
+    },
+    setValuePreservingUndo: (text: string, select?: { start: number; end: number }) => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
+      if (!editor || !model) return;
+      editor.executeEdits('indent-api', [
+        {
+          range: model.getFullModelRange(),
+          text,
+          forceMoveMarkers: true,
+        },
+      ]);
+      editor.pushUndoStop();
+      if (select) {
+        const max = model.getValueLength();
+        const startPos = model.getPositionAt(Math.max(0, Math.min(select.start, max)));
+        const endPos = model.getPositionAt(Math.max(0, Math.min(select.end, max)));
+        editor.setSelection(
+          new monaco.Selection(
+            startPos.lineNumber,
+            startPos.column,
+            endPos.lineNumber,
+            endPos.column,
+          ),
+        );
+      }
+      // Notify parent of content change
+      onTextChangeRef.current(text);
+      editor.focus();
     },
   }));
 

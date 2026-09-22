@@ -273,6 +273,10 @@ import {
 import { flattenPrintTable, formatTableSpecToBrf } from '../utils/tableBraille';
 import { DEFAULT_TABLE } from '../utils/tableRegistry';
 import { parseTypeformMarkup, serializeTypeformMarkup } from '../utils/typeformMarkup';
+import {
+  encodeParagraphIndentBrfPrefix,
+  parseParagraphIndentPrefix,
+} from '../utils/paragraphIndent';
 import { restoreUebOpenQuoteFromHis } from '../utils/uebBackTranslate';
 
 const DEFAULT_CELLS_PER_ROW = 40;
@@ -346,7 +350,8 @@ function translateLineWithTypeform(
   line: string,
   table: string,
 ): { output: string; outputPos: number[] } {
-  const forTranslate = line
+  const { indent, rest, markerLength } = parseParagraphIndentPrefix(line);
+  const forTranslate = rest
     .replaceAll(SOFT_LINE_BREAK_CR, ' ')
     .replaceAll(LEGACY_SOFT_LINE_LS, ' ');
   if (!forTranslate) {
@@ -356,21 +361,23 @@ function translateLineWithTypeform(
   const parsed = parseTypeformMarkup(forTranslate);
   const result = liblouis!.translate(table, parsed.plain, parsed.typeform);
   const linePos = new Array<number>(line.length).fill(-1);
+  const prefix = indent ? encodeParagraphIndentBrfPrefix(indent) : '';
 
   if (result && result.outputPos) {
     const n = Math.min(parsed.plainToSrc.length, result.outputPos.length);
     for (let i = 0; i < n; i++) {
-      const src = parsed.plainToSrc[i];
+      const srcInRest = parsed.plainToSrc[i];
+      const src = srcInRest + markerLength;
       if (src >= 0 && src < line.length) {
-        linePos[src] = result.outputPos[i];
+        linePos[src] = result.outputPos[i] + prefix.length;
       }
     }
-    return { output: result.output, outputPos: linePos };
+    return { output: prefix + result.output, outputPos: linePos };
   }
 
   const translated =
     liblouis!.translateString(table, parsed.plain, false, parsed.typeform) || '';
-  return { output: translated, outputPos: linePos };
+  return { output: prefix + translated, outputPos: linePos };
 }
 
 function translateTextWithPositions(text: string, table: string): TextWithPositions {
@@ -451,7 +458,8 @@ function prefixPreformattedLines(body: string): string {
 function translateTableCellText(text: string, textTable: string): string {
   if (!text.trim()) return '';
   try {
-    const parsed = parseTypeformMarkup(text);
+    const { rest } = parseParagraphIndentPrefix(text);
+    const parsed = parseTypeformMarkup(rest);
     return liblouis!.translateString(textTable, parsed.plain, false, parsed.typeform) || text;
   } catch {
     return text;
