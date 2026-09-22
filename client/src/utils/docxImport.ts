@@ -422,6 +422,22 @@ function renderInline(nodes: HtmlNode[]): string {
       out += renderInline(node.children);
       continue;
     }
+    // Map common Word emphasis to Graham typeform markup ({b:}/{i:}/{u:}).
+    if (node.name === 'strong' || node.name === 'b') {
+      const inner = renderInline(node.children);
+      out += inner ? `{b:${inner}}` : '';
+      continue;
+    }
+    if (node.name === 'em' || node.name === 'i') {
+      const inner = renderInline(node.children);
+      out += inner ? `{i:${inner}}` : '';
+      continue;
+    }
+    if (node.name === 'u') {
+      const inner = renderInline(node.children);
+      out += inner ? `{u:${inner}}` : '';
+      continue;
+    }
     out += renderInline(node.children);
   }
   return out;
