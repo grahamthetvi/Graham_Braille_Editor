@@ -39,6 +39,8 @@ export interface BraillePreviewPagesProps {
   onScrollPercentage: (percentage: number) => void;
   onActivePageChange: (pageNumber1Based: number) => void;
   ariaLabel: string;
+  /** When true, last line of each page is a page-number footer (excluded from word sync). */
+  skipTrailingPageNumbers?: boolean;
 }
 
 const OVERSCAN_PAGES = 2;
@@ -138,6 +140,21 @@ const PageView = memo(function PageView({
             );
           }
 
+          if (line.kind === 'pageNumber') {
+            return (
+              <div key={lineIdx} className="brf-page-line brf-page-line--page-number">
+                {line.chars.map((char, charIdx) => (
+                  <BrailleCell
+                    key={charIdx}
+                    char={char}
+                    showEmptyDots={showEmptyDots}
+                    variant={cellVariant}
+                  />
+                ))}
+              </div>
+            );
+          }
+
           return (
             <div key={lineIdx} className="brf-page-line">
               {line.segments.map((seg, segIdx) => {
@@ -198,6 +215,7 @@ export const BraillePreviewPages = forwardRef<
     onScrollPercentage,
     onActivePageChange,
     ariaLabel,
+    skipTrailingPageNumbers = false,
   },
   ref,
 ) {
@@ -207,7 +225,10 @@ export const BraillePreviewPages = forwardRef<
   const pageChangeRafRef = useRef<number | null>(null);
   const suppressScrollReportRef = useRef(false);
 
-  const models = useMemo(() => buildBrfPageModels(pages), [pages]);
+  const models = useMemo(
+    () => buildBrfPageModels(pages, { skipTrailingPageNumbers }),
+    [pages, skipTrailingPageNumbers],
+  );
   const pageHeights = useMemo(() => braillePageHeights(models, brailleSize), [models, brailleSize]);
   const lineCount = useMemo(() => brailleLineCount(models), [models]);
   const virtualize = pages.length > VIRTUALIZE_AFTER_PAGES;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { JUMBO_LINE_MARKER } from '../../utils/braille';
+import { JUMBO_LINE_MARKER, asciiToUnicodeBraille } from '../../utils/braille';
+import { formatBrfPages } from '../../utils/brailleFormat';
 import {
   brailleLineAtY,
   brailleLineCount,
@@ -21,6 +22,48 @@ describe('buildBrfPageModels', () => {
       ),
     );
     expect(words).toEqual([0, 1, 2]);
+  });
+
+  it('does not count page-number footers toward word indices', () => {
+    const uni = asciiToUnicodeBraille(
+      'one two three four\nfive six seven eight\nnine ten eleven twelve\nthirteen fourteen',
+    );
+    const pages = formatBrfPages(uni, 20, 3, true);
+    expect(pages.length).toBeGreaterThan(1);
+    const models = buildBrfPageModels(pages, { skipTrailingPageNumbers: true });
+    const words = models.flatMap((p) =>
+      p.lines.flatMap((l) =>
+        l.kind === 'cells'
+          ? l.segments.filter((s) => s.type === 'word').map((s) => s.wordIndex)
+          : [],
+      ),
+    );
+    const rawWordCount = (uni.match(/[^\s\u2800]+/g) || []).length;
+    expect(words).toHaveLength(rawWordCount);
+    expect(words[words.length - 1]).toBe(rawWordCount - 1);
+    expect(models.every((p) => p.lines.at(-1)?.kind === 'pageNumber')).toBe(true);
+
+    // Without skipping, page numbers inflate the word stream.
+    const inflated = buildBrfPageModels(pages);
+    const inflatedWords = inflated.flatMap((p) =>
+      p.lines.flatMap((l) =>
+        l.kind === 'cells'
+          ? l.segments.filter((s) => s.type === 'word').map((s) => s.wordIndex)
+          : [],
+      ),
+    );
+    expect(inflatedWords.length).toBeGreaterThan(rawWordCount);
+  });
+
+  it('keeps hyphenated wrap halves on the same word index', () => {
+    const hyphen = '\u2824'; // ASCII '-' in Unicode braille
+    const [page] = buildBrfPageModels([`⠁⠃${hyphen}\n⠉⠙`]);
+    const words = page.lines.flatMap((l) =>
+      l.kind === 'cells'
+        ? l.segments.filter((s) => s.type === 'word').map((s) => s.wordIndex)
+        : [],
+    );
+    expect(words).toEqual([0, 0]);
   });
 
   it('hello, blank line, world is three rows with a blank in the middle', () => {
