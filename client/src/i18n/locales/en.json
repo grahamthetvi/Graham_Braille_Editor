@@ -378,7 +378,11 @@
         "matrixCellAriaLabel": "First line cell {{first}}, runover cell {{run}}",
         "quickLabel": "Quick:",
         "quickFlush": "1–1 (flush)",
-        "quickLiterary": "3–5 (literary)"
+        "quickLiterary": "3–5 (literary)",
+        "applyToSelection": "Apply to selection",
+        "applyToSelectionTitle": "Apply the selected first-line / runover cells to the current print selection only (inserts {p:F-R} markers). Does not change the global layout default.",
+        "applyToSelectionAria": "Apply paragraph indent to selected print text",
+        "selectionNote": "Apply to selection indents only the selected paragraphs via {p:F-R} markers; the matrix above still sets the document default."
       },
       "embosserPadding": {
         "ariaLabel": "Embosser edge padding",

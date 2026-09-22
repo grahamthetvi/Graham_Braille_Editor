@@ -82,6 +82,7 @@ import {
   hyphenDictionaryForTable,
   type HyphenateAsciiWord,
 } from './utils/hyphenation';
+import { applyParagraphIndentToRange } from './utils/paragraphIndent';
 import {
   DOCX_MAX_BYTES,
   DocxImportError,
@@ -1311,6 +1312,38 @@ export default function App() {
     }
   }
 
+  const handleApplyIndentToSelection = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor || isPerkinsMode || isMusicBrailleMode) return;
+    if (literarySourceMode === 'importedLocked' || literarySourceMode === 'brailleEditing') return;
+    const offsets = editor.getSelectionOffsets();
+    if (!offsets) return;
+    const current = inputText;
+    const applied = applyParagraphIndentToRange(
+      current,
+      offsets.start,
+      offsets.end,
+      {
+        firstLineStartCell: pageSettings.paragraphFirstLineStartCell,
+        runoverStartCell: pageSettings.paragraphRunoverStartCell,
+      },
+    );
+    if (applied.text === current) return;
+    editor.setValuePreservingUndo(applied.text, {
+      start: applied.selStart,
+      end: applied.selEnd,
+    });
+    setInputText(applied.text);
+    setFileContent(applied.text);
+  }, [
+    inputText,
+    isPerkinsMode,
+    isMusicBrailleMode,
+    literarySourceMode,
+    pageSettings.paragraphFirstLineStartCell,
+    pageSettings.paragraphRunoverStartCell,
+  ]);
+
   return (
     <div className="app-layout">
       {/* Skip navigation link for keyboard and screen reader users */}
@@ -2069,7 +2102,26 @@ export default function App() {
                       >
                         {t('app.layoutSettings.paragraphFormat.quickLiterary')}
                       </button>
+                      <button
+                        type="button"
+                        className="toolbar-btn"
+                        onClick={handleApplyIndentToSelection}
+                        disabled={
+                          isPerkinsMode ||
+                          isMusicBrailleMode ||
+                          literarySourceMode === 'importedLocked' ||
+                          literarySourceMode === 'brailleEditing' ||
+                          !inputText.trim()
+                        }
+                        title={t('app.layoutSettings.paragraphFormat.applyToSelectionTitle')}
+                        aria-label={t('app.layoutSettings.paragraphFormat.applyToSelectionAria')}
+                      >
+                        {t('app.layoutSettings.paragraphFormat.applyToSelection')}
+                      </button>
                     </div>
+                    <p className="settings-hint paragraph-format-note">
+                      {t('app.layoutSettings.paragraphFormat.selectionNote')}
+                    </p>
                   </div>
 
                   <p className="settings-hint">

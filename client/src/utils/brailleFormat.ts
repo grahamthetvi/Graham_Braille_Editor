@@ -1,5 +1,6 @@
 import { asciiToUnicodeBraille, unicodeBrailleToAscii } from './braille';
 import type { HyphenateAsciiWord } from './hyphenation';
+import { parseParagraphIndentBrfPrefix } from './paragraphIndent';
 
 export type { HyphenateAsciiWord };
 
@@ -954,11 +955,17 @@ function formatBrfPagesSegment(
       continue;
     }
 
+    const lineIndent = parseParagraphIndentBrfPrefix(line);
+    const lineFirst = lineIndent.indent?.firstLineStartCell ?? firstStart;
+    const lineRun = lineIndent.indent?.runoverStartCell ?? runStart;
+    line = lineIndent.rest;
+    const useLineStarts = lineFirst > 1 || lineRun > 1 || useParagraphStarts;
+
     if (line.length === 0) {
       wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
-    } else if (useParagraphStarts) {
+    } else if (useLineStarts) {
       wrappedLines.push(
-        ...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, BRAILLE_SPACE, hyphenateWord),
+        ...wrapBrailleLineWithParagraphStarts(line, cells, lineFirst, lineRun, BRAILLE_SPACE, hyphenateWord),
       );
     } else if (line.length <= cells) {
       wrappedLines.push(line); // fits — no wrapping needed
@@ -1578,8 +1585,13 @@ function formatBrfForOutputSegment(
       wrapped.push('');
       continue;
     }
-    if (useParagraphStarts) {
-      wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, firstStart, runStart, ' ', hyphenateWord));
+    const lineIndent = parseParagraphIndentBrfPrefix(line);
+    const lineFirst = lineIndent.indent?.firstLineStartCell ?? firstStart;
+    const lineRun = lineIndent.indent?.runoverStartCell ?? runStart;
+    line = lineIndent.rest;
+    const useLineStarts = lineFirst > 1 || lineRun > 1 || useParagraphStarts;
+    if (useLineStarts) {
+      wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, lineFirst, lineRun, ' ', hyphenateWord));
     } else if (line.length <= cells) {
       wrapped.push(line);
     } else {
