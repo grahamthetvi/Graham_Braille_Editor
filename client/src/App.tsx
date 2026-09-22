@@ -1591,6 +1591,16 @@ export default function App() {
                 </button>
 
                 <button
+                  className={`toolbar-btn${showTableEditor ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowTableEditor(s => !s)}
+                  disabled={isPerkinsMode}
+                  title={t('app.tools.table.title')}
+                  aria-label={t('app.tools.table.ariaLabel')}
+                >
+                  {t('app.tools.table.label')}
+                </button>
+
+                <button
                   className="toolbar-btn"
                   onClick={() => setShowStlExportDialog(true)}
                   disabled={isPerkinsMode}
@@ -1621,16 +1631,6 @@ export default function App() {
                   aria-label={t('app.tools.alphabet.ariaLabel')}
                 >
                   {t('app.tools.alphabet.label')}
-                </button>
-
-                <button
-                  className={`toolbar-btn${showTableEditor ? ' toolbar-btn--active' : ''}`}
-                  onClick={() => setShowTableEditor(s => !s)}
-                  disabled={isPerkinsMode}
-                  title={t('app.tools.table.title')}
-                  aria-label={t('app.tools.table.ariaLabel')}
-                >
-                  {t('app.tools.table.label')}
                 </button>
 
                 <button
