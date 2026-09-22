@@ -170,6 +170,15 @@ describe('docxHtmlToEditorText', () => {
     expect(text).toBe('Intro\n\n- Apples\n- Bananas\n\n1. First\n2. Second');
   });
 
+  it('maps bold/italic/underline to typeform markup', async () => {
+    const text = await docxHtmlToEditorText(
+      '<p>Say <strong>hello</strong> and <em>goodbye</em> with <u>care</u>.</p>',
+    );
+    expect(text).toContain('{b:hello}');
+    expect(text).toContain('{i:goodbye}');
+    expect(text).toContain('{u:care}');
+  });
+
   it('keeps visible hyperlink text only', async () => {
     const text = await docxHtmlToEditorText('<p>See <a href="https://example.com/secret">the guide</a> please.</p>');
     expect(text).toBe('See the guide please.');
