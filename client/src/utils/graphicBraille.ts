@@ -2278,15 +2278,21 @@ export class GraphicCanvas extends GridCanvas {
 
   drawAtom(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
-    const nucleusR = Math.max(2, Math.round(radius * 0.18));
-    this.drawCircle(Math.round(cx), Math.round(cy), nucleusR, filled);
-    const orbits = [
-      { a: radius * 0.95, b: radius * 0.38, rot: 0 },
-      { a: radius * 0.95, b: radius * 0.38, rot: Math.PI / 3 },
-      { a: radius * 0.95, b: radius * 0.38, rot: -Math.PI / 3 },
+    // Dense nucleus (protons/neutrons as a solid core + ring)
+    const nucleusR = Math.max(3, Math.round(radius * 0.22));
+    this.drawCircle(Math.round(cx), Math.round(cy), nucleusR, true);
+    if (!filled) {
+      this.drawCircle(Math.round(cx), Math.round(cy), Math.max(1, nucleusR - 2), false);
+    }
+    // Three electron shells at distinct radii (not just tilted ellipses)
+    const shells = [
+      { a: radius * 0.48, b: radius * 0.48, rot: 0 },
+      { a: radius * 0.72, b: radius * 0.42, rot: Math.PI / 5 },
+      { a: radius * 0.95, b: radius * 0.55, rot: -Math.PI / 3.2 },
     ];
-    for (const o of orbits) {
-      const steps = Math.max(36, Math.ceil(radius * 4));
+    for (let oi = 0; oi < shells.length; oi++) {
+      const o = shells[oi];
+      const steps = Math.max(40, Math.ceil(radius * 5));
       let prevX = 0;
       let prevY = 0;
       for (let i = 0; i <= steps; i++) {
@@ -2299,20 +2305,22 @@ export class GraphicCanvas extends GridCanvas {
         prevX = x;
         prevY = y;
       }
-      // Electron dot on each orbit
-      const ex = cx + o.a * Math.cos(o.rot);
-      const ey = cy + o.a * Math.sin(o.rot);
-      this.drawCircle(Math.round(ex), Math.round(ey), Math.max(1, Math.round(radius * 0.08)), true);
+      // One clear electron on each shell
+      const phase = oi * 2.1;
+      const ex = cx + o.a * Math.cos(phase) * Math.cos(o.rot) - o.b * Math.sin(phase) * Math.sin(o.rot);
+      const ey = cy + o.a * Math.cos(phase) * Math.sin(o.rot) + o.b * Math.sin(phase) * Math.cos(o.rot);
+      this.drawCircle(Math.round(ex), Math.round(ey), Math.max(2, Math.round(radius * 0.09)), true);
     }
   }
 
   drawDna(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
-    const halfH = radius * 1.15;
-    const amp = radius * 0.45;
-    const turns = 2.5;
-    const steps = Math.max(40, Math.ceil(radius * 5));
+    const halfH = radius * 1.2;
+    const amp = radius * 0.42;
+    const turns = 3;
+    const steps = Math.max(48, Math.ceil(radius * 6));
     let p1x = 0, p1y = 0, p2x = 0, p2y = 0;
+    const rungEvery = Math.max(3, Math.floor(steps / 12));
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       const y = cy - halfH + t * 2 * halfH;
@@ -2323,15 +2331,19 @@ export class GraphicCanvas extends GridCanvas {
         this.drawLine(p1x, p1y, x1, y);
         this.drawLine(p2x, p2y, x2, y);
       }
-      // Ladder rungs every few steps
-      if (i % Math.max(4, Math.floor(steps / 8)) === 0) {
+      // Base-pair rungs (thicker feel via parallel short ticks when filled)
+      if (i % rungEvery === 0) {
         this.drawLine(x1, y, x2, y);
         if (filled) {
+          this.drawLine(x1, y - 1, x2, y - 1);
           this.setPoint(Math.round((x1 + x2) / 2), Math.round(y));
         }
       }
       p1x = x1; p1y = y; p2x = x2; p2y = y;
     }
+    // Caps on the helix ends so the strands read as a unit
+    this.drawLine(cx - amp * 0.15, cy - halfH, cx + amp * 0.15, cy - halfH);
+    this.drawLine(cx - amp * 0.15, cy + halfH, cx + amp * 0.15, cy + halfH);
   }
 
   drawLeaf(cx: number, cy: number, radius: number, filled = false) {
@@ -2413,20 +2425,44 @@ export class GraphicCanvas extends GridCanvas {
 
   drawEarth(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
+    // Ocean disc (outline or filled) then latitude / longitude grid
     this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), filled);
+    if (filled) {
+      // Clear a few land-mass blobs so continents read by touch against filled ocean
+      const clearLand = (lx: number, ly: number, rx: number, ry: number) => {
+        for (let y = Math.round(ly - ry); y <= Math.round(ly + ry); y++) {
+          for (let x = Math.round(lx - rx); x <= Math.round(lx + rx); x++) {
+            const dx = (x - lx) / rx;
+            const dy = (y - ly) / ry;
+            if (dx * dx + dy * dy <= 1) {
+              const ix = Math.round(x);
+              const iy = Math.round(y);
+              if (ix >= 0 && ix < this.width && iy >= 0 && iy < this.height) {
+                this.data[iy][ix] = false;
+              }
+            }
+          }
+        }
+      };
+      clearLand(cx - radius * 0.25, cy - radius * 0.15, radius * 0.35, radius * 0.28);
+      clearLand(cx + radius * 0.35, cy + radius * 0.1, radius * 0.22, radius * 0.2);
+      clearLand(cx + radius * 0.05, cy + radius * 0.45, radius * 0.28, radius * 0.18);
+      this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), false);
+    }
     // Equator
     this.drawLine(cx - radius, cy, cx + radius, cy);
-    // Tropics
-    const trop = radius * 0.45;
-    this.drawLine(cx - Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy - trop,
-      cx + Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy - trop);
-    this.drawLine(cx - Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy + trop,
-      cx + Math.sqrt(Math.max(0, radius * radius - trop * trop)), cy + trop);
-    // Meridians (ellipses approximated)
-    for (const scale of [0.55, 0.9]) {
+    // Tropics / polar circles
+    for (const frac of [0.35, 0.7]) {
+      const lat = radius * frac;
+      const half = Math.sqrt(Math.max(0, radius * radius - lat * lat));
+      this.drawLine(cx - half, cy - lat, cx + half, cy - lat);
+      this.drawLine(cx - half, cy + lat, cx + half, cy + lat);
+    }
+    // Meridians
+    for (const scale of [0.4, 0.7, 1.0]) {
       const a = radius * scale;
       const b = radius;
-      const steps = Math.max(24, Math.ceil(radius * 3));
+      const steps = Math.max(28, Math.ceil(radius * 3));
       let px = 0, py = 0;
       for (let i = 0; i <= steps; i++) {
         const t = -Math.PI / 2 + (i / steps) * Math.PI;
@@ -2435,6 +2471,83 @@ export class GraphicCanvas extends GridCanvas {
         if (i > 0) this.drawLine(px, py, x, y);
         px = x; py = y;
       }
+    }
+  }
+
+  drawVolcano(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Broad cone with flat crater lip
+    const baseY = cy + radius * 0.9;
+    const craterY = cy - radius * 0.05;
+    const craterHalf = radius * 0.28;
+    const mountain = [
+      { x: cx - radius * 1.05, y: baseY },
+      { x: cx - craterHalf, y: craterY },
+      { x: cx + craterHalf, y: craterY },
+      { x: cx + radius * 1.05, y: baseY },
+    ];
+    this.strokeClosedPoly(mountain, filled);
+    // Crater bowl (inner dip)
+    this.drawLine(cx - craterHalf, craterY, cx - craterHalf * 0.45, craterY + radius * 0.12);
+    this.drawLine(cx - craterHalf * 0.45, craterY + radius * 0.12, cx + craterHalf * 0.45, craterY + radius * 0.12);
+    this.drawLine(cx + craterHalf * 0.45, craterY + radius * 0.12, cx + craterHalf, craterY);
+    // Eruption: central column + asymmetric ash plume
+    this.drawLine(cx, craterY, cx, cy - radius * 0.55);
+    const plume = [
+      { x: cx - radius * 0.06, y: cy - radius * 0.2 },
+      { x: cx - radius * 0.4, y: cy - radius * 0.55 },
+      { x: cx - radius * 0.2, y: cy - radius * 0.78 },
+      { x: cx, y: cy - radius * 1.05 },
+      { x: cx + radius * 0.28, y: cy - radius * 0.72 },
+      { x: cx + radius * 0.42, y: cy - radius * 0.48 },
+      { x: cx + radius * 0.08, y: cy - radius * 0.2 },
+    ];
+    this.strokeClosedPoly(plume, filled);
+    // Falling ash ticks
+    this.drawLine(cx - radius * 0.55, cy - radius * 0.35, cx - radius * 0.45, cy - radius * 0.15);
+    this.drawLine(cx + radius * 0.5, cy - radius * 0.3, cx + radius * 0.38, cy - radius * 0.08);
+  }
+
+  drawMagnet(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Horseshoe opening upward with thick poles
+    const outer = [
+      { x: cx - radius * 0.75, y: cy - radius * 0.9 },
+      { x: cx - radius * 0.38, y: cy - radius * 0.9 },
+      { x: cx - radius * 0.38, y: cy + radius * 0.2 },
+      { x: cx + radius * 0.38, y: cy + radius * 0.2 },
+      { x: cx + radius * 0.38, y: cy - radius * 0.9 },
+      { x: cx + radius * 0.75, y: cy - radius * 0.9 },
+      { x: cx + radius * 0.75, y: cy + radius * 0.5 },
+      { x: cx, y: cy + radius * 1.0 },
+      { x: cx - radius * 0.75, y: cy + radius * 0.5 },
+    ];
+    this.strokeClosedPoly(outer, filled);
+    if (filled) {
+      for (let y = Math.round(cy - radius * 0.8); y <= Math.round(cy + radius * 0.08); y++) {
+        for (let x = Math.round(cx - radius * 0.22); x <= Math.round(cx + radius * 0.22); x++) {
+          if (x >= 0 && x < this.width && y >= 0 && y < this.height) this.data[y][x] = false;
+        }
+      }
+    }
+    this.drawLine(cx - radius * 0.38, cy - radius * 0.9, cx - radius * 0.38, cy + radius * 0.2);
+    this.drawLine(cx + radius * 0.38, cy - radius * 0.9, cx + radius * 0.38, cy + radius * 0.2);
+    this.drawLine(cx - radius * 0.38, cy + radius * 0.2, cx + radius * 0.38, cy + radius * 0.2);
+    // Pole bars
+    this.drawLine(cx - radius * 0.75, cy - radius * 0.55, cx - radius * 0.38, cy - radius * 0.55);
+    this.drawLine(cx + radius * 0.38, cy - radius * 0.55, cx + radius * 0.75, cy - radius * 0.55);
+    // N / S braille labels on poles (ASCII → painted cells)
+    const cellY = Math.max(0, Math.floor((cy - radius * 0.78) / 3));
+    const leftCellX = Math.max(0, Math.floor((cx - radius * 0.62) / 2));
+    const rightCellX = Math.max(0, Math.floor((cx + radius * 0.48) / 2));
+    this.paintBrailleString(leftCellX, cellY, 'n');
+    this.paintBrailleString(rightCellX, cellY, 's');
+    // Field arcs between poles
+    for (const lift of [0.15, 0.35, 0.55]) {
+      const top = cy - radius * (0.95 + lift * 0.15);
+      this.drawLine(cx - radius * 0.55, cy - radius * 0.9, cx - radius * (0.2 + lift * 0.15), top);
+      this.drawLine(cx - radius * (0.2 + lift * 0.15), top, cx + radius * (0.2 + lift * 0.15), top);
+      this.drawLine(cx + radius * (0.2 + lift * 0.15), top, cx + radius * 0.55, cy - radius * 0.9);
     }
   }
 
@@ -2451,70 +2564,6 @@ export class GraphicCanvas extends GridCanvas {
       const y2 = cy + Math.sin(theta) * radius;
       this.drawLine(x1, y1, x2, y2);
     }
-  }
-
-  drawVolcano(cx: number, cy: number, radius: number, filled = false) {
-    if (radius <= 0) return;
-    const mountain = [
-      { x: cx - radius, y: cy + radius * 0.85 },
-      { x: cx - radius * 0.25, y: cy - radius * 0.15 },
-      { x: cx + radius * 0.25, y: cy - radius * 0.15 },
-      { x: cx + radius, y: cy + radius * 0.85 },
-    ];
-    this.strokeClosedPoly(mountain, filled);
-    // Crater lip
-    this.drawLine(cx - radius * 0.25, cy - radius * 0.15, cx + radius * 0.25, cy - radius * 0.15);
-    // Eruption plume
-    const plume = [
-      { x: cx - radius * 0.08, y: cy - radius * 0.15 },
-      { x: cx - radius * 0.35, y: cy - radius * 0.55 },
-      { x: cx - radius * 0.15, y: cy - radius * 0.7 },
-      { x: cx, y: cy - radius * 0.95 },
-      { x: cx + radius * 0.2, y: cy - radius * 0.65 },
-      { x: cx + radius * 0.35, y: cy - radius * 0.5 },
-      { x: cx + radius * 0.08, y: cy - radius * 0.15 },
-    ];
-    this.strokeClosedPoly(plume, filled);
-  }
-
-  drawMagnet(cx: number, cy: number, radius: number, filled = false) {
-    if (radius <= 0) return;
-    const outer = [
-      { x: cx - radius * 0.7, y: cy - radius * 0.85 },
-      { x: cx - radius * 0.35, y: cy - radius * 0.85 },
-      { x: cx - radius * 0.35, y: cy + radius * 0.15 },
-      { x: cx + radius * 0.35, y: cy + radius * 0.15 },
-      { x: cx + radius * 0.35, y: cy - radius * 0.85 },
-      { x: cx + radius * 0.7, y: cy - radius * 0.85 },
-      { x: cx + radius * 0.7, y: cy + radius * 0.45 },
-      { x: cx, y: cy + radius * 0.95 },
-      { x: cx - radius * 0.7, y: cy + radius * 0.45 },
-    ];
-    this.strokeClosedPoly(outer, filled);
-    // Inner U cutout (outline only when filled: clear a channel)
-    if (filled) {
-      const clearInner = (x: number, y: number) => {
-        const ix = Math.round(x);
-        const iy = Math.round(y);
-        if (ix >= 0 && ix < this.width && iy >= 0 && iy < this.height) this.data[iy][ix] = false;
-      };
-      for (let y = Math.round(cy - radius * 0.75); y <= Math.round(cy + radius * 0.05); y++) {
-        for (let x = Math.round(cx - radius * 0.2); x <= Math.round(cx + radius * 0.2); x++) {
-          clearInner(x, y);
-        }
-      }
-      // redraw outer edges near cut
-      this.drawLine(cx - radius * 0.35, cy - radius * 0.85, cx - radius * 0.35, cy + radius * 0.15);
-      this.drawLine(cx + radius * 0.35, cy - radius * 0.85, cx + radius * 0.35, cy + radius * 0.15);
-      this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx + radius * 0.35, cy + radius * 0.15);
-    } else {
-      this.drawLine(cx - radius * 0.35, cy - radius * 0.85, cx - radius * 0.35, cy + radius * 0.15);
-      this.drawLine(cx + radius * 0.35, cy - radius * 0.85, cx + radius * 0.35, cy + radius * 0.15);
-      this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx + radius * 0.35, cy + radius * 0.15);
-    }
-    // N / S tick marks on poles
-    this.drawLine(cx - radius * 0.55, cy - radius * 0.7, cx - radius * 0.5, cy - radius * 0.55);
-    this.drawLine(cx + radius * 0.55, cy - radius * 0.7, cx + radius * 0.5, cy - radius * 0.55);
   }
 
   drawThermometer(cx: number, cy: number, radius: number, filled = false) {

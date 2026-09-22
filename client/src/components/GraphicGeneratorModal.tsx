@@ -552,7 +552,18 @@ export function GraphicGeneratorModal({
 
               {/* Preview */}
               {preview.brf && (
-                <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto', borderRadius: '4px' }}>
+                <div
+                  className="graphic-brf-preview"
+                  style={{
+                    flex: 1,
+                    border: '1px solid var(--border-color)',
+                    padding: '1rem',
+                    background: 'var(--page-bg)',
+                    color: 'var(--text-primary)',
+                    overflow: 'auto',
+                    borderRadius: '4px',
+                  }}
+                >
                   <div style={{ fontFamily: 'sans-serif', marginBottom: '0.75rem', fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{preview.summary}</div>
                   <div
                     className="brf-pages-container"
@@ -563,6 +574,7 @@ export function GraphicGeneratorModal({
                       '--braille-dot-size-active': '3.5px',
                       '--braille-dot-size-inactive': '0px',
                       '--braille-line-gap': '6px',
+                      color: 'var(--braille-color)',
                       overflow: 'visible',
                       maxHeight: 'none',
                     } as React.CSSProperties}
@@ -833,7 +845,17 @@ export function GraphicGeneratorModal({
             </div>
 
             {/* Preview */}
-            <div style={{ flex: 1, border: '1px solid var(--border-color)', padding: '1rem', background: '#fff', color: '#000', overflow: 'auto' }}>
+            <div
+              className="graphic-brf-preview"
+              style={{
+                flex: 1,
+                border: '1px solid var(--border-color)',
+                padding: '1rem',
+                background: 'var(--page-bg)',
+                color: 'var(--text-primary)',
+                overflow: 'auto',
+              }}
+            >
               <div style={{ fontFamily: 'sans-serif', marginBottom: '1rem', fontWeight: 'bold' }}>{preview.summary}</div>
               <div
                 className="brf-pages-container"
@@ -844,6 +866,7 @@ export function GraphicGeneratorModal({
                   '--braille-dot-size-active': '3.5px',
                   '--braille-dot-size-inactive': '0px',
                   '--braille-line-gap': '6px',
+                  color: 'var(--braille-color)',
                   overflow: 'visible',
                   maxHeight: 'none',
                 } as React.CSSProperties}

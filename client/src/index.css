@@ -25,6 +25,12 @@
   --braille-color: #58a6ff;
   --page-bg: #1c2128;          /* Dark "paper" — slightly lighter than bg */
   --braille-highlight-bg: rgba(254, 240, 138, 0.25);
+  /* Aliases used by modals / generators */
+  --bg-card: var(--bg-surface);
+  --bg-input: var(--bg-overlay);
+  --text-color: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-color: var(--border);
 
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -59,6 +65,11 @@
   --braille-color: #0969da;
   --page-bg: #ffffff;          /* White paper for light theme */
   --braille-highlight-bg: rgba(254, 240, 138, 0.45);
+  --bg-card: var(--bg-surface);
+  --bg-input: var(--bg-overlay);
+  --text-color: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-color: var(--border);
 
   color-scheme: light;
 }
@@ -85,6 +96,11 @@
   --braille-color: #ffff00;
   --page-bg: #000000;          /* Black paper for high-contrast */
   --braille-highlight-bg: rgba(255, 255, 255, 0.35);
+  --bg-card: var(--bg-surface);
+  --bg-input: var(--bg-overlay);
+  --text-color: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-color: var(--border);
 
   color-scheme: dark;
 }
