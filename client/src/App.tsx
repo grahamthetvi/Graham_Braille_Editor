@@ -2253,6 +2253,7 @@ export default function App() {
                   onScrollPercentage={handlePreviewScrollPercentage}
                   onActivePageChange={handleActivePageChange}
                   ariaLabel={t('app.layoutSettings.braillePreviewAriaLabel')}
+                  skipTrailingPageNumbers={Boolean(pageSettings.showPageNumbers)}
                 />
               ) : (
                 <p className="brf-placeholder" aria-live="polite">
