@@ -28,6 +28,7 @@ import {
   type ShapeCatalogCategory,
 } from '../utils/shapeCatalog';
 import { generateEquationGraph } from '../utils/graphEquation';
+import { generateMultiplicationChart, MULTIPLICATION_CHART_LIMITS } from '../utils/multiplicationChart';
 import { asciiToUnicodeBraille } from '../utils/braille';
 import { BrailleCell } from './BrailleCell';
 import { TactileDesignCanvas } from './TactileDesignCanvas';
@@ -58,7 +59,8 @@ type GraphicType =
   | 'photo'
   | 'raisedPrintText'
   | 'graph'
-  | 'chart';
+  | 'chart'
+  | 'multiplicationChart';
 
 function defaultsForSection(section: GraphicsSection): {
   section: GraphicsSection;
@@ -117,6 +119,10 @@ export function GraphicGeneratorModal({
   const [manRows, setManRows] = useState(2);
   const [manCols, setManCols] = useState(3);
   const [manSpacing, setManSpacing] = useState(5);
+
+  // Multiplication chart state
+  const [multFrom, setMultFrom] = useState(1);
+  const [multTo, setMultTo] = useState(10);
 
   // Shape Inventory state — size is radius in braille dots
   const [inventoryShape, setInventoryShape] = useState<InventoryShapeKind>('circle');
@@ -298,6 +304,15 @@ export function GraphicGeneratorModal({
       case 'manipulatives':
         preview = generateManipulatives(manRows, manCols, manSpacing);
         break;
+      case 'multiplicationChart':
+        preview = generateMultiplicationChart({
+          from: multFrom,
+          to: multTo,
+          mathCode,
+          cellsPerRow: defaultCellsPerRow,
+          linesPerPage: defaultLinesPerPage,
+        });
+        break;
       case 'shapeInventory':
         preview = generateInventoryShape(inventoryShape, inventorySize, inventoryFilled, {
           lengthHorizontal: crossLengthHorizontal,
@@ -319,6 +334,11 @@ export function GraphicGeneratorModal({
           preview = { brf: '', summary: fontError ? `Error: ${fontError}` : (fontLoading ? 'Loading font...' : 'Font not loaded.') };
         }
         break;
+      default: {
+        const _exhaustive: never = graphicType;
+        preview = _exhaustive;
+        break;
+      }
     }
   }
 
@@ -641,6 +661,61 @@ export function GraphicGeneratorModal({
                   <label>Spacing: <input type="number" value={manSpacing} onChange={e => setManSpacing(Number(e.target.value))} /></label>
                 </>
               )}
+              {graphicType === 'multiplicationChart' && (
+                <>
+                  <label>
+                    From:{' '}
+                    <input
+                      type="number"
+                      min={MULTIPLICATION_CHART_LIMITS.minFactor}
+                      max={MULTIPLICATION_CHART_LIMITS.maxFactor}
+                      step={1}
+                      value={multFrom}
+                      onChange={e => setMultFrom(Number(e.target.value))}
+                    />
+                  </label>
+                  <label>
+                    Through:{' '}
+                    <input
+                      type="number"
+                      min={MULTIPLICATION_CHART_LIMITS.minFactor}
+                      max={MULTIPLICATION_CHART_LIMITS.maxFactor}
+                      step={1}
+                      value={multTo}
+                      onChange={e => setMultTo(Number(e.target.value))}
+                    />
+                  </label>
+                  <fieldset style={{ gridColumn: '1 / -1', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '12px' }}>
+                    <legend style={{ fontSize: '0.85rem', padding: '0 6px' }}>Math code</legend>
+                    <p style={{ fontSize: '0.82rem', marginTop: 0, marginBottom: '10px', opacity: 0.9 }}>
+                      Numbers in the chart use this code. The choice is saved with the document.
+                    </p>
+                    <div role="radiogroup" aria-label="Math code">
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="multiplication-math-code"
+                          checked={mathCode === 'nemeth'}
+                          onChange={() => onMathCodeChange('nemeth')}
+                        />
+                        <span>Nemeth (lower-cell digits)</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="multiplication-math-code"
+                          checked={mathCode === 'ueb'}
+                          onChange={() => onMathCodeChange('ueb')}
+                        />
+                        <span>UEB (upper-cell digits)</span>
+                      </label>
+                    </div>
+                  </fieldset>
+                  <p style={{ gridColumn: '1 / -1', margin: 0, fontSize: '0.85rem', opacity: 0.85 }}>
+                    Follow a row factor across and a column factor down. A wide chart stacks into strips that fit the current line length, and each strip repeats the row factors.
+                  </p>
+                </>
+              )}
               {graphicType === 'shapeInventory' && (
                 <>
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -856,7 +931,7 @@ export function GraphicGeneratorModal({
                 overflow: 'auto',
               }}
             >
-              <div style={{ fontFamily: 'sans-serif', marginBottom: '1rem', fontWeight: 'bold' }}>{preview.summary}</div>
+              <div style={{ fontFamily: 'sans-serif', marginBottom: '1rem', fontWeight: 'bold', whiteSpace: 'pre-wrap' }}>{preview.summary}</div>
               <div
                 className="brf-pages-container"
                 style={{

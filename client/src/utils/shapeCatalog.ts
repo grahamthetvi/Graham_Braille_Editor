@@ -110,7 +110,7 @@ export function getShapeEntry(kind: InventoryShapeKind): ShapeCatalogEntry | und
 }
 
 export interface MathToolEntry {
-  id: 'clock' | 'fraction' | 'numberLine' | 'base10' | 'manipulatives' | 'graph' | 'chart';
+  id: 'clock' | 'fraction' | 'numberLine' | 'base10' | 'manipulatives' | 'multiplicationChart' | 'graph' | 'chart';
   label: string;
   keywords?: string[];
 }
@@ -121,6 +121,7 @@ export const MATH_TOOLS: MathToolEntry[] = [
   { id: 'numberLine', label: 'Number Line', keywords: ['line'] },
   { id: 'base10', label: 'Base-10', keywords: ['blocks', 'place value'] },
   { id: 'manipulatives', label: 'Manipulatives', keywords: ['array', 'grid'] },
+  { id: 'multiplicationChart', label: 'Multiplication chart', keywords: ['times', 'times table', 'product', 'multiply'] },
   { id: 'graph', label: 'Graphs', keywords: ['equation', 'function', 'plot'] },
   { id: 'chart', label: 'Charts (data)', keywords: ['bar', 'data', 'table'] },
 ];
