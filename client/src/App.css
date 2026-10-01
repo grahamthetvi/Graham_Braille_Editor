@@ -2186,4 +2186,84 @@ label.stl-export-field {
   color: var(--accent);
 }
 
+.word-doc-modal {
+  max-width: 52rem;
+}
+
+.word-doc-body {
+  gap: 0.85rem;
+}
+
+.word-doc-note,
+.word-doc-status,
+.word-doc-error-lead {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.word-doc-note,
+.word-doc-status {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.word-doc-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.word-doc-code {
+  width: 100%;
+  min-height: 16rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  padding: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.word-doc-code:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.word-doc-actions,
+.word-doc-file-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.word-doc-error-lead {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.word-doc-error {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 12rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.6rem;
+}
+
+.word-doc-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 
