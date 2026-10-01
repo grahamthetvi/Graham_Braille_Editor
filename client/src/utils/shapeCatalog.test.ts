@@ -28,6 +28,9 @@ describe('shapeCatalog', () => {
     const fraction = searchGraphicsCatalog('fraction');
     expect(fraction.some(h => h.kind === 'mathTool' && h.tool.id === 'fraction')).toBe(true);
 
+    const times = searchGraphicsCatalog('times table');
+    expect(times.some(h => h.kind === 'mathTool' && h.tool.id === 'multiplicationChart')).toBe(true);
+
     expect(searchGraphicsCatalog('axe')).toEqual([]);
     expect(searchGraphicsCatalog('axes').some(h => h.kind === 'mathQuickShape' && h.shape.kind === 'coordinateAxes')).toBe(true);
   });
