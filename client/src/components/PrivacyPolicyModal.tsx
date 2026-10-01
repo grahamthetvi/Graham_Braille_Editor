@@ -67,6 +67,7 @@ export function PrivacyPolicyModal({ onClose }: PrivacyPolicyModalProps) {
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.embosserBridge')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.emailBrf')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.inboxFolder')}</li>
+                <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.wordFromPython')}</li>
                 <li style={{ marginBottom: '1rem' }}>{t('privacy.tldr.noTracking')}</li>
               </ul>
 
@@ -89,6 +90,7 @@ export function PrivacyPolicyModal({ onClose }: PrivacyPolicyModalProps) {
 
                   <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>{t('privacy.fullPolicy.section2.heading')}</h4>
                   <p>{t('privacy.fullPolicy.section2.body')}</p>
+                  <p style={{ marginTop: '0.75rem' }}>{t('privacy.fullPolicy.wordFromPython')}</p>
 
                   <h4 style={{ marginTop: '1.5rem', marginBottom: '0.5rem' }}>{t('privacy.fullPolicy.section3.heading')}</h4>
                   <p>{t('privacy.fullPolicy.section3.lead')}</p>

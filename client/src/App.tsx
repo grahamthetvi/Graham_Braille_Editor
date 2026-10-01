@@ -26,6 +26,7 @@ import { RestoreModal } from './components/RestoreModal';
 import { PerkinsViewer } from './components/PerkinsViewer';
 import type { BrailleCellVariant } from './components/BrailleCell';
 import { AlphabetGeneratorModal } from './components/AlphabetGeneratorModal';
+import { WordDocGeneratorModal } from './components/WordDocGeneratorModal';
 import { TableEditorModal } from './components/TableEditorModal';
 import { MusicBrailleGuideModal } from './components/MusicBrailleGuideModal';
 import { MusicBrailleAuditModal } from './components/MusicBrailleAuditModal';
@@ -224,6 +225,7 @@ export default function App() {
   const [graphicsInitialSection, setGraphicsInitialSection] =
     useState<GraphicsSection>('math');
   const [showAlphabetGenerator, setShowAlphabetGenerator] = useState(false);
+  const [showWordDocGenerator, setShowWordDocGenerator] = useState(false);
   const [showTableEditor, setShowTableEditor] = useState(false);
   const [hasSeenMusicGuide, setHasSeenMusicGuide] = useState(
     () => !!localStorage.getItem('graham-braille-music-guide-seen')
@@ -1737,6 +1739,16 @@ export default function App() {
                   {t('app.tools.uebMathHint')}
                 </span>
                 <button
+                  className={`toolbar-btn${showWordDocGenerator ? ' toolbar-btn--active' : ''}`}
+                  onClick={() => setShowWordDocGenerator((open) => !open)}
+                  title={t('app.tools.wordDoc.title')}
+                  aria-label={t('app.tools.wordDoc.ariaLabel')}
+                  aria-expanded={showWordDocGenerator}
+                >
+                  {t('app.tools.wordDoc.label')}
+                </button>
+
+                <button
                   className="toolbar-btn"
                   id="ai-prompt-btn"
                   onClick={() => {
@@ -2361,6 +2373,27 @@ export default function App() {
             setShowAlphabetGenerator(false);
           }}
           onClose={() => setShowAlphabetGenerator(false)}
+        />
+      )}
+
+      {showWordDocGenerator && (
+        <WordDocGeneratorModal
+          onInsertText={(text) => {
+            setShowWordDocGenerator(false);
+            void (async () => {
+              await waitForFlag(() => workerReadyRef.current, 20000);
+              setLiterarySourceMode('none');
+              importedBrailleRef.current = '';
+              setShowBackTranslatedEditModal(false);
+              setIsMusicBrailleMode(false);
+              setInputText(text);
+              setFileContent(text);
+              setImportError(null);
+              announceStatus(t('app.file.import.success'));
+              translate(text, selectedTable, mathCode, pageSettings.cellsPerRow);
+            })();
+          }}
+          onClose={() => setShowWordDocGenerator(false)}
         />
       )}
 

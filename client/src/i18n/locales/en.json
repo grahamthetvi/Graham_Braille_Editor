@@ -188,6 +188,11 @@
         "ariaLabel": "Download grading print layout text file"
       },
       "uebMathHint": "UEB Math is standard and $$math$$ is Nemeth.",
+      "wordDoc": {
+        "label": "Word from Python",
+        "title": "Generate a Word .docx from Python (python-docx), including a script written by Gemini",
+        "ariaLabel": "Open Word document from Python"
+      },
       "copyAiPrompt": {
         "label": "Copy AI Prompt",
         "title": "Copy prompt for AI to format math",
@@ -620,6 +625,7 @@
       "embosserBridge": "Embosser Bridge: If you use our local printing bridge application, your files are transmitted directly to your local embosser over your own computer/network, not over the internet. Optional Share mode accepts print jobs from other Graham Bridges on your LAN that know your share code—still with no cloud relay.",
       "emailBrf": "Email BRF: If you use Email BRF, Graham downloads the .brf to your computer and opens Gmail compose in your browser. Graham does not send the email, attach the file, or upload the document. You attach and send from your own Gmail account.",
       "inboxFolder": "Inbox folder: Optional Bridge inbox printing reads .brf files from a folder on the embosser computer (often filled by rclone or Drive for desktop). Graham does not access Google Drive; your school’s account and tools do.",
+      "wordFromPython": "Word from Python: Optional. The first use downloads a Python engine and the python-docx library. The script you paste and the Word file it creates stay in your browser and are not uploaded.",
       "noTracking": "No Tracking: We do not use analytics, trackers, or advertising cookies. What you do in the editor is entirely your business."
     },
     "readFullPolicy": "Read Comprehensive Privacy Policy",
@@ -638,6 +644,7 @@
         "heading": "2. How Your Data is Processed (Client-Side Only)",
         "body": "All core functionality of the Graham Braille Editor happens directly inside your web browser. When you type text, translate it to braille, or generate a 3D printable STL file, the computation is performed entirely by your device's processor using web technologies. Because the processing is local, your documents never leave your computer."
       },
+      "wordFromPython": "Word from Python runs the script you paste inside your browser. The first run downloads Pyodide and python-docx from a public content network so the library can build the file. Graham does not receive the script or the Word document.",
       "section3": {
         "heading": "3. Local Storage",
         "lead": "To provide a seamless experience, we save certain data locally on your device using your browser's standard localStorage and IndexedDB capabilities. This includes:",
@@ -1423,5 +1430,42 @@
       "valuesHeading": "Values (x, y):",
       "valueRow": "  $${{x}}: {{y}}$$"
     }
+  },
+  "wordDocGenerator": {
+    "ariaLabel": "Word document from Python",
+    "title": "Word document from Python",
+    "close": "Close",
+    "intro": "Gemini can write Python for a Word file, but the chat cannot attach the .docx. Paste that Python here. Graham runs it in your browser with python-docx and downloads the Word document.",
+    "privacyNote": "The first run downloads the Python engine and python-docx. Your script and the document stay on this device and are not uploaded. The script cannot use the network.",
+    "codeLabel": "Python script",
+    "example": "Load example",
+    "copyPrompt": "Copy Gemini prompt",
+    "copied": "Copied",
+    "generate": "Generate Word document",
+    "generating": "Generating…",
+    "downloadAgain": "Download {{name}}",
+    "openInEditor": "Open text in editor",
+    "openInEditorHint": "Formatting stays in the Word file. The editor receives the readable text so you can translate it to braille.",
+    "outputLabel": "Script output",
+    "status": {
+      "loadingRuntime": "Downloading the Python engine (first run only)…",
+      "installingLibrary": "Installing python-docx…",
+      "running": "Running your script…",
+      "success": "Saved {{name}}.",
+      "successMany": "Saved {{count}} Word documents."
+    },
+    "errors": {
+      "empty": "Paste a Python script first.",
+      "tooLong": "That script is longer than {{limit}} characters.",
+      "noDocx": "The script finished without saving a .docx file. End it with doc.save(\"document.docx\").",
+      "outputTooLarge": "The Word file is larger than {{limitMb}} MB.",
+      "timeout": "The script took too long and was stopped.",
+      "loadFailed": "Could not download the Python engine. Check your connection and try again.",
+      "generic": "Could not build the Word document.",
+      "script": "The script raised an error.",
+      "importEmpty": "The Word file was created, but it has no text to place in the editor. Download the .docx instead.",
+      "importFailed": "The Word file was created, but its text could not be opened in the editor. Download the .docx instead."
+    },
+    "geminiPrompt": "Write a single Python script that creates a Microsoft Word document with the python-docx library.\n\nRequirements:\n- Use `from docx import Document` and create the file with `doc = Document()`.\n- Use headings, paragraphs, tables, and formatting as needed.\n- Save the file with doc.save(\"document.docx\").\n- Reply with only the Python source. No explanation and no markdown code fences.\n- Do not use the network, and do not read or write any file except that .docx.\n\nDocument to create:\n[describe the document here]"
   }
 }
