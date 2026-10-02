@@ -1,0 +1,18 @@
+---
+description: Use Sonnet 5.5 instead of Sonnet 4.5 for subagents
+alwaysApply: true
+---
+
+# Subagent model: Sonnet 5.5, not Sonnet 4.5
+
+When launching a subagent, if you would choose Sonnet 4.5, use Sonnet 5.5 instead.
+
+Do not pass a Sonnet 4.5 model slug (for example `claude-sonnet-4-5`, `claude-sonnet-4-5-thinking`, or any `claude-sonnet-4-5-*` effort level). Pass the matching Sonnet 5.5 slug:
+
+- default, or high: `claude-sonnet-5-5-high`
+- low: `claude-sonnet-5-5-low`
+- medium: `claude-sonnet-5-5-medium`
+- max: `claude-sonnet-5-5-max`
+- xhigh: `claude-sonnet-5-5-xhigh`
+
+This applies only when the intended model is Sonnet 4.5. Leave other model choices unchanged, including `inherit` when no specific model was requested.
