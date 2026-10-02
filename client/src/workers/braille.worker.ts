@@ -346,6 +346,17 @@ interface TextWithPositions {
   outputPos: number[];
 }
 
+/** Print line with no letters: Enter, spaces, or a leftover CR / soft break. */
+function isBlankSourceLine(line: string): boolean {
+  const { rest } = parseParagraphIndentPrefix(line);
+  for (const ch of rest) {
+    if (ch !== ' ' && ch !== '\t' && ch !== '\r' && ch !== '\u2028' && ch !== '\u00a0') {
+      return false;
+    }
+  }
+  return true;
+}
+
 function translateLineWithTypeform(
   line: string,
   table: string,
@@ -392,7 +403,9 @@ function translateTextWithPositions(text: string, table: string): TextWithPositi
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
 
-    if (!line) {
+    // A row of spaces, or a CR-only row from CRLF, is a blank line. Translating
+    // it to a single space lets literary 3-5 wrapping delete the row.
+    if (isBlankSourceLine(line)) {
       resultLines.push('');
     } else {
       const { output, outputPos: linePos } = translateLineWithTypeform(line, table);

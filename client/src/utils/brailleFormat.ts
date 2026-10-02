@@ -761,6 +761,7 @@ export function wrapBrailleLineWithParagraphStarts(
   space: string,
   hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
+  if (isBlankBrailleLine(line)) return [''];
   const cells = Math.max(1, cellsPerRow);
   const firstCell = clampParagraphCell(firstLineStartCell, cells);
   const runCell = clampParagraphCell(runoverStartCell, cells);
@@ -834,6 +835,7 @@ function wrapBrailleLine(
   space: string,
   hyphenateWord?: HyphenateAsciiWord,
 ): string[] {
+  if (isBlankBrailleLine(line)) return [''];
   const words = line.split(space);
   const result: string[] = [];
   let current = '';
@@ -896,10 +898,35 @@ function toBrailleNumber(num: number): string {
   return chars;
 }
 
-/** Count consecutive `\n` characters at the end of a string. */
-function countTrailingNewlines(text: string): number {
+/**
+ * A braille row with no dots: empty, or only ordinary / braille / soft-break spaces.
+ * Literary paragraph wrapping must keep these as their own row. Dropping them is
+ * what made Enter (and a line of spaces) disappear from the preview.
+ */
+function isBlankBrailleLine(line: string): boolean {
+  for (const ch of line) {
+    if (
+      ch !== ' ' &&
+      ch !== '\t' &&
+      ch !== '\r' &&
+      ch !== '\u00a0' &&
+      ch !== '\u2028' &&
+      ch !== '\u2800'
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Trailing source rows that are blank, including a final whitespace-only line. */
+function countTrailingBlankSourceLines(text: string): number {
+  const lines = text.split('\n');
   let count = 0;
-  for (let i = text.length - 1; i >= 0 && text[i] === '\n'; i--) count++;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (!isBlankBrailleLine(lines[i])) break;
+    count++;
+  }
   return count;
 }
 
@@ -908,7 +935,7 @@ function countTrailingNewlines(text: string): number {
  * Keeps Enter-created blank lines while still trimming spurious padding.
  */
 function trimTrailingBlankLines(lines: string[], sourceText: string): void {
-  const preserve = countTrailingNewlines(sourceText);
+  const preserve = countTrailingBlankSourceLines(sourceText);
   let trailingBlanks = 0;
   for (let i = lines.length - 1; i >= 0 && lines[i] === ''; i--) trailingBlanks++;
   const remove = Math.max(0, trailingBlanks - preserve);
@@ -961,8 +988,8 @@ function formatBrfPagesSegment(
     line = lineIndent.rest;
     const useLineStarts = lineFirst > 1 || lineRun > 1 || useParagraphStarts;
 
-    if (line.length === 0) {
-      wrappedLines.push(''); // preserve blank lines (e.g. from Enter key presses)
+    if (isBlankBrailleLine(line)) {
+      wrappedLines.push(''); // preserve blank lines (Enter, or a row of spaces)
     } else if (useLineStarts) {
       wrappedLines.push(
         ...wrapBrailleLineWithParagraphStarts(line, cells, lineFirst, lineRun, BRAILLE_SPACE, hyphenateWord),
@@ -1581,15 +1608,15 @@ function formatBrfForOutputSegment(
       continue;
     }
 
-    if (!line) {
-      wrapped.push('');
-      continue;
-    }
     const lineIndent = parseParagraphIndentBrfPrefix(line);
     const lineFirst = lineIndent.indent?.firstLineStartCell ?? firstStart;
     const lineRun = lineIndent.indent?.runoverStartCell ?? runStart;
     line = lineIndent.rest;
     const useLineStarts = lineFirst > 1 || lineRun > 1 || useParagraphStarts;
+    if (isBlankBrailleLine(line)) {
+      wrapped.push('');
+      continue;
+    }
     if (useLineStarts) {
       wrapped.push(...wrapBrailleLineWithParagraphStarts(line, cells, lineFirst, lineRun, ' ', hyphenateWord));
     } else if (line.length <= cells) {

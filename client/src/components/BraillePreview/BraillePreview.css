@@ -9,6 +9,16 @@
   min-height: var(--braille-cell-height, 22px);
 }
 
+/* Empty cells on a blank row have to read on white as well as on dark. */
+.brf-page-line--blank .braille-dot--inactive {
+  opacity: 0.72;
+}
+
+[data-theme="light"] .brf-page-line--blank .braille-dot--inactive {
+  opacity: 0.9;
+  background-color: #424a53;
+}
+
 /* Fast path: one Unicode braille glyph per cell (no per-dot paint). */
 .braille-cell--unicode {
   display: inline-flex;

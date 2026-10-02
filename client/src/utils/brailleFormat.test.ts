@@ -61,6 +61,28 @@ describe('formatBrfPages', () => {
     const pages = formatBrfPages(unicode, 40, 25, false);
     expect(pages[0].split('\n')).toEqual([asciiToUnicodeBraille('hello')]);
   });
+
+  it('keeps a row of spaces as a blank line when literary margins are on', () => {
+    const unicode = asciiToUnicodeBraille('hello\n   \nworld');
+    const pages = formatBrfPages(unicode, 40, 25, false, {
+      firstLineStartCell: 3,
+      runoverStartCell: 5,
+    });
+    const lines = pages[0].split('\n');
+    expect(lines.filter((line) => line === '')).toHaveLength(1);
+    expect(lines[0].length).toBeGreaterThan(0);
+    expect(lines.at(-1)?.length).toBeGreaterThan(0);
+  });
+
+  it('keeps two Enter blank lines under literary 3-5 margins', () => {
+    const unicode = asciiToUnicodeBraille('waffles\n\n\nquestions');
+    const pages = formatBrfPages(unicode, 40, 25, false, {
+      firstLineStartCell: 3,
+      runoverStartCell: 5,
+    });
+    const lines = pages[0].split('\n');
+    expect(lines.map((line) => line === '')).toEqual([false, true, true, false]);
+  });
 });
 
 describe('buildPlainTextToMatchBrailleWrap', () => {
@@ -111,6 +133,17 @@ describe('buildPlainTextToMatchBrailleWrap', () => {
 });
 
 describe('formatBrfForOutput', () => {
+  it('keeps a whitespace row under literary margins in the embosser file', () => {
+    const result = formatBrfForOutput('hello\n   \nworld', 40, 25, false, {
+      firstLineStartCell: 3,
+      runoverStartCell: 5,
+    });
+    const lines = result.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n');
+    expect(lines.filter((line) => line === '')).toHaveLength(1);
+    expect(lines[0].startsWith('  ')).toBe(true);
+    expect(lines.at(-1)?.trim().length).toBeGreaterThan(0);
+  });
+
   it('replaces all pipe characters with backslashes', () => {
     const rawBrf = 'j|rney |r way';
     const result = formatBrfForOutput(rawBrf, 40, 25, false);
