@@ -15,6 +15,8 @@ interface EditorProps {
   value?: string;
   /** Number of characters at which text wraps; also draws a column ruler. */
   cellsPerRow?: number;
+  /** Glyph size. Narrow viewports pass a smaller size so one row fits. */
+  fontSize?: number;
   /** Callback fired when the editor is scrolled by the user, passing the percentage [0, 1] */
   onScrollPercentageChange?: (percentage: number) => void;
   /** Externally controlled scroll percentage, [0, 1] */
@@ -94,6 +96,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   monacoTheme = 'vs-dark',
   value,
   cellsPerRow = 40,
+  fontSize = 16,
   onScrollPercentageChange,
   scrollPercentage,
   onSelectionChange,
@@ -294,8 +297,9 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
       wordWrapColumn: cellsPerRow,
       rulers: [cellsPerRow],
       minimap: { enabled: false },
-      fontSize: 16,
-      lineHeight: 24,
+      fontSize,
+      lineNumbersMinChars: fontSize < 16 ? 3 : 5,
+      lineHeight: Math.round(fontSize * 1.5),
       lineNumbers: 'on',
       scrollBeyondLastLine: false,
       automaticLayout: true,
@@ -433,11 +437,17 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
 
   // Keep ruler aligned with page width (visual guide only; soft breaks use \\r between wrapped rows).
   useEffect(() => {
-    editorRef.current?.updateOptions({
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.updateOptions({
       wordWrapColumn: cellsPerRow,
       rulers: [cellsPerRow],
+      fontSize,
+      lineNumbersMinChars: fontSize < 16 ? 3 : 5,
+      lineHeight: Math.round(fontSize * 1.5),
     });
-  }, [cellsPerRow]);
+    editor.setScrollLeft(0);
+  }, [cellsPerRow, fontSize]);
 
   // Toggle read-only without recreating the editor
   useEffect(() => {
@@ -542,7 +552,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(({
   return (
     <div
       ref={containerRef}
-      style={{ width: '100%', height: '100%', minHeight: '400px' }}
+      style={{ width: '100%', flex: 1, minHeight: 0, height: '100%' }}
     />
   );
 });

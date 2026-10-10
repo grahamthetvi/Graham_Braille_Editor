@@ -2266,4 +2266,161 @@ label.stl-export-field {
   list-style: none;
 }
 
+/* ── Narrow viewport (phones, portrait tablets, narrow windows) ─────────────
+   Keep the 820px breakpoint in sync with COMPACT_VIEWPORT_QUERY in utils/os.ts.
+   The header stops sharing a row with the tabs, and the editor and preview
+   stack so each line can use the full width. */
+
+.compact-pane-switch {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.35rem 0.6rem 0.4rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.compact-pane-switch__btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 0.32rem 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.compact-pane-switch__btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.compact-pane-switch__btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.compact-pane-switch__btn--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+@media (max-width: 820px) {
+  .app-header {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.3rem;
+    padding: 0.35rem 0.6rem 0.4rem;
+    padding-inline: max(0.6rem, env(safe-area-inset-left)) max(0.6rem, env(safe-area-inset-right));
+  }
+
+  .subtitle {
+    display: none;
+  }
+
+  .app-header h1 {
+    font-size: 1.05rem;
+  }
+
+  .toolbar-container {
+    flex: none;
+    width: 100%;
+    gap: 0.15rem;
+  }
+
+  .tab-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    gap: 0.1rem;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    white-space: nowrap;
+    flex: 0 0 auto;
+    padding: 0.4rem 0.7rem 0.45rem;
+  }
+
+  .tab-content {
+    min-height: 0;
+  }
+
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    padding-bottom: 0.1rem;
+  }
+
+  .toolbar-btn,
+  .theme-toggle {
+    padding: 0.4rem 0.7rem;
+  }
+
+  .table-select,
+  .language-select {
+    min-width: 11rem;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
+  .app-main {
+    flex-direction: column;
+  }
+
+  .editor-pane {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0.35rem 0.5rem 0.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .side-pane {
+    flex: 1 1 0;
+    min-height: 0;
+    border-inline-start: none;
+  }
+
+  .app-main[data-compact-pane='text'] .side-pane,
+  .app-main[data-compact-pane='preview'] .editor-pane {
+    display: none;
+  }
+
+  .app-main[data-compact-pane='text'] .editor-pane,
+  .app-main[data-compact-pane='preview'] .side-pane {
+    border-bottom: none;
+  }
+
+  .brf-preview {
+    padding: 0.35rem 0.5rem 0;
+  }
+
+  .pane-title-row {
+    margin-bottom: 0.3rem;
+  }
+
+  .brf-page {
+    padding: 1.15rem 0.35rem 0;
+  }
+
+  .brf-page-number {
+    top: 0.1rem;
+    line-height: 1rem;
+  }
+
+  .status-bar {
+    gap: 0.75rem;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0.25rem 0.6rem;
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom));
+    padding-inline: max(0.6rem, env(safe-area-inset-left)) max(0.6rem, env(safe-area-inset-right));
+  }
+}
+
 

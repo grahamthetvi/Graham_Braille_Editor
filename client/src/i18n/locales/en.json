@@ -5,6 +5,12 @@
       "subtitle": "Braille Editing & Embossing Suite",
       "skipLink": "Skip to main content"
     },
+    "compact": {
+      "paneSwitchLabel": "Choose how much of the screen the editor and preview use",
+      "text": "Text",
+      "both": "Both",
+      "preview": "Preview"
+    },
     "tabs": {
       "file": "File",
       "view": "View & Layout",
@@ -415,7 +421,8 @@
         "displaySize": {
           "label": "Display size",
           "ariaLabel": "Braille display cell size slider",
-          "valueSuffix": "{{px}}px"
+          "valueSuffix": "{{px}}px",
+          "fittedHint": "Scaled to {{px}}px so a full row fits this screen. Your {{preferred}}px size returns on a wider window."
         },
         "showEmptyDots": {
           "label": "Show empty dots",

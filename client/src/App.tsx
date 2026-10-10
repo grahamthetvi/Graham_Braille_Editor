@@ -77,7 +77,8 @@ import {
   type ContentKind,
 } from './utils/brfIntake';
 import { TABLE_GROUPS, DEFAULT_TABLE, migrateTableFilename, isKnownTable, getGrade2TableFor } from './utils/tableRegistry';
-import { canUseWebUSB } from './utils/os';
+import { useCompactViewport } from './hooks/useCompactViewport';
+import { canUseWebUSB, fittedBrailleDisplaySize, fittedEditorFontSize } from './utils/os';
 import {
   createHyphenator,
   hyphenDictionaryForTable,
@@ -126,6 +127,8 @@ import './App.css';
  *   • MP3 synthesizes speech in the browser (Kitten default; eSpeak NG / Piper optional).
  *   • Export STL builds a paginated Unicode layout into binary STL (BANA midpoint spacing, mm) in a Web Worker.
  *   • PrintPanel sends BRF to the optional local Go bridge for embosser printing.
+ *   • Narrow viewports (see isCompactViewport) compact the header, stack the
+ *     editor and preview, and scale the braille row so more of each line is visible.
  *   • Theme toggle cycles dark → light → high-contrast, persisted to localStorage.
  *   • Page layout settings (cells, lines, paper format, ViewPlus padding) persist to localStorage.
  */
@@ -236,6 +239,8 @@ export default function App() {
   const [showGradingPrintLayoutDialog, setShowGradingPrintLayoutDialog] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(hasSeenWelcome && !hasSeenPrivacyPolicy);
   const [activeTab, setActiveTab] = useState<'file' | 'view' | 'languages-codes' | 'graphics' | 'tools' | 'help'>('file');
+  const compactViewport = useCompactViewport();
+  const [compactPane, setCompactPane] = useState<'text' | 'both' | 'preview'>('both');
   const editorRef = useRef<EditorHandle>(null);
 
   const { isSecondaryInstance, isChecking } = useActiveInstances();
@@ -1346,8 +1351,19 @@ export default function App() {
     pageSettings.paragraphRunoverStartCell,
   ]);
 
+  const previewBrailleSize = compactViewport.compact
+    ? fittedBrailleDisplaySize(
+        brailleSize,
+        compactViewport.width,
+        pageSettings.cellsPerRow,
+      )
+    : brailleSize;
+  const editorFontSize = compactViewport.compact
+    ? fittedEditorFontSize(compactViewport.width, pageSettings.cellsPerRow)
+    : 16;
+
   return (
-    <div className="app-layout">
+    <div className="app-layout" data-viewport={compactViewport.compact ? 'compact' : 'wide'}>
       {/* Skip navigation link for keyboard and screen reader users */}
       <a className="skip-link" href="#main-content">{t('app.brand.skipLink')}</a>
 
@@ -1870,10 +1886,46 @@ export default function App() {
         )}
       </header>
 
+      {compactViewport.compact && (
+        <div
+          className="compact-pane-switch"
+          role="tablist"
+          aria-label={t('app.compact.paneSwitchLabel')}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={compactPane === 'text'}
+            className={`compact-pane-switch__btn${compactPane === 'text' ? ' compact-pane-switch__btn--active' : ''}`}
+            onClick={() => setCompactPane('text')}
+          >
+            {t('app.compact.text')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={compactPane === 'both'}
+            className={`compact-pane-switch__btn${compactPane === 'both' ? ' compact-pane-switch__btn--active' : ''}`}
+            onClick={() => setCompactPane('both')}
+          >
+            {t('app.compact.both')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={compactPane === 'preview'}
+            className={`compact-pane-switch__btn${compactPane === 'preview' ? ' compact-pane-switch__btn--active' : ''}`}
+            onClick={() => setCompactPane('preview')}
+          >
+            {t('app.compact.preview')}
+          </button>
+        </div>
+      )}
+
       {/* ── Main two-pane layout ─────────────────────────────────────────── */}
-      <main id="main-content" className="app-main">
+      <main id="main-content" className="app-main" data-compact-pane={compactPane}>
         {/* Left pane: text editor */}
-        <section className="editor-pane" style={{ display: 'flex', flexDirection: 'column' }}>
+        <section className="editor-pane">
           <div className="pane-title-row">
             <div className="pane-title" style={{ margin: 0 }}>
               {t('app.panes.textInput.title')}
@@ -1916,6 +1968,7 @@ export default function App() {
               readOnly={literarySourceMode === 'importedLocked'}
               onAttemptEdit={handleAttemptEditWhileLocked}
               sixKeyInput={literarySourceMode === 'brailleEditing'}
+              fontSize={editorFontSize}
             />
           </div>
         </section>
@@ -2204,8 +2257,16 @@ export default function App() {
                         onChange={(e) => setBrailleSize(parseInt(e.target.value, 10))}
                         aria-label={t('app.layoutSettings.brailleDisplay.displaySize.ariaLabel')}
                       />
-                      <span className="settings-value-label">{t('app.layoutSettings.brailleDisplay.displaySize.valueSuffix', { px: brailleSize })}</span>
+                      <span className="settings-value-label">{t('app.layoutSettings.brailleDisplay.displaySize.valueSuffix', { px: previewBrailleSize })}</span>
                     </label>
+                    {previewBrailleSize < brailleSize && (
+                      <p className="settings-hint">
+                        {t('app.layoutSettings.brailleDisplay.displaySize.fittedHint', {
+                          px: previewBrailleSize,
+                          preferred: brailleSize,
+                        })}
+                      </p>
+                    )}
                     <label className="settings-field">
                       <input
                         type="checkbox"
@@ -2293,7 +2354,7 @@ export default function App() {
                 <MusicBraillePreview
                   ref={musicPreviewRef}
                   lines={musicPreviewLines}
-                  brailleSize={brailleSize}
+                  brailleSize={previewBrailleSize}
                   inactiveDotSize={inactiveDotSize}
                   showEmptyDots={showEmptyDots}
                   cellVariant={brailleCellVariant}
@@ -2307,7 +2368,7 @@ export default function App() {
                 <BraillePreviewPages
                   ref={brfPagesRef}
                   pages={brfPages}
-                  brailleSize={brailleSize}
+                  brailleSize={previewBrailleSize}
                   inactiveDotSize={inactiveDotSize}
                   showEmptyDots={showEmptyDots}
                   cellVariant={brailleCellVariant}
