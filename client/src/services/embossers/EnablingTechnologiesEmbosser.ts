@@ -1,4 +1,4 @@
-import type { Embosser, EmbossingAttributeSet, Rectangle } from './Embosser';
+import type { Embosser, Rectangle } from './Embosser';
 
 const Duplex = {
     INTERPOINT: 64, // '@'
@@ -38,7 +38,7 @@ export class EnablingTechnologiesEmbosser implements Embosser {
         return 64 + value;
     }
 
-    generateBytes(brf: string, _attributes: EmbossingAttributeSet): Uint8Array {
+    generateBytes(brf: string): Uint8Array {
         const encoder = new TextEncoder();
         const brfBytes = encoder.encode(brf.replace(/\|/g, '\\'));
 
