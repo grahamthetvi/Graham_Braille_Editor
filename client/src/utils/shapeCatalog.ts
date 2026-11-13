@@ -41,6 +41,13 @@ export const SHAPE_CATALOG: ShapeCatalogEntry[] = [
   { kind: 'thermometer', label: 'Thermometer', shortLabel: 'Therm.', category: 'science', keywords: ['temperature', 'weather'] },
   { kind: 'beaker', label: 'Lab Beaker', shortLabel: 'Beaker', category: 'science', keywords: ['lab', 'flask', 'chemistry'] },
   { kind: 'microscope', label: 'Microscope', shortLabel: 'Micro.', category: 'science', keywords: ['lab'] },
+  // Mitosis / cell cycle (in order)
+  { kind: 'interphase', label: 'Interphase (Mitosis)', shortLabel: 'Interph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'nucleus', 'chromatin'] },
+  { kind: 'prophase', label: 'Prophase (Mitosis)', shortLabel: 'Prophase', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'] },
+  { kind: 'metaphase', label: 'Metaphase (Mitosis)', shortLabel: 'Metaph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'] },
+  { kind: 'anaphase', label: 'Anaphase (Mitosis)', shortLabel: 'Anaph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'] },
+  { kind: 'telophase', label: 'Telophase (Mitosis)', shortLabel: 'Teloph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'nuclear membrane'] },
+  { kind: 'cytokinesis', label: 'Cytokinesis (Mitosis)', shortLabel: 'Cytokin.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'daughter cells'] },
 
   // History
   { kind: 'pyramid', label: 'Pyramid', shortLabel: 'Pyramid', category: 'history', keywords: ['egypt'] },

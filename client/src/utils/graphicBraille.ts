@@ -2653,6 +2653,237 @@ export class GraphicCanvas extends GridCanvas {
     this.drawLine(cx - radius * 0.35, cy + radius * 0.15, cx - radius * 0.35, cy + radius * 0.75);
   }
 
+  // ── Mitosis / cell-cycle stages (life science) ──
+  // In every stage the cell membrane and nucleus stay outlines so the interior remains readable by
+  // touch; `filled` only makes the chromosomes and centrosomes solid.
+
+  /** Outline of an ellipse; samples for which `skip` returns true are left open (used for the telophase pinch). */
+  private strokeEllipseOutline(
+    cx: number,
+    cy: number,
+    a: number,
+    b: number,
+    skip?: (x: number, y: number) => boolean,
+  ) {
+    const steps = Math.max(48, Math.ceil(Math.max(a, b) * 6));
+    let prev: { x: number; y: number; ok: boolean } | null = null;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      const x = cx + a * Math.cos(t);
+      const y = cy + b * Math.sin(t);
+      const ok = !skip || !skip(x, y);
+      if (prev && prev.ok && ok) this.drawLine(prev.x, prev.y, x, y);
+      prev = { x, y, ok };
+    }
+  }
+
+  /** Duplicated chromosome: two crossed sister chromatids (an X) with the centromere at the crossing. */
+  private drawChromosomeX(x: number, y: number, half: number, rot: number, filled: boolean) {
+    const spread = 0.62;
+    for (const s of [-1, 1]) {
+      const ang = rot + s * spread;
+      const dx = Math.cos(ang) * half;
+      const dy = Math.sin(ang) * half;
+      this.drawLine(x - dx, y - dy, x + dx, y + dy);
+      if (filled) {
+        // Second parallel stroke so the chromatid is a solid bar.
+        const px = -Math.sin(ang);
+        const py = Math.cos(ang);
+        this.drawLine(x - dx + px, y - dy + py, x + dx + px, y + dy + py);
+      }
+    }
+    if (filled) this.fillDisc(Math.round(x), Math.round(y), 1);
+    else this.setPoint(Math.round(x), Math.round(y));
+  }
+
+  /** Single chromatid (telophase): a short rod with a centromere dot. */
+  private drawChromatidRod(x: number, y: number, half: number, rot: number, filled: boolean) {
+    const dx = Math.cos(rot) * half;
+    const dy = Math.sin(rot) * half;
+    this.drawLine(x - dx, y - dy, x + dx, y + dy);
+    if (filled) this.drawLine(x - dx - dy / half, y - dy + dx / half, x + dx - dy / half, y + dy + dx / half);
+    this.setPoint(Math.round(x), Math.round(y));
+  }
+
+  /** Chromatid being pulled to a pole (anaphase): a V whose tip leads toward the pole (`dir` +1 = right, -1 = left). */
+  private drawChromatidV(tipX: number, tipY: number, len: number, dir: number, filled: boolean) {
+    const back = dir > 0 ? Math.PI : 0;
+    const spread = 0.55;
+    const e1 = { x: tipX + Math.cos(back + spread) * len, y: tipY + Math.sin(back + spread) * len };
+    const e2 = { x: tipX + Math.cos(back - spread) * len, y: tipY + Math.sin(back - spread) * len };
+    if (filled) {
+      this.strokeClosedPoly([{ x: tipX, y: tipY }, e1, e2], true);
+    } else {
+      this.drawLine(tipX, tipY, e1.x, e1.y);
+      this.drawLine(tipX, tipY, e2.x, e2.y);
+    }
+  }
+
+  /** Centrosome: a small solid dot, optionally with short aster rays fanning toward `outward` (radians). */
+  private drawCentrosome(x: number, y: number, radius: number, outward: number, rays: boolean) {
+    // Dot with rays can be larger; a bare dot stays small so it never fuses with a nearby membrane.
+    this.fillDisc(Math.round(x), Math.round(y), Math.max(1, Math.round(radius * (rays ? 0.07 : 0.045))));
+    if (!rays) return;
+    for (let k = -2; k <= 2; k++) {
+      const ang = outward + k * 0.5;
+      this.drawLine(
+        x + Math.cos(ang) * radius * 0.09,
+        y + Math.sin(ang) * radius * 0.09,
+        x + Math.cos(ang) * radius * 0.15,
+        y + Math.sin(ang) * radius * 0.15,
+      );
+    }
+  }
+
+  /** Spindle fibre between two points, bowed by `bow` (perpendicular offset at the midpoint). */
+  private drawSpindleFibre(ax: number, ay: number, bx: number, by: number, bow: number) {
+    const qx = (ax + bx) / 2;
+    const qy = (ay + by) / 2 + bow * 2;
+    const steps = Math.max(12, Math.ceil(Math.hypot(bx - ax, by - ay)));
+    let p = { x: ax, y: ay };
+    for (let i = 1; i <= steps; i++) {
+      const n = quadPoint(i / steps, ax, ay, qx, qy, bx, by);
+      this.drawLine(p.x, p.y, n.x, n.y);
+      p = n;
+    }
+  }
+
+  /** Loose, tangled chromatin (interphase / cytokinesis) kept inside a nucleus of radius R. */
+  private drawChromatinTangle(cx: number, cy: number, R: number, phase: number, filled: boolean) {
+    const steps = Math.max(72, Math.ceil(R * 12));
+    let prev: { x: number; y: number } | null = null;
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * 2 * Math.PI;
+      let ux = 0.62 * Math.sin(3 * t + phase) + 0.38 * Math.sin(5 * t + 1.3 * phase);
+      let uy = 0.62 * Math.cos(2 * t + phase) + 0.38 * Math.cos(7 * t);
+      const m = Math.hypot(ux, uy);
+      if (m > 1) {
+        ux /= m;
+        uy /= m;
+      }
+      const x = cx + ux * R * 0.82;
+      const y = cy + uy * R * 0.82;
+      if (prev) {
+        this.drawLine(prev.x, prev.y, x, y);
+        if (filled) this.drawLine(prev.x + 1, prev.y, x + 1, y);
+      }
+      prev = { x, y };
+    }
+  }
+
+  /** Interphase: nucleus holding tangled chromatin; one centrosome with aster rays outside the nucleus. */
+  drawInterphase(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), false);
+    const nucleusR = radius * 0.52;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(nucleusR), false);
+    this.drawChromatinTangle(cx, cy, nucleusR, 0.5, filled);
+    const ang = (5 * Math.PI) / 4; // upper-left, as in the printed diagram
+    this.drawCentrosome(cx + Math.cos(ang) * radius * 0.76, cy + Math.sin(ang) * radius * 0.76, radius, ang, true);
+  }
+
+  /** Prophase: no nuclear membrane; X-shaped chromosomes scattered; spindle forming between two poles. */
+  drawProphase(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), false);
+    const poleDx = radius * 0.66;
+    for (const sx of [-1, 1]) {
+      this.drawCentrosome(cx + sx * poleDx, cy, radius, sx > 0 ? 0 : Math.PI, true);
+    }
+    // Spindle outline (two bowed fibres) leaving room for the chromosomes inside.
+    this.drawSpindleFibre(cx - poleDx, cy, cx + poleDx, cy, -radius * 0.55);
+    this.drawSpindleFibre(cx - poleDx, cy, cx + poleDx, cy, radius * 0.55);
+    const half = Math.max(2, radius * 0.13);
+    const chromosomes = [
+      { x: -0.3, y: -0.2, rot: 0.4 },
+      { x: 0.2, y: -0.28, rot: -0.5 },
+      { x: -0.08, y: 0.06, rot: 0.9 },
+      { x: -0.25, y: 0.3, rot: -0.2 },
+      { x: 0.3, y: 0.22, rot: 0.7 },
+    ];
+    for (const c of chromosomes) {
+      this.drawChromosomeX(cx + c.x * radius, cy + c.y * radius, half, c.rot, filled);
+    }
+  }
+
+  /** Metaphase: chromosomes line up in a column at the cell's equator, each attached to fibres from both poles. */
+  drawMetaphase(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    this.drawCircle(Math.round(cx), Math.round(cy), Math.round(radius), false);
+    const poleDx = radius * 0.66;
+    for (const sx of [-1, 1]) {
+      this.drawCentrosome(cx + sx * poleDx, cy, radius, sx > 0 ? 0 : Math.PI, true);
+    }
+    const half = Math.max(2, radius * 0.13);
+    const edge = half * 0.85;
+    for (const ry of [-0.45, -0.15, 0.15, 0.45]) {
+      const y = cy + ry * radius;
+      this.drawChromosomeX(cx, y, half, 0, filled);
+      this.drawLine(cx - poleDx, cy, cx - edge, y);
+      this.drawLine(cx + poleDx, cy, cx + edge, y);
+    }
+  }
+
+  /** Anaphase: sister chromatids (V shapes, tips leading) are pulled apart toward opposite poles. */
+  drawAnaphase(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    // Cell begins to elongate along the spindle axis.
+    this.strokeEllipseOutline(cx, cy, radius * 1.04, radius * 0.8);
+    const poleDx = radius * 0.7;
+    const tipDx = radius * 0.26;
+    const len = Math.max(3, radius * 0.17);
+    for (const sx of [-1, 1]) {
+      this.drawCentrosome(cx + sx * poleDx, cy, radius, sx > 0 ? 0 : Math.PI, true);
+      for (const ry of [-0.4, -0.13, 0.13, 0.4]) {
+        const y = cy + ry * radius;
+        const tipX = cx + sx * tipDx;
+        this.drawLine(cx + sx * poleDx, cy, tipX, y);
+        this.drawChromatidV(tipX, y, len, -sx, filled);
+      }
+    }
+  }
+
+  /** Telophase: two daughter nuclei re-form (chromatids as rods) and the cell pinches in the middle. */
+  drawTelophase(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const lobeR = radius * 0.58;
+    const lobeDx = radius * 0.5;
+    const nucleusR = radius * 0.34;
+    const rods = [
+      { x: -0.09, y: -0.1, rot: 0.6 },
+      { x: 0.1, y: -0.07, rot: -0.5 },
+      { x: -0.07, y: 0.11, rot: -0.2 },
+      { x: 0.1, y: 0.12, rot: 0.9 },
+    ];
+    for (const sx of [-1, 1]) {
+      const lx = cx + sx * lobeDx;
+      const otherX = cx - sx * lobeDx;
+      // Leave out the arc that lies inside the other lobe, producing the pinched waist.
+      this.strokeEllipseOutline(lx, cy, lobeR, lobeR, (x, y) => Math.hypot(x - otherX, y - cy) < lobeR - 0.5);
+      this.drawCircle(Math.round(lx), Math.round(cy), Math.round(nucleusR), false);
+      for (const c of rods) {
+        this.drawChromatidRod(lx + c.x * radius, cy + c.y * radius, Math.max(1.5, radius * 0.07), c.rot, filled);
+      }
+      this.drawCentrosome(cx + sx * radius * 0.96, cy, radius, sx > 0 ? 0 : Math.PI, false);
+    }
+  }
+
+  /** Cytokinesis: division complete — two separate daughter cells, each with a nucleus of loose chromatin. */
+  drawCytokinesis(cx: number, cy: number, radius: number, filled = false) {
+    if (radius <= 0) return;
+    const cellR = radius * 0.5;
+    const cellDx = radius * 0.58;
+    const nucleusR = radius * 0.28;
+    for (const sx of [-1, 1]) {
+      const x = cx + sx * cellDx;
+      this.drawCircle(Math.round(x), Math.round(cy), Math.round(cellR), false);
+      this.drawCircle(Math.round(x), Math.round(cy), Math.round(nucleusR), false);
+      this.drawChromatinTangle(x, cy, nucleusR, sx > 0 ? 2.1 : 0.5, filled);
+      // Centrosome on the outer side of each daughter cell.
+      this.drawCentrosome(x + sx * radius * 0.39, cy - radius * 0.02, radius, sx > 0 ? 0 : Math.PI, false);
+    }
+  }
+
   drawPyramid(cx: number, cy: number, radius: number, filled = false) {
     if (radius <= 0) return;
     const baseL = { x: cx - radius, y: cy + radius * 0.75 };
@@ -3146,6 +3377,7 @@ export function generateManipulatives(rows: number, cols: number, spacing: numbe
 
 export type InventoryShapeKind =
   | 'actingMask'
+  | 'anaphase'
   | 'angle'
   | 'apple'
   | 'atom'
@@ -3168,6 +3400,7 @@ export type InventoryShapeKind =
   | 'cross'
   | 'cube'
   | 'cylinder'
+  | 'cytokinesis'
   | 'dna'
   | 'dog'
   | 'earth'
@@ -3180,16 +3413,19 @@ export type InventoryShapeKind =
   | 'hiking'
   | 'house'
   | 'iceSkates'
+  | 'interphase'
   | 'leaf'
   | 'libertyBell'
   | 'lightning'
   | 'magnet'
+  | 'metaphase'
   | 'microscope'
   | 'moon'
   | 'movieProjector'
   | 'mustache'
   | 'paintbrush'
   | 'pieChart'
+  | 'prophase'
   | 'pyramid'
   | 'rightTriangle'
   | 'scroll'
@@ -3197,6 +3433,7 @@ export type InventoryShapeKind =
   | 'square'
   | 'star'
   | 'sun'
+  | 'telophase'
   | 'thermometer'
   | 'timeline'
   | 'triangle'
@@ -3389,6 +3626,30 @@ export function paintInventoryShape(
       canvas.drawMicroscope(cx, cy, r, filled);
       label = 'Microscope';
       break;
+    case 'interphase':
+      canvas.drawInterphase(cx, cy, r, filled);
+      label = 'Interphase (Mitosis)';
+      break;
+    case 'prophase':
+      canvas.drawProphase(cx, cy, r, filled);
+      label = 'Prophase (Mitosis)';
+      break;
+    case 'metaphase':
+      canvas.drawMetaphase(cx, cy, r, filled);
+      label = 'Metaphase (Mitosis)';
+      break;
+    case 'anaphase':
+      canvas.drawAnaphase(cx, cy, r, filled);
+      label = 'Anaphase (Mitosis)';
+      break;
+    case 'telophase':
+      canvas.drawTelophase(cx, cy, r, filled);
+      label = 'Telophase (Mitosis)';
+      break;
+    case 'cytokinesis':
+      canvas.drawCytokinesis(cx, cy, r, filled);
+      label = 'Cytokinesis (Mitosis)';
+      break;
     case 'pyramid':
       canvas.drawPyramid(cx, cy, r, filled);
       label = 'Pyramid';
@@ -3560,7 +3821,9 @@ export function generateInventoryShape(
     || kind === 'cylinder' || kind === 'rightTriangle' || kind === 'angle' || kind === 'coordinateAxes'
     || kind === 'magnet' || kind === 'leaf' || kind === 'fish' || kind === 'butterfly' || kind === 'volcano'
     || kind === 'beaker' || kind === 'microscope' || kind === 'pyramid' || kind === 'castle' || kind === 'shipSail'
-    || kind === 'scroll' || kind === 'libertyBell' || kind === 'flag') {
+    || kind === 'scroll' || kind === 'libertyBell' || kind === 'flag'
+    || kind === 'interphase' || kind === 'prophase' || kind === 'metaphase' || kind === 'anaphase'
+    || kind === 'telophase' || kind === 'cytokinesis') {
     spanX = r * 2.2;
     spanY = r * 2.2;
   } else if (kind === 'dna' || kind === 'thermometer' || kind === 'greekColumn') {
