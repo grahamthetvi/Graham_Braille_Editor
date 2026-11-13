@@ -125,7 +125,7 @@ export class GridCanvas {
         const maxCells = opts?.maxCells && opts.maxCells > 0 ? opts.maxCells : charWidth - cellX;
         let x = cellX;
         let y = cellY;
-        let lineStartX = cellX;
+        const lineStartX = cellX;
         let cellsWide = 0;
         let linesUsed = 1;
         let colOnLine = 0;

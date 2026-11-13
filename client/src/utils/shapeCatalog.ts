@@ -11,6 +11,8 @@ export interface ShapeCatalogEntry {
   category: ShapeCatalogCategory;
   /** Extra terms for search (kind/label are always searched). */
   keywords?: string[];
+  /** Optional teaching text; shown only when the user opts in (it can give away worksheet answers). */
+  description?: string;
 }
 
 /**
@@ -41,6 +43,13 @@ export const SHAPE_CATALOG: ShapeCatalogEntry[] = [
   { kind: 'thermometer', label: 'Thermometer', shortLabel: 'Therm.', category: 'science', keywords: ['temperature', 'weather'] },
   { kind: 'beaker', label: 'Lab Beaker', shortLabel: 'Beaker', category: 'science', keywords: ['lab', 'flask', 'chemistry'] },
   { kind: 'microscope', label: 'Microscope', shortLabel: 'Micro.', category: 'science', keywords: ['lab'] },
+  // Mitosis / cell cycle (in order)
+  { kind: 'interphase', label: 'Interphase (Mitosis)', shortLabel: 'Interph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'nucleus', 'chromatin'], description: 'Preparation for division - chromosomes make a copy of themselves.' },
+  { kind: 'prophase', label: 'Prophase (Mitosis)', shortLabel: 'Prophase', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'], description: 'Chromosomes become visible because the nuclear membrane disappears and the spindle fibers stretch across the cell.' },
+  { kind: 'metaphase', label: 'Metaphase (Mitosis)', shortLabel: 'Metaph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'], description: 'Chromosomes line up in the middle of the cell and attach to the spindle fibers.' },
+  { kind: 'anaphase', label: 'Anaphase (Mitosis)', shortLabel: 'Anaph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'chromosomes', 'spindle'], description: 'Spindle fibers pull chromosome pairs apart towards each end of the cell.' },
+  { kind: 'telophase', label: 'Telophase (Mitosis)', shortLabel: 'Teloph.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'nuclear membrane'], description: 'Nuclear membrane reappears around chromosomes and the cell pinches apart in the middle.' },
+  { kind: 'cytokinesis', label: 'Cytokinesis (Mitosis)', shortLabel: 'Cytokin.', category: 'science', keywords: ['mitosis', 'cell cycle', 'cell division', 'biology', 'daughter cells'], description: 'The end of the process of cell division where two new daughter cells are present.' },
 
   // History
   { kind: 'pyramid', label: 'Pyramid', shortLabel: 'Pyramid', category: 'history', keywords: ['egypt'] },
@@ -103,6 +112,12 @@ export const SHAPES_SECTION_CATEGORIES: Array<Exclude<ShapeCatalogCategory, 'mat
 
 export function shapesInCategory(category: ShapeCatalogCategory): ShapeCatalogEntry[] {
   return SHAPE_CATALOG.filter(s => s.category === category);
+}
+
+/** Append the shape's teaching description to a graphic summary when requested and available. */
+export function summaryWithDescription(summary: string, kind: InventoryShapeKind, include: boolean): string {
+  const description = include ? getShapeEntry(kind)?.description : undefined;
+  return description ? `${summary}\n${description}` : summary;
 }
 
 export function getShapeEntry(kind: InventoryShapeKind): ShapeCatalogEntry | undefined {

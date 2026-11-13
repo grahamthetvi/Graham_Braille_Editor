@@ -136,7 +136,7 @@ export function stripBraillePageNumbersAndPadding(raw: string): string {
     }
     if (end < 0) continue;
 
-    let lines = pageLines.slice(0, end + 1);
+    const lines = pageLines.slice(0, end + 1);
 
     // Check last line of page for page number
     const lastLine = lines[lines.length - 1];

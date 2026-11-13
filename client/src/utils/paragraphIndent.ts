@@ -87,7 +87,7 @@ export function applyParagraphIndentToRange(
   const marker = formatParagraphIndentMarker(indent);
 
   // Expand to full lines that intersect the selection.
-  let lineStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
+  const lineStart = text.lastIndexOf('\n', Math.max(0, start - 1)) + 1;
   let lineEnd = text.indexOf('\n', end);
   if (lineEnd < 0) lineEnd = text.length;
 

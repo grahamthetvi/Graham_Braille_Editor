@@ -691,7 +691,7 @@ function cleanNemethBackTranslation(text: string): string {
   // 2. Remove Nemeth numeric indicator: ^#
   result = result.replace(/\^#/g, '');
   // 3. Clean up other standard prefixed operators/symbols (e.g. ^+ -> +, ^- -> -)
-  result = result.replace(/\^([+\-*/()<>,'";:!_~`&\?{}|=])/g, '$1');
+  result = result.replace(/\^([+\-*/()<>,'";:!_~`&?{}|=])/g, '$1');
   return result;
 }
 

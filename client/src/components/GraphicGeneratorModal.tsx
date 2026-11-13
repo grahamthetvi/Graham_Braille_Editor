@@ -23,6 +23,7 @@ import {
   searchHitChip,
   searchHitLabel,
   shapesInCategory,
+  summaryWithDescription,
   type GraphicsSection,
   type SearchHit,
   type ShapeCatalogCategory,
@@ -128,6 +129,7 @@ export function GraphicGeneratorModal({
   const [inventoryShape, setInventoryShape] = useState<InventoryShapeKind>('circle');
   const [inventorySize, setInventorySize] = useState(15);
   const [inventoryFilled, setInventoryFilled] = useState(false);
+  const [inventoryIncludeDescription, setInventoryIncludeDescription] = useState(false);
 
   // Cross-specific state
   const [crossLengthHorizontal, setCrossLengthHorizontal] = useState(30);
@@ -320,6 +322,10 @@ export function GraphicGeneratorModal({
           thicknessHorizontal: crossThicknessHorizontal,
           heightRatio: crossHeightRatio
         });
+        preview = {
+          ...preview,
+          summary: summaryWithDescription(preview.summary, inventoryShape, inventoryIncludeDescription),
+        };
         break;
       case 'customShape':
         preview = generateCustomShape(customSize, customSides, customAngle, customFilled);
@@ -772,6 +778,16 @@ export function GraphicGeneratorModal({
                     />{' '}
                     Filled (solid)
                   </label>
+                  {getShapeEntry(inventoryShape)?.description && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={inventoryIncludeDescription}
+                        onChange={e => setInventoryIncludeDescription(e.target.checked)}
+                      />{' '}
+                      Include description text
+                    </label>
+                  )}
                   {inventoryShape === 'cross' && (
                     <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', borderTop: '1px dashed var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
                       <h4 style={{ gridColumn: '1 / -1', margin: '0 0 0.5rem 0' }}>Cross Parameters</h4>

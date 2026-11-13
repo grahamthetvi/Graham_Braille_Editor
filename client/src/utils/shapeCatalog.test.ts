@@ -3,6 +3,7 @@ import {
   SHAPE_CATALOG,
   searchGraphicsCatalog,
   shapesInCategory,
+  summaryWithDescription,
 } from './shapeCatalog';
 
 describe('shapeCatalog', () => {
@@ -33,5 +34,25 @@ describe('shapeCatalog', () => {
 
     expect(searchGraphicsCatalog('axe')).toEqual([]);
     expect(searchGraphicsCatalog('axes').some(h => h.kind === 'mathQuickShape' && h.shape.kind === 'coordinateAxes')).toBe(true);
+  });
+
+  it('lists the six mitosis stages in cell-cycle order under Science and finds them by "mitosis"', () => {
+    const order = ['interphase', 'prophase', 'metaphase', 'anaphase', 'telophase', 'cytokinesis'];
+    const scienceKinds = shapesInCategory('science').map(s => s.kind as string);
+    const positions = order.map(k => scienceKinds.indexOf(k));
+    expect(positions.every(p => p >= 0)).toBe(true);
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+
+    const hits = searchGraphicsCatalog('mitosis').filter(h => h.kind === 'shape');
+    expect(hits.map(h => (h.kind === 'shape' ? h.shape.kind : ''))).toEqual(order);
+    expect(searchGraphicsCatalog('prophase').some(h => h.kind === 'shape' && h.shape.kind === 'prophase')).toBe(true);
+    expect(searchGraphicsCatalog('cell division').length).toBeGreaterThanOrEqual(order.length);
+  });
+
+  it('adds the teaching description to the summary only when opted in', () => {
+    const base = 'Metaphase (Mitosis) (size 15, outline)';
+    expect(summaryWithDescription(base, 'metaphase', false)).toBe(base);
+    expect(summaryWithDescription(base, 'metaphase', true)).toContain('line up in the middle of the cell');
+    expect(summaryWithDescription('Atom (size 15, outline)', 'atom', true)).toBe('Atom (size 15, outline)');
   });
 });
